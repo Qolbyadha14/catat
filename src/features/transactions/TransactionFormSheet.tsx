@@ -4,6 +4,7 @@ import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction } from './transactionService';
 import { TransactionTemplateBar } from './TransactionTemplateBar';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
+import { evaluateMathExpression } from '../../lib/mathEvaluator';
 
 interface TransactionFormSheetProps {
   uid: string;
@@ -36,6 +37,12 @@ export function TransactionFormSheet({
     if (duplicateData) return String(duplicateData.amount);
     return '';
   });
+  const [amountInput, setAmountInput] = useState<string>(() => {
+    if (initialTx) return new Intl.NumberFormat('id-ID').format(initialTx.amount);
+    if (duplicateData) return new Intl.NumberFormat('id-ID').format(duplicateData.amount);
+    return '';
+  });
+  const [mathError, setMathError] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string>(() => {
     if (initialTx) {
       return initialTx.type === 'transfer'
@@ -104,21 +111,69 @@ export function TransactionFormSheet({
     : (duplicateData ? '' : toAccountOptions[0]?.id || '');
 
   const handleAmountChange = (val: string) => {
-    // Only allow numbers
-    const clean = val.replace(/\D/g, '');
-    setRawAmount(clean);
+    // Allow digits, operators (+, -, *, /), decimal dots, and whitespace
+    const sanitized = val.replace(/,/g, '.').replace(/[^0-9+\-*/.\s]/g, '');
+    setAmountInput(sanitized);
+    if (mathError) setMathError(null);
   };
 
-  const formattedDisplayAmount = rawAmount
-    ? new Intl.NumberFormat('id-ID').format(parseInt(rawAmount, 10))
-    : '';
+  const evaluateInput = (text: string) => {
+    if (!text.trim()) {
+      setRawAmount('');
+      setAmountInput('');
+      setMathError(null);
+      return;
+    }
+
+    const res = evaluateMathExpression(text);
+    if (res.success) {
+      const rounded = Math.round(res.value);
+      setRawAmount(String(rounded));
+      setAmountInput(new Intl.NumberFormat('id-ID').format(rounded));
+      setMathError(null);
+    } else {
+      // Keep last valid rawAmount, show red helper without blocking
+      setMathError(res.error);
+    }
+  };
+
+  const handleAmountFocus = () => {
+    if (!mathError && rawAmount) {
+      setAmountInput(rawAmount);
+    }
+  };
+
+  const handleAmountBlur = () => {
+    evaluateInput(amountInput);
+  };
+
+  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      evaluateInput(amountInput);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const amountNum = parseInt(rawAmount, 10);
-    if (!amountNum || amountNum <= 0) {
+    let finalAmount = parseInt(rawAmount, 10);
+    if (amountInput.trim()) {
+      const res = evaluateMathExpression(amountInput);
+      if (res.success) {
+        finalAmount = Math.round(res.value);
+        setRawAmount(String(finalAmount));
+        setAmountInput(new Intl.NumberFormat('id-ID').format(finalAmount));
+        setMathError(null);
+      } else if (!finalAmount) {
+        setMathError(res.error);
+        setError('Masukkan nominal yang valid');
+        return;
+      }
+    }
+
+    if (!finalAmount || finalAmount <= 0) {
       setError('Masukkan nominal yang valid');
       return;
     }
@@ -139,7 +194,7 @@ export function TransactionFormSheet({
         }
         const payload = {
           type: 'transfer' as const,
-          amount: amountNum,
+          amount: finalAmount,
           fromAccountId: currentAccountId,
           toAccountId: currentToAccountId,
           date: epochDate,
@@ -157,7 +212,7 @@ export function TransactionFormSheet({
         }
         const payload = {
           type,
-          amount: amountNum,
+          amount: finalAmount,
           accountId: currentAccountId,
           categoryId: currentCategoryId,
           date: epochDate,
@@ -172,6 +227,8 @@ export function TransactionFormSheet({
 
       // Reset
       setRawAmount('');
+      setAmountInput('');
+      setMathError(null);
       setNote('');
       onSuccess?.();
       onClose();
@@ -212,6 +269,8 @@ export function TransactionFormSheet({
             onApply={(resolved) => {
               setType(resolved.type);
               setRawAmount(String(resolved.amount));
+              setAmountInput(new Intl.NumberFormat('id-ID').format(resolved.amount));
+              setMathError(null);
               setAccountId(resolved.accountId);
               if (resolved.type === 'transfer') {
                 setToAccountId(resolved.toAccountId);
@@ -303,15 +362,22 @@ export function TransactionFormSheet({
               <input
                 id={amountInputId}
                 type="text"
-                inputMode="numeric"
                 className="input-hero-amount"
                 placeholder="0"
-                value={formattedDisplayAmount}
+                value={amountInput}
                 onChange={(e) => handleAmountChange(e.target.value)}
+                onFocus={handleAmountFocus}
+                onBlur={handleAmountBlur}
+                onKeyDown={handleAmountKeyDown}
                 autoFocus
                 required
               />
             </div>
+            {mathError && (
+              <div className="input-helper-error" role="alert">
+                {mathError}
+              </div>
+            )}
           </div>
 
           {/* Account Pickers */}

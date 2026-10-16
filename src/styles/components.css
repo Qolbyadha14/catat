@@ -886,6 +886,13 @@
   border-color: var(--accent);
 }
 
+.input-helper-error {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--error-fg);
+}
+
 /* Pills Type Selector */
 .pills-type-selector {
   display: grid;
