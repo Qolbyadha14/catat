@@ -6,6 +6,7 @@ import { useCategories } from '../categories/useCategories';
 import { useTransactions } from '../transactions/useTransactions';
 import { deleteTransaction } from '../transactions/transactionService';
 import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
+import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { isInRange, getPresetRange, type PresetRange } from '../../lib/dateRange';
 import { useTheme, type ThemeMode } from '../../lib/theme';
@@ -42,6 +43,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [tempTo, setTempTo] = useState('');
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isManageOpen, setIsManageOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -57,6 +59,9 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  const activeAccounts = useMemo(() => accounts.filter((a) => !a.isArchived), [accounts]);
+  const activeCategories = useMemo(() => categories.filter((c) => !c.isArchived), [categories]);
 
   // Category map for quick lookup
   const categoryMap = useMemo(() => {
@@ -74,8 +79,8 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
   // Totals calculation (hero saldo stays invariant to date/other filters)
   const totalBalance = useMemo(() => {
-    return accounts.reduce((acc, a) => acc + a.balance, 0);
-  }, [accounts]);
+    return activeAccounts.reduce((acc, a) => acc + a.balance, 0);
+  }, [activeAccounts]);
 
   // Month summary
   const [startOfMonth] = useState(() => {
@@ -96,10 +101,10 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   }, [transactions, startOfMonth]);
 
   const availableFilterCategories = useMemo(() => {
-    if (filterType === 'expense') return categories.filter((c) => c.type === 'expense');
-    if (filterType === 'income') return categories.filter((c) => c.type === 'income');
-    return categories;
-  }, [categories, filterType]);
+    if (filterType === 'expense') return activeCategories.filter((c) => c.type === 'expense');
+    if (filterType === 'income') return activeCategories.filter((c) => c.type === 'income');
+    return activeCategories;
+  }, [activeCategories, filterType]);
 
   const activeDateRange = useMemo(() => {
     if (dateFilterMode === 'all') return null;
@@ -184,6 +189,15 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           <p className="brand-sub">Your money, under control.</p>
         </div>
         <div className="user-profile-menu">
+          <button
+            type="button"
+            className="btn-header-gear"
+            onClick={() => setIsManageOpen(true)}
+            title="Kelola Akun & Kategori"
+            aria-label="Kelola Akun & Kategori"
+          >
+            ⚙️
+          </button>
           <div className="theme-toggle-wrap" title="Pilih tema">
             <span className="theme-toggle-icon" aria-hidden="true">
               {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🌓'}
@@ -232,7 +246,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
             <span className="section-title">Kantong Akun</span>
           </div>
           <div className="accounts-scroller">
-            {accounts.map((acc) => (
+            {activeAccounts.map((acc) => (
               <div key={acc.id} className="account-chip">
                 <div className="account-chip-name">{acc.name}</div>
                 <div className="account-chip-balance">{formatIdr(acc.balance)}</div>
@@ -348,7 +362,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                 onChange={(e) => setSelectedAccountId(e.target.value)}
               >
                 <option value="all">Semua Akun</option>
-                {accounts.map((acc) => (
+                {activeAccounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.name}
                   </option>
@@ -581,11 +595,20 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
             setIsSheetOpen(false);
             setEditingTx(null);
           }}
-          accounts={accounts}
-          categories={categories}
+          accounts={activeAccounts}
+          categories={activeCategories}
           initialTx={editingTx}
         />
       )}
+
+      {/* Manage Accounts & Categories Sheet */}
+      <ManageSheet
+        uid={user.uid}
+        isOpen={isManageOpen}
+        onClose={() => setIsManageOpen(false)}
+        accounts={accounts}
+        categories={categories}
+      />
     </div>
   );
 }

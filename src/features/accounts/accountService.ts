@@ -1,10 +1,18 @@
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, collection } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import type { Account } from '../../lib/schemas';
 
 export interface UpdateAccountInput {
   name?: string;
   icon?: string;
   isArchived?: boolean;
+}
+
+export interface CreateAccountInput {
+  name: string;
+  kind?: 'asset' | 'liability';
+  balance?: number;
+  icon?: string;
 }
 
 export function sanitizeAccountUpdate(input: Record<string, unknown>): UpdateAccountInput {
@@ -33,4 +41,24 @@ export async function updateAccount(
   const ref = doc(db, 'users', uid, 'accounts', accountId);
   await updateDoc(ref, payload);
   return payload;
+}
+
+export async function createAccount(
+  uid: string,
+  input: CreateAccountInput
+): Promise<Account> {
+  const colRef = collection(db, 'users', uid, 'accounts');
+  const newRef = doc(colRef);
+  const now = Date.now();
+  const acc: Account = {
+    id: newRef.id,
+    name: input.name.trim(),
+    kind: input.kind || 'asset',
+    balance: input.balance || 0,
+    icon: input.icon?.trim() || undefined,
+    isArchived: false,
+    createdAt: now,
+  };
+  await setDoc(newRef, acc);
+  return acc;
 }

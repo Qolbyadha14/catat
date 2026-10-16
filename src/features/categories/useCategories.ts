@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { categorySchema, type Category } from '../../lib/schemas';
 
@@ -11,10 +11,7 @@ export function useCategories(uid: string) {
   useEffect(() => {
     if (!uid) return;
 
-    const q = query(
-      collection(db, 'users', uid, 'categories'),
-      where('isArchived', '==', false)
-    );
+    const q = query(collection(db, 'users', uid, 'categories'));
 
     const unsubscribe = onSnapshot(
       q,
