@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "bun test src/",
+    "test:e2e": "export PATH=\"/opt/homebrew/opt/openjdk@25/bin:$PATH\" && firebase emulators:exec --only auth,firestore \"bun test tests/e2e-gates.test.ts\"",
     "emulators": "export PATH=\"/opt/homebrew/opt/openjdk@25/bin:$PATH\" && firebase emulators:start --only auth,firestore",
     "preview": "vite preview"
   },
