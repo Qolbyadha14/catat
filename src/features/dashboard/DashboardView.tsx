@@ -13,6 +13,7 @@ import { MonthNavigator } from './MonthNavigator';
 import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
+import { calculateNetCashflow } from '../../lib/cashflow';
 import { useTheme, type ThemeMode } from '../../lib/theme';
 import {
   filterTransactions,
@@ -121,7 +122,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     setSelectedMonth((prev) => shiftMonth(prev, 1));
   };
 
-  const { monthIncome, monthExpense } = useMemo(() => {
+  const { monthIncome, monthExpense, netCashflow } = useMemo(() => {
     let income = 0;
     let expense = 0;
     transactions.forEach((tx) => {
@@ -130,7 +131,11 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         if (tx.type === 'expense') expense += tx.amount;
       }
     });
-    return { monthIncome: income, monthExpense: expense };
+    return {
+      monthIncome: income,
+      monthExpense: expense,
+      netCashflow: calculateNetCashflow(income, expense),
+    };
   }, [transactions, startOfMonth, endOfMonth]);
 
   const activeFilterCount = useMemo(
@@ -236,6 +241,12 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
             <div className="stat-item">
               <span className="stat-title">Pengeluaran {monthLabel}</span>
               <span className="stat-val-expense">-{formatIdr(monthExpense)}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-title">Arus Kas Bersih</span>
+              <span className={netCashflow.isSurplus ? 'stat-val-income' : 'stat-val-expense'}>
+                {netCashflow.formatted}
+              </span>
             </div>
           </div>
         </div>

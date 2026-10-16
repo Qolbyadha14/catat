@@ -214,33 +214,59 @@
 
 .stats-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+@media (max-width: 360px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
 .stat-item {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .stat-title {
   font-size: 11px;
   color: var(--slate-400);
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-val-income {
   font-size: 14px;
   font-weight: 600;
   color: var(--success);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-val-expense {
   font-size: 14px;
   font-weight: 600;
   color: var(--error);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Ensure WCAG AA contrast over dark hero gradient in all theme modes */
+.hero-card .stat-val-income {
+  color: #34d399;
+}
+
+.hero-card .stat-val-expense {
+  color: #f87171;
 }
 
 /* Section Header */
