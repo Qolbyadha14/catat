@@ -9,8 +9,10 @@ import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
 import { TransactionHistoryHeader } from '../transactions/TransactionHistoryHeader';
 import { CategoryBreakdown } from './CategoryBreakdown';
+import { MonthNavigator } from './MonthNavigator';
 import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
+import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
 import { useTheme, type ThemeMode } from '../../lib/theme';
 import {
   filterTransactions,
@@ -86,23 +88,38 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     return activeAccounts.reduce((acc, a) => acc + a.balance, 0);
   }, [activeAccounts]);
 
-  // Month summary
-  const [startOfMonth] = useState(() => {
+  // Month summary & navigation state
+  const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
     const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+
+  const { startOfMonth, endOfMonth } = useMemo(
+    () => getMonthRange(selectedMonth),
+    [selectedMonth]
+  );
+
+  const monthLabel = useMemo(() => formatMonthYear(selectedMonth), [selectedMonth]);
+
+  const handlePrevMonth = () => {
+    setSelectedMonth((prev) => shiftMonth(prev, -1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth((prev) => shiftMonth(prev, 1));
+  };
 
   const { monthIncome, monthExpense } = useMemo(() => {
     let income = 0;
     let expense = 0;
     transactions.forEach((tx) => {
-      if (tx.date >= startOfMonth) {
+      if (tx.date >= startOfMonth && tx.date < endOfMonth) {
         if (tx.type === 'income') income += tx.amount;
         if (tx.type === 'expense') expense += tx.amount;
       }
     });
     return { monthIncome: income, monthExpense: expense };
-  }, [transactions, startOfMonth]);
+  }, [transactions, startOfMonth, endOfMonth]);
 
   const activeFilterCount = useMemo(
     () => countActiveFilters(filterCriteria),
@@ -188,17 +205,24 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
       {/* Main Content */}
       <main className="app-content">
+        {/* Month Navigator */}
+        <MonthNavigator
+          currentDate={selectedMonth}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+        />
+
         {/* Balance Hero Card */}
         <div className="hero-card">
           <div className="hero-label">Total Saldo</div>
           <div className="hero-balance">{formatIdr(totalBalance)}</div>
           <div className="stats-row">
             <div className="stat-item">
-              <span className="stat-title">Pemasukan Bulan Ini</span>
+              <span className="stat-title">Pemasukan {monthLabel}</span>
               <span className="stat-val-income">+{formatIdr(monthIncome)}</span>
             </div>
             <div className="stat-item">
-              <span className="stat-title">Pengeluaran Bulan Ini</span>
+              <span className="stat-title">Pengeluaran {monthLabel}</span>
               <span className="stat-val-expense">-{formatIdr(monthExpense)}</span>
             </div>
           </div>
@@ -209,6 +233,8 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           transactions={transactions}
           categoryMap={categoryMap}
           startOfMonth={startOfMonth}
+          endOfMonth={endOfMonth}
+          monthLabel={monthLabel}
         />
 
         {/* Accounts Scroller */}

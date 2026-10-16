@@ -142,6 +142,52 @@
   padding-bottom: 96px;
 }
 
+/* Month Navigator */
+.month-navigator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 4px 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.month-navigator-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: center;
+  user-select: none;
+}
+
+.btn-month-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-month-nav:hover {
+  background: var(--surface-secondary);
+}
+
+.btn-month-nav:active {
+  transform: scale(0.95);
+}
+
 /* Hero Balance Card */
 .hero-card {
   background: linear-gradient(135deg, var(--slate-800) 0%, var(--slate-900) 100%);
