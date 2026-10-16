@@ -8,7 +8,10 @@ import {
   updateTransaction,
   deleteTransaction,
 } from '../src/features/transactions/transactionService';
-import { transactionSchema, type Transaction } from '../src/lib/schemas';
+import { updateAccount } from '../src/features/accounts/accountService';
+import { canArchiveAccount } from '../src/lib/canArchiveAccount';
+import { isNameUnique } from '../src/lib/manageValidation';
+import { transactionSchema, type Transaction, type Account, type Category } from '../src/lib/schemas';
 
 let testUid: string;
 
@@ -375,5 +378,60 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     const resetTransferResult = runFilter('transfer', 'all', 'all', '');
     expect(resetTransferResult.length).toBe(1);
     expect(resetTransferResult[0]?.id).toBe('tx4');
+  });
+
+  it('Gate 7: P0.3 Manage accounts/categories — canArchiveAccount guard, picker isolation & history resolution', async () => {
+    // 1. Guard check: non-zero balance rejected with exact reason
+    const accCashRef = doc(db, 'users', testUid, 'accounts', 'acc_cash');
+    const accBankRef = doc(db, 'users', testUid, 'accounts', 'acc_bank');
+    await updateDoc(accCashRef, { balance: 50_000, isArchived: false });
+    await updateDoc(accBankRef, { balance: 0, isArchived: false });
+
+    const activeList: Account[] = [
+      { id: 'acc_cash', name: 'Tunai', kind: 'asset', balance: 50_000, isArchived: false, createdAt: 0 },
+      { id: 'acc_bank', name: 'Bank Jago', kind: 'asset', balance: 0, isArchived: false, createdAt: 0 },
+    ];
+
+    const guardNonZero = canArchiveAccount(activeList[0]!, activeList);
+    expect(guardNonZero.allowed).toBe(false);
+    expect(guardNonZero.reason).toBe('Pindahkan saldo dulu sebelum arsip');
+
+    // 2. Guard check: last active account rejected with exact reason
+    const singleActiveList: Account[] = [
+      { id: 'acc_bank', name: 'Bank Jago', kind: 'asset', balance: 0, isArchived: false, createdAt: 0 },
+    ];
+    const guardLastActive = canArchiveAccount(singleActiveList[0]!, singleActiveList);
+    expect(guardLastActive.allowed).toBe(false);
+    expect(guardLastActive.reason).toBe('Akun aktif terakhir tidak bisa diarsip');
+
+    // 3. Guard check: zero balance with another active account allowed
+    const guardHappy = canArchiveAccount(activeList[1]!, activeList);
+    expect(guardHappy.allowed).toBe(true);
+    expect(guardHappy.reason).toBeUndefined();
+
+    // 4. Unique name validation (case-insensitive & trimmed)
+    expect(isNameUnique('  Tunai  ', activeList)).toBe(false);
+    expect(isNameUnique('TUNAI', activeList)).toBe(false);
+    expect(isNameUnique('Dana Darurat', activeList)).toBe(true);
+
+    // 5. Execution: Archive acc_bank via updateAccount (whitelist ensures no balance drift)
+    await updateAccount(testUid, 'acc_bank', { isArchived: true, balance: 999_999 } as any);
+    const bankSnap = await getDoc(accBankRef);
+    expect(bankSnap.data()?.isArchived).toBe(true);
+    // Whitelist stripped balance: remains 0
+    expect(bankSnap.data()?.balance).toBe(0);
+
+    // 6. Picker isolation: Transaction form picker only consumes active accounts
+    const allAccountsSnap = await getDocs(collection(db, 'users', testUid, 'accounts'));
+    const allAccounts: Account[] = allAccountsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Account));
+    const activeAccounts = allAccounts.filter((a) => !a.isArchived);
+
+    // Form picker only gets 1 account ('acc_cash'), archived 'acc_bank' dropped
+    expect(activeAccounts.length).toBe(1);
+    expect(activeAccounts.some((a) => a.id === 'acc_bank')).toBe(false);
+
+    // 7. History label resolution: Even though 'acc_bank' is archived, full map resolves name
+    const accountsMap = new Map(allAccounts.map((a) => [a.id, a.name]));
+    expect(accountsMap.get('acc_bank')).toBe('Rekening Utama'); // Resolved from seed default
   });
 });
