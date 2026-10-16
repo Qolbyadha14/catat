@@ -12,6 +12,8 @@ import { updateAccount } from '../src/features/accounts/accountService';
 import { canArchiveAccount } from '../src/lib/canArchiveAccount';
 import { isNameUnique } from '../src/lib/manageValidation';
 import { exportTransactionsCSV, escapeCsvField } from '../src/lib/exportTransactionsCSV';
+import { evaluateMathExpression } from '../src/lib/mathEvaluator';
+import { calculateNetCashflow } from '../src/lib/cashflow';
 import { transactionSchema, type Transaction, type Account } from '../src/lib/schemas';
 
 let testUid: string;
@@ -533,5 +535,110 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(escapeCsvField('-123', true)).toBe("'-123");
     expect(escapeCsvField(-123, false)).toBe('-123'); // raw number untouched
     expect(escapeCsvField(45000, false)).toBe('45000');
+  });
+
+  it('Gate 9: Inline Math Evaluator — operator precedence, division by zero, float rounding, trailing operator', async () => {
+    // 1. Operator precedence: 2 + 3 * 4 = 14 (not 20)
+    const precRes = evaluateMathExpression('2 + 3 * 4');
+    expect(precRes.success).toBe(true);
+    if (precRes.success) {
+      expect(precRes.value).toBe(14);
+    }
+
+    // 2. Trailing operator fallback: "15000+" evaluates to 15000
+    const trailingRes = evaluateMathExpression('15000+');
+    expect(trailingRes.success).toBe(true);
+    if (trailingRes.success) {
+      expect(trailingRes.value).toBe(15000);
+    }
+
+    // 3. Division by zero guard: returns error "Pembagi nol"
+    const divZeroRes = evaluateMathExpression('25000 / 0');
+    expect(divZeroRes.success).toBe(false);
+    if (!divZeroRes.success) {
+      expect(divZeroRes.error).toBe('Pembagi nol');
+    }
+
+    // 4. Float precision rounding: 0.1 + 0.2 = 0.3
+    const floatRes = evaluateMathExpression('0.1 + 0.2');
+    expect(floatRes.success).toBe(true);
+    if (floatRes.success) {
+      expect(floatRes.value).toBe(0.3);
+    }
+
+    // 5. Negative value guard: result < 0 rejected for nominal
+    const negRes = evaluateMathExpression('5000 - 10000');
+    expect(negRes.success).toBe(false);
+    if (!negRes.success) {
+      expect(negRes.error).toBe('Hasil kalkulasi tidak boleh negatif');
+    }
+
+    // 6. Seamless integration with createTransaction
+    if (precRes.success) {
+      const tx = await createTransaction(testUid, {
+        type: 'expense',
+        amount: precRes.value,
+        accountId: 'acc_cash',
+        categoryId: 'cat_food',
+        date: Date.now(),
+        note: 'Evaluated nominal tx',
+      });
+      expect(tx.id).toBeDefined();
+      expect(tx.amount).toBe(14);
+    }
+  });
+
+  it('Gate 10: 3-Column Net Cashflow — surplus, deficit, net=0 derived calculations', () => {
+    // 1. Surplus: Income > Expense
+    const surplus = calculateNetCashflow(5_000_000, 3_200_000);
+    expect(surplus.net).toBe(1_800_000);
+    expect(surplus.isSurplus).toBe(true);
+    expect(surplus.formatted.startsWith('+')).toBe(true);
+
+    // 2. Deficit: Income < Expense
+    const deficit = calculateNetCashflow(1_000_000, 2_500_000);
+    expect(deficit.net).toBe(-1_500_000);
+    expect(deficit.isSurplus).toBe(false);
+    expect(deficit.formatted.startsWith('-')).toBe(true);
+
+    // 3. Zero Net: Income == Expense (treated as surplus with +)
+    const zeroNet = calculateNetCashflow(1_000_000, 1_000_000);
+    expect(zeroNet.net).toBe(0);
+    expect(zeroNet.isSurplus).toBe(true);
+    expect(zeroNet.formatted.startsWith('+')).toBe(true);
+  });
+
+  it('Gate 11: Atomic Delete Transaction — full dual-leg transfer rollback and document removal', async () => {
+    const cashRef = doc(db, 'users', testUid, 'accounts', 'acc_cash');
+    const bankRef = doc(db, 'users', testUid, 'accounts', 'acc_bank');
+    await updateDoc(cashRef, { balance: 500_000 });
+    await updateDoc(bankRef, { balance: 1_000_000 });
+
+    // Create dual-leg transfer: 200k from bank to cash
+    const trf = await createTransaction(testUid, {
+      type: 'transfer',
+      amount: 200_000,
+      fromAccountId: 'acc_bank',
+      toAccountId: 'acc_cash',
+      date: Date.now(),
+      note: 'Transfer to be deleted',
+    });
+
+    let cashSnap = await getDoc(cashRef);
+    let bankSnap = await getDoc(bankRef);
+    expect(cashSnap.data()?.balance).toBe(700_000);
+    expect(bankSnap.data()?.balance).toBe(800_000);
+
+    // Atomic delete: should rollback both legs
+    await deleteTransaction(testUid, trf.id);
+
+    cashSnap = await getDoc(cashRef);
+    bankSnap = await getDoc(bankRef);
+    expect(cashSnap.data()?.balance).toBe(500_000);
+    expect(bankSnap.data()?.balance).toBe(1_000_000);
+
+    // Ensure document is deleted
+    const txSnap = await getDoc(doc(db, 'users', testUid, 'transactions', trf.id));
+    expect(txSnap.exists()).toBe(false);
   });
 });
