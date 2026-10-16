@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catat Coreboy — UI/UX Interactive Prototype</title>
+  <style>
+    :root {
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+
+      --success: #10b981;
+      --success-light: #d1fae5;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --error: #ef4444;
+      --error-light: #fee2e2;
+      --info: #3b82f6;
+      --info-light: #dbeafe;
+
+      --amber-100: #fef3c7;
+      --amber-800: #92400e;
+
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --surface-secondary: #f1f5f9;
+      --border: #e2e8f0;
+      --foreground: #0f172a;
+      --muted-foreground: #64748b;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+
+      --radius-sm: 0.25rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      --radius-full: 9999px;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      --shadow-sheet: 0 -10px 25px -5px rgba(0, 0, 0, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: #0f172a;
+      color: var(--foreground);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    /* Top Dev/Designer Controls */
+    .toolbar {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid #334155;
+      padding: 10px 16px;
+      border-radius: var(--radius-full);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 24px;
+      max-width: 95vw;
+      overflow-x: auto;
+      z-index: 50;
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 4px;
+    }
+
+    .btn-toggle {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid transparent;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .btn-toggle:hover {
+      background: #475569;
+    }
+
+    .btn-toggle.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Device Mockup Canvas */
+    .device-frame {
+      width: 100%;
+      max-width: 412px;
+      height: 844px;
+      background: var(--background);
+      border-radius: 40px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 10px #1e293b, 0 0 0 12px #334155;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-700);
+      background: var(--surface);
+      z-index: 20;
+    }
+
+    /* App Header */
+    .app-header {
+      background: var(--surface);
+      padding: 12px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand-group h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      background: var(--slate-100);
+      color: var(--slate-600);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-top: 2px;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      background: #e0e7ff;
+      color: #3730a3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      border: 2px solid white;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Offline Alert Banner */
+    .offline-banner {
+      background: #fef2f2;
+      border-bottom: 1px solid #fee2e2;
+      color: #991b1b;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .offline-banner svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Scrollable App Body */
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Balance Hero Card */
+    .hero-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      border-radius: var(--radius-xl);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-label {
+      font-size: 12px;
+      color: var(--slate-400);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 500;
+    }
+
+    .hero-balance {
+      font-size: 30px;
+      font-weight: 700;
+      margin: 8px 0 16px;
+      letter-spacing: -0.03em;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-title {
+      font-size: 11px;
+      color: var(--slate-400);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    .stat-val-income {
+      font-size: 14px;
+      font-weight: 600;
+      color: #34d399;
+    }
+
+    .stat-val-expense {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f87171;
+    }
+
+    /* Section Headers */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--slate-800);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .section-link {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    /* Accounts Horizontal Scroll */
+    .accounts-scroller {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin: 0 -4px;
+      scrollbar-width: none;
+    }
+
+    .accounts-scroller::-webkit-scrollbar {
+      display: none;
+    }
+
+    .account-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      min-width: 140px;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .account-chip-name {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      font-weight: 500;
+    }
+
+    .account-chip-balance {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-top: 4px;
+    }
+
+    /* Transactions List */
+    .card-list {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tx-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--slate-100);
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+
+    .tx-item:last-child {
+      border-bottom: none;
+    }
+
+    .tx-item:hover {
+      background: var(--slate-50);
+    }
+
+    .tx-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tx-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .icon-expense {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .icon-income {
+      background: #d1fae5;
+      color: #059669;
+    }
+
+    .icon-transfer {
+      background: #e0e7ff;
+      color: #4338ca;
+    }
+
+    .tx-details h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--slate-900);
+      line-height: 1.2;
+    }
+
+    .tx-sub {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-top: 3px;
+    }
+
+    .tx-amount {
+      text-align: right;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .tx-amount.neg {
+      color: var(--slate-900);
+    }
+
+    .tx-amount.pos {
+      color: var(--success);
+    }
+
+    /* Empty State Component */
+    .empty-state-card {
+      background: var(--surface);
+      border: 1.5px dashed var(--slate-300);
+      border-radius: var(--radius-xl);
+      padding: 36px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .empty-illustration {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-full);
+      background: var(--slate-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--slate-500);
+    }
+
+    .empty-state-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--slate-800);
+    }
+
+    .empty-state-card p {
+      font-size: 13px;
+      color: var(--muted-foreground);
+      max-width: 240px;
+      line-height: 1.4;
+    }
+
+    /* Floating Action Trigger */
+    .fab-bottom {
+      padding: 12px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .btn-hero {
+      width: 100%;
+      height: 48px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-lg);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      transition: background 0.15s ease;
+    }
+
+    .btn-hero:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Bottom Sheet Overlay & Modal */
+    .sheet-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .sheet-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .bottom-sheet {
+      background: var(--surface);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      box-shadow: var(--shadow-sheet);
+      max-height: 90%;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .sheet-backdrop.visible .bottom-sheet {
+      transform: translateY(0);
+    }
+
+    .sheet-handle-bar {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding-top: 10px;
+      padding-bottom: 4px;
+      cursor: grab;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--slate-300);
+      border-radius: var(--radius-full);
+    }
+
+    .sheet-header {
+      padding: 10px 20px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sheet-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--slate-900);
+    }
+
+    .btn-close-sheet {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-full);
+      color: var(--slate-500);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .btn-close-sheet:hover {
+      background: var(--slate-100);
+      color: var(--slate-800);
+    }
+
+    .sheet-scroll-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Tab Switcher: Manual | Ketik | Scan */
+    .tabs-segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background: var(--slate-100);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      gap: 4px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted-foreground);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 38px;
+    }
+
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--slate-900);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* OCR Progress / Scanning State */
+    .ocr-loader-box {
+      background: var(--slate-50);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ocr-status-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-700);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-bar-bg {
+      height: 6px;
+      background: var(--slate-200);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 65%;
+      border-radius: var(--radius-full);
+      transition: width 0.3s ease;
+    }
+
+    /* Receipt Thumbnail Box with Privacy Note */
+    .receipt-preview-row {
+      display: flex;
+      gap: 12px;
+      background: var(--slate-50);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 10px 12px;
+      align-items: center;
+    }
+
+    .receipt-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      background: #e2e8f0;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .receipt-info {
+      flex: 1;
+    }
+
+    .receipt-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-800);
+    }
+
+    .receipt-privacy-note {
+      font-size: 11px;
+      color: var(--muted-foreground);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Error Banner inside Form */
+    .form-error-banner {
+      background: var(--error-light);
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #991b1b;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .btn-retry {
+      background: #b91c1c;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Form Fields */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-700);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    /* Amber / Low Confidence Badge (WCAG AA Compliant 5.9:1) */
+    .badge-amber-check {
+      background: var(--amber-100);
+      color: var(--amber-800);
+      border: 1px solid #fde68a;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* Hero Amount Input */
+    .amount-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .amount-input-wrap span {
+      position: absolute;
+      left: 14px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--slate-400);
+      pointer-events: none;
+    }
+
+    .input-hero-amount {
+      width: 100%;
+      height: 56px;
+      padding-left: 50px;
+      padding-right: 14px;
+      font-size: 24px;
+      font-weight: 700;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      color: var(--slate-900);
+      outline: none;
+      font-family: inherit;
+      transition: border 0.15s ease;
+    }
+
+    .input-hero-amount:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Amber Highlight State */
+    .field-amber .input-hero-amount,
+    .field-amber select,
+    .field-amber input {
+      border-color: var(--warning) !important;
+      background: #fffbeb !important;
+    }
+
+    /* Transaction Type Toggle Pills */
+    .type-pill-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .type-pill {
+      height: 40px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+    }
+
+    .type-pill.active {
+      background: var(--slate-900);
+      border-color: var(--slate-900);
+      color: white;
+    }
+
+    /* Select Inputs & Text Inputs */
+    .input-standard {
+      height: 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0 12px;
+      font-size: 14px;
+      color: var(--slate-900);
+      background: var(--surface);
+      outline: none;
+      font-family: inherit;
+    }
+
+    .input-standard:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .sheet-footer {
+      padding: 16px 20px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    /* Annotation Legend Card */
+    .ux-notes-panel {
+      max-width: 412px;
+      width: 100%;
+      margin-top: 20px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      color: #cbd5e1;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .ux-notes-panel h4 {
+      font-size: 13px;
+      color: #f8fafc;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ux-notes-panel ul {
+      padding-left: 18px;
+    }
+
+    .ux-notes-panel li {
+      margin-bottom: 4px;
+    }
+
+    .pill-code {
+      background: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls for UX Review -->
+  <div class="toolbar">
+    <span class="toolbar-title">UX State:</span>
+    <button class="btn-toggle active" id="btnPopulated" onclick="setState('populated')">1. Dashboard Normal</button>
+    <button class="btn-toggle" id="btnEmpty" onclick="setState('empty')">2. First Login (Empty)</button>
+    <button class="btn-toggle" id="btnDraftOcr" onclick="openSheet('ocr')">3. OCR Draft (Amber Check)</button>
+    <button class="btn-toggle" id="btnOcrLoading" onclick="openSheet('loading')">4. OCR Loading</button>
+    <button class="btn-toggle" id="btnFormError" onclick="openSheet('error')">5. Form Save Error</button>
+    <button class="btn-toggle" id="btnOffline" onclick="toggleOffline()">Offline: OFF</button>
+  </div>
+
+  <!-- Mobile Frame -->
+  <div class="device-frame">
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>09:41</span>
+      <span>5G · 100%</span>
+    </div>
+
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="brand-group">
+        <h1>Catat <span class="brand-badge">COREBOY</span></h1>
+        <div class="brand-sub">Uangmu, terkendali.</div>
+      </div>
+      <div class="user-avatar" title="Akun Pengguna">
+        <span>QB</span>
+      </div>
+    </header>
+
+    <!-- Offline Notification Banner (Sticky under header) -->
+    <div class="offline-banner" id="offlineBanner" style="display: none;">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m-3.536-3.536a5 5 0 000-7.072m-4.95 4.95l10.607-10.607M3 3l18 18" />
+      </svg>
+      <span>Mode offline — data disimpan di perangkat & disinkronkan otomatis.</span>
+    </div>
+
+    <!-- Scrollable Body Content -->
+    <main class="app-content" id="appContent">
+
+      <!-- Balance Card -->
+      <section class="hero-card">
+        <div class="hero-label">Total Saldo Bersih</div>
+        <div class="hero-balance" id="heroTotalBalance">Rp 8.450.000</div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-title">↓ Pemasukan Bulan Ini</span>
+            <span class="stat-val-income" id="heroIncome">Rp 12.000.000</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-title">↑ Pengeluaran Bulan Ini</span>
+            <span class="stat-val-expense" id="heroExpense">Rp 3.550.000</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Accounts Section -->
+      <div class="section-header">
+        <span class="section-title">Kantong Akun</span>
+        <a class="section-link" onclick="alert('Kelola Akun: Tambah, edit, atau arsipkan.')">Kelola</a>
+      </div>
+
+      <div class="accounts-scroller" id="accountsScroller">
+        <div class="account-chip">
+          <div class="account-chip-name">Tunai (Dompet)</div>
+          <div class="account-chip-balance">Rp 450.000</div>
+        </div>
+        <div class="account-chip">
+          <div class="account-chip-name">Rekening Utama (BCA)</div>
+          <div class="account-chip-balance">Rp 7.200.000</div>
+        </div>
+        <div class="account-chip">
+          <div class="account-chip-name">GoPay / e-Wallet</div>
+          <div class="account-chip-balance">Rp 800.000</div>
+        </div>
+      </div>
+
+      <!-- Transactions Section -->
+      <div class="section-header">
+        <span class="section-title">Aktivitas Terakhir</span>
+        <a class="section-link" id="viewAllLink" onclick="alert('Buka riwayat lengkap transaksi.')">Semua</a>
+      </div>
+
+      <!-- Populated Transaction List -->
+      <div class="card-list" id="txPopulatedList">
+        <div class="tx-item" onclick="openSheet('manual')">
+          <div class="tx-left">
+            <div class="tx-icon icon-expense">☕</div>
+            <div class="tx-details">
+              <h4>Kopi & Sarapan</h4>
+              <div class="tx-sub">Hari ini · Tunai · Makanan</div>
+            </div>
+          </div>
+          <div class="tx-amount neg">-Rp 35.000</div>
+        </div>
+
+        <div class="tx-item" onclick="openSheet('manual')">
+          <div class="tx-left">
+            <div class="tx-icon icon-expense">🛒</div>
+            <div class="tx-details">
+              <h4>Belanja Mingguan Supermarket</h4>
+              <div class="tx-sub">Kemarin · BCA · Kebutuhan</div>
+            </div>
+          </div>
+          <div class="tx-amount neg">-Rp 420.000</div>
+        </div>
+
+        <div class="tx-item" onclick="openSheet('manual')">
+          <div class="tx-left">
+            <div class="tx-icon icon-income">💼</div>
+            <div class="tx-details">
+              <h4>Gaji Bulanan</h4>
+              <div class="tx-sub">1 Okt · BCA · Gaji</div>
+            </div>
+          </div>
+          <div class="tx-amount pos">+Rp 12.000.000</div>
+        </div>
+
+        <div class="tx-item" onclick="openSheet('manual')">
+          <div class="tx-left">
+            <div class="tx-icon icon-transfer">⇆</div>
+            <div class="tx-details">
+              <h4>Top Up GoPay</h4>
+              <div class="tx-sub">29 Sep · BCA ➔ GoPay</div>
+            </div>
+          </div>
+          <div class="tx-amount neg">Rp 500.000</div>
+        </div>
+      </div>
+
+      <!-- Empty State Card (Default First Login) -->
+      <div class="empty-state-card" id="txEmptyCard" style="display: none;">
+        <div class="empty-illustration">📝</div>
+        <h3>Belum Ada Transaksi</h3>
+        <p>Akun Tunai & Rekening Utama siap digunakan. Catat pengeluaran pertamamu!</p>
+        <button class="btn-hero" style="width: auto; padding: 0 20px; height: 42px; font-size: 13px;" onclick="openSheet('manual')">
+          + Catat Transaksi Pertama
+        </button>
+      </div>
+
+    </main>
+
+    <!-- Floating Action Button at Bottom -->
+    <div class="fab-bottom">
+      <button class="btn-hero" onclick="openSheet('manual')">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Catat Transaksi</span>
+      </button>
+    </div>
+
+    <!-- Interactive Bottom Sheet Modal -->
+    <div class="sheet-backdrop" id="sheetBackdrop" onclick="handleBackdropClick(event)">
+      <div class="bottom-sheet" id="bottomSheet" onclick="event.stopPropagation()">
+        
+        <div class="sheet-handle-bar">
+          <div class="sheet-handle"></div>
+        </div>
+
+        <div class="sheet-header">
+          <h3 id="sheetTitle">Catat Transaksi</h3>
+          <button class="btn-close-sheet" onclick="closeSheet()" aria-label="Tutup form">✕</button>
+        </div>
+
+        <div class="sheet-scroll-body">
+
+          <!-- 1. Mode Switcher -->
+          <div class="tabs-segmented">
+            <button class="tab-btn active" id="tabManual" onclick="switchTab('manual')">Manual</button>
+            <button class="tab-btn" id="tabKetik" onclick="switchTab('ketik')">Ketik</button>
+            <button class="tab-btn" id="tabScan" onclick="switchTab('scan')">Scan</button>
+          </div>
+
+          <!-- Error Alert Banner in Sheet -->
+          <div class="form-error-banner" id="sheetErrorBanner" style="display: none;">
+            <span>Gagal menyimpan transaksi. Periksa koneksi Firestore.</span>
+            <button class="btn-retry" onclick="retrySave()">Coba Lagi</button>
+          </div>
+
+          <!-- OCR Loading State -->
+          <div class="ocr-loader-box" id="ocrLoaderBox" style="display: none;">
+            <div class="ocr-status-text">
+              <span>Mengunduh modul OCR...</span>
+              <span>65%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill"></div>
+            </div>
+            <div style="font-size: 11px; color: var(--muted-foreground); text-align: center;">
+              Proses membaca teks struk di perangkat lokal.
+            </div>
+          </div>
+
+          <!-- OCR Struk Thumbnail & Privacy Badge -->
+          <div class="receipt-preview-row" id="receiptPreviewRow" style="display: none;">
+            <div class="receipt-thumb" onclick="alert('Buka dialog zoom/pan struk')" title="Tap untuk perbesar">🧾</div>
+            <div class="receipt-info">
+              <div class="receipt-title">Struk_Indomaret_0910.jpg</div>
+              <div class="receipt-privacy-note">
+                <svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 2a1 1 0 00-.707.293l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h10a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7A1 1 0 0010 2z" clip-rule="evenodd" />
+                </svg>
+                Foto diproses di perangkatmu, tidak diunggah.
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Hero Nominal Field -->
+          <div class="form-group" id="groupAmount">
+            <div class="form-label-row">
+              <label class="form-label">Nominal (Rupiah)</label>
+              <span class="badge-amber-check" id="badgeAmount" style="display: none;">
+                ⚠️ Perlu dicek
+              </span>
+            </div>
+            <div class="amount-input-wrap">
+              <span>Rp</span>
+              <input type="text" class="input-hero-amount" id="inputAmount" value="84.500" oninput="dismissBadge('badgeAmount', 'groupAmount')">
+            </div>
+          </div>
+
+          <!-- 3. Type Pills -->
+          <div class="form-group">
+            <label class="form-label">Jenis Transaksi</label>
+            <div class="type-pill-group">
+              <button type="button" class="type-pill active-expense" id="pillExpense" onclick="setType('expense')">Pengeluaran</button>
+              <button type="button" class="type-pill" id="pillIncome" onclick="setType('income')">Pemasukan</button>
+              <button type="button" class="type-pill" id="pillTransfer" onclick="setType('transfer')">Transfer</button>
+            </div>
+          </div>
+
+          <!-- 4. Source Account & Target Account -->
+          <div class="form-group">
+            <label class="form-label" id="labelFromAccount">Dari Akun</label>
+            <select class="input-standard" id="selectFromAccount" onchange="updateTransferToOptions()">
+              <option value="cash">Tunai (Dompet) · Rp 450.000</option>
+              <option value="bca" selected>Rekening Utama (BCA) · Rp 7.200.000</option>
+              <option value="gopay">GoPay / e-Wallet · Rp 800.000</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="groupToAccount" style="display: none;">
+            <label class="form-label">Ke Akun Tujuan</label>
+            <select class="input-standard" id="selectToAccount">
+              <!-- Auto-filtered to not include fromAccount -->
+            </select>
+          </div>
+
+          <!-- 5. Category (Hidden during Transfer) -->
+          <div class="form-group" id="groupCategory">
+            <div class="form-label-row">
+              <label class="form-label">Kategori</label>
+              <span class="badge-amber-check" id="badgeCategory" style="display: none;">
+                ⚠️ Perlu dicek
+              </span>
+            </div>
+            <select class="input-standard" id="selectCategory" onchange="dismissBadge('badgeCategory', 'groupCategory')">
+              <option value="makanan">Makanan & Minuman</option>
+              <option value="belanja" selected>Belanja & Kebutuhan</option>
+              <option value="transport">Transportasi</option>
+              <option value="tagihan">Tagihan & Utilitas</option>
+              <option value="hiburan">Hiburan & Rekreasi</option>
+              <option value="kesehatan">Kesehatan</option>
+              <option value="lainnya">Lain-lain</option>
+            </select>
+          </div>
+
+          <!-- 6. Date & Note -->
+          <div class="form-group">
+            <label class="form-label">Tanggal</label>
+            <input type="date" class="input-standard" id="inputDate" value="2026-10-16">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Catatan (Opsional)</label>
+            <input type="text" class="input-standard" id="inputNote" placeholder="Contoh: Belanja deterjen & snack" value="Indomaret Teuku Umar">
+          </div>
+
+        </div>
+
+        <!-- Sticky Footer CTA -->
+        <div class="sheet-footer">
+          <button class="btn-hero" id="btnSubmitForm" onclick="submitForm()">
+            Simpan Transaksi
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Design & UX Compliance Documentation Panel -->
+  <div class="ux-notes-panel">
+    <h4>📐 Spesifikasi & Keputusan Desain Teruji:</h4>
+    <ul>
+      <li><strong>Thumb-Zone Hero CTA:</strong> Tombol utama <span class="pill-code">48px</span> berada di bagian bawah untuk jangkauan satu tangan yang ergonomis.</li>
+      <li><strong>Amber Contrast WCAG AA:</strong> Badge <span class="pill-code">#92400e</span> di atas <span class="pill-code">#fef3c7</span> menghasilkan rasio kontras <strong>5.9:1</strong> (lolos batas 4.5:1).</li>
+      <li><strong>Privacy Microcopy:</strong> <em>"Foto diproses di perangkatmu, tidak diunggah"</em> transparan dan membina kepercayaan.</li>
+      <li><strong>Zero Roadblock:</strong> Batal scan langsung terminasi worker tanpa dialog konfirmasi yang mengganggu.</li>
+      <li><strong>Auto-dismiss Badge:</strong> Peringatan "Perlu dicek" otomatis hilang saat pengguna menyentuh/mengubah nilai field.</li>
+      <li><strong>Transfer Filtering:</strong> Akun pengirim otomatis disaring dari daftar akun tujuan untuk mencegah transaksi intra-akun ilegal.</li>
+    </ul>
+  </div>
+
+  <script>
+    let isOffline = false;
+    let currentType = 'expense';
+
+    function setState(state) {
+      document.getElementById('btnPopulated').classList.toggle('active', state === 'populated');
+      document.getElementById('btnEmpty').classList.toggle('active', state === 'empty');
+
+      const isPop = state === 'populated';
+      document.getElementById('txPopulatedList').style.display = isPop ? 'block' : 'none';
+      document.getElementById('txEmptyCard').style.display = isPop ? 'none' : 'flex';
+      document.getElementById('viewAllLink').style.display = isPop ? 'block' : 'none';
+
+      if (!isPop) {
+        document.getElementById('heroTotalBalance').innerText = 'Rp 1.000.000';
+        document.getElementById('heroIncome').innerText = 'Rp 0';
+        document.getElementById('heroExpense').innerText = 'Rp 0';
+        document.getElementById('accountsScroller').innerHTML = `
+          <div class="account-chip">
+            <div class="account-chip-name">Tunai (Dompet)</div>
+            <div class="account-chip-balance">Rp 200.000</div>
+          </div>
+          <div class="account-chip">
+            <div class="account-chip-name">Rekening Utama</div>
+            <div class="account-chip-balance">Rp 800.000</div>
+          </div>
+        `;
+      } else {
+        document.getElementById('heroTotalBalance').innerText = 'Rp 8.450.000';
+        document.getElementById('heroIncome').innerText = 'Rp 12.000.000';
+        document.getElementById('heroExpense').innerText = 'Rp 3.550.000';
+        document.getElementById('accountsScroller').innerHTML = `
+          <div class="account-chip">
+            <div class="account-chip-name">Tunai (Dompet)</div>
+            <div class="account-chip-balance">Rp 450.000</div>
+          </div>
+          <div class="account-chip">
+            <div class="account-chip-name">Rekening Utama (BCA)</div>
+            <div class="account-chip-balance">Rp 7.200.000</div>
+          </div>
+          <div class="account-chip">
+            <div class="account-chip-name">GoPay / e-Wallet</div>
+            <div class="account-chip-balance">Rp 800.000</div>
+          </div>
+        `;
+      }
+    }
+
+    function toggleOffline() {
+      isOffline = !isOffline;
+      const banner = document.getElementById('offlineBanner');
+      const btn = document.getElementById('btnOffline');
+      banner.style.display = isOffline ? 'flex' : 'none';
+      btn.innerText = isOffline ? 'Offline: ON' : 'Offline: OFF';
+      btn.classList.toggle('active', isOffline);
+    }
+
+    function openSheet(mode) {
+      const backdrop = document.getElementById('sheetBackdrop');
+      backdrop.classList.add('visible');
+
+      // Reset components
+      document.getElementById('sheetErrorBanner').style.display = 'none';
+      document.getElementById('ocrLoaderBox').style.display = 'none';
+      document.getElementById('receiptPreviewRow').style.display = 'none';
+      document.getElementById('badgeAmount').style.display = 'none';
+      document.getElementById('badgeCategory').style.display = 'none';
+      document.getElementById('groupAmount').classList.remove('field-amber');
+      document.getElementById('groupCategory').classList.remove('field-amber');
+
+      switchTab(mode === 'ocr' || mode === 'loading' ? 'scan' : 'manual');
+
+      if (mode === 'ocr') {
+        document.getElementById('receiptPreviewRow').style.display = 'flex';
+        document.getElementById('badgeAmount').style.display = 'inline-flex';
+        document.getElementById('badgeCategory').style.display = 'inline-flex';
+        document.getElementById('groupAmount').classList.add('field-amber');
+        document.getElementById('groupCategory').classList.add('field-amber');
+        document.getElementById('inputAmount').value = '84.500';
+        document.getElementById('inputNote').value = 'Indomaret - Kasir 2';
+      } else if (mode === 'loading') {
+        document.getElementById('ocrLoaderBox').style.display = 'flex';
+      } else if (mode === 'error') {
+        document.getElementById('sheetErrorBanner').style.display = 'flex';
+      }
+    }
+
+    function closeSheet() {
+      const backdrop = document.getElementById('sheetBackdrop');
+      backdrop.classList.remove('visible');
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target.id === 'sheetBackdrop') {
+        closeSheet();
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabManual').classList.toggle('active', tab === 'manual');
+      document.getElementById('tabKetik').classList.toggle('active', tab === 'ketik');
+      document.getElementById('tabScan').classList.toggle('active', tab === 'scan');
+
+      if (tab === 'ketik') {
+        alert('Fitur Ketik (P1a Local Parser): Input kalimat bebas seperti "Beli nasi padang 25rb pakai gopay" akan otomatis diparsing.');
+      }
+    }
+
+    function setType(type) {
+      currentType = type;
+      const pExp = document.getElementById('pillExpense');
+      const pInc = document.getElementById('pillIncome');
+      const pTrf = document.getElementById('pillTransfer');
+
+      pExp.className = 'type-pill' + (type === 'expense' ? ' active' : '');
+      pInc.className = 'type-pill' + (type === 'income' ? ' active' : '');
+      pTrf.className = 'type-pill' + (type === 'transfer' ? ' active' : '');
+
+      const isTrf = type === 'transfer';
+      document.getElementById('groupToAccount').style.display = isTrf ? 'flex' : 'none';
+      document.getElementById('groupCategory').style.display = isTrf ? 'none' : 'flex';
+      document.getElementById('labelFromAccount').innerText = isTrf ? 'Dari Akun Asal' : 'Akun';
+
+      if (isTrf) {
+        updateTransferToOptions();
+      }
+    }
+
+    function updateTransferToOptions() {
+      const fromVal = document.getElementById('selectFromAccount').value;
+      const toSelect = document.getElementById('selectToAccount');
+      
+      const allAccounts = [
+        { id: 'cash', label: 'Tunai (Dompet)' },
+        { id: 'bca', label: 'Rekening Utama (BCA)' },
+        { id: 'gopay', label: 'GoPay / e-Wallet' }
+      ];
+
+      toSelect.innerHTML = '';
+      allAccounts.forEach(acc => {
+        if (acc.id !== fromVal) {
+          const opt = document.createElement('option');
+          opt.value = acc.id;
+          opt.innerText = acc.label;
+          toSelect.appendChild(opt);
+        }
+      });
+    }
+
+    function dismissBadge(badgeId, groupId) {
+      const badge = document.getElementById(badgeId);
+      const group = document.getElementById(groupId);
+      if (badge) badge.style.display = 'none';
+      if (group) group.classList.remove('field-amber');
+    }
+
+    function retrySave() {
+      document.getElementById('sheetErrorBanner').style.display = 'none';
+      alert('Mencoba menyimpan kembali transaksi...');
+      closeSheet();
+    }
+
+    function submitForm() {
+      closeSheet();
+      alert('Transaksi berhasil disimpan ke Firestore (atau cache lokal jika offline)!');
+    }
+
+    // Initialize defaults
+    updateTransferToOptions();
+  </script>
+</body>
+</html>
