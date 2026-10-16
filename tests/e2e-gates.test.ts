@@ -15,6 +15,9 @@ import { exportTransactionsCSV, escapeCsvField } from '../src/lib/exportTransact
 import { evaluateMathExpression } from '../src/lib/mathEvaluator';
 import { calculateNetCashflow } from '../src/lib/cashflow';
 import { transactionSchema, type Transaction, type Account } from '../src/lib/schemas';
+import { auditColorPairs, getContrastRatio } from '../src/lib/contrastChecker';
+import * as fs from 'fs';
+import * as path from 'path';
 
 let testUid: string;
 
@@ -640,5 +643,61 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     // Ensure document is deleted
     const txSnap = await getDoc(doc(db, 'users', testUid, 'transactions', trf.id));
     expect(txSnap.exists()).toBe(false);
+  });
+
+  it('Gate 12: Visual Contrast & Token Audit — WCAG AA compliance (>=4.5:1 text, >=3:1 UI), 44px touch targets, zero raw hex', () => {
+    // 1. Light Mode Tokens WCAG AA Audit
+    const lightAudit = auditColorPairs([
+      { label: 'Light: Text Primary on Surface Card', fg: '#0f172a', bg: '#ffffff' },
+      { label: 'Light: Text Primary on Surface Base', fg: '#0f172a', bg: '#f8fafc' },
+      { label: 'Light: Text Muted on Surface Card', fg: '#64748b', bg: '#ffffff' },
+      { label: 'Light: Button Text on Accent Primary', fg: '#ffffff', bg: '#4f46e5' },
+      { label: 'Light: Success Text on Surface Card', fg: '#047857', bg: '#ffffff' },
+      { label: 'Light: Warning Text on Surface Card', fg: '#b45309', bg: '#ffffff' },
+      { label: 'Light: Error Text on Surface Card', fg: '#be123c', bg: '#ffffff' },
+    ]);
+    expect(lightAudit.passed).toBe(true);
+    for (const r of lightAudit.results) {
+      expect(r.ratio).toBeGreaterThanOrEqual(4.5);
+    }
+
+    // 2. Dark Mode Tokens WCAG AA Audit
+    const darkAudit = auditColorPairs([
+      { label: 'Dark: Text Primary on Surface Card', fg: '#f9fafb', bg: '#111827' },
+      { label: 'Dark: Text Primary on Surface Base', fg: '#f9fafb', bg: '#0b0f19' },
+      { label: 'Dark: Text Muted on Surface Card', fg: '#94a3b8', bg: '#111827' },
+      { label: 'Dark: Success Text on Surface Card', fg: '#10b981', bg: '#111827' },
+      { label: 'Dark: Warning Text on Surface Card', fg: '#f59e0b', bg: '#111827' },
+      { label: 'Dark: Error Text on Surface Card', fg: '#f43f5e', bg: '#111827' },
+      { label: 'Dark: Button UI Accent on Surface Card', fg: '#6366f1', bg: '#111827', isLargeText: true },
+    ]);
+    expect(darkAudit.passed).toBe(true);
+
+    // 3. Hero Card Contrast (Dark Gradient Background: #0f172a / #1e293b)
+    const heroSurplusRatio1 = getContrastRatio('#34d399', '#0f172a');
+    const heroSurplusRatio2 = getContrastRatio('#34d399', '#1e293b');
+    const heroDeficitRatio1 = getContrastRatio('#f87171', '#0f172a');
+    const heroDeficitRatio2 = getContrastRatio('#f87171', '#1e293b');
+    const heroBalanceRatio = getContrastRatio('#ffffff', '#0f172a');
+
+    expect(heroSurplusRatio1).toBeGreaterThanOrEqual(4.5);
+    expect(heroSurplusRatio2).toBeGreaterThanOrEqual(4.5);
+    expect(heroDeficitRatio1).toBeGreaterThanOrEqual(4.5);
+    expect(heroDeficitRatio2).toBeGreaterThanOrEqual(4.5);
+    expect(heroBalanceRatio).toBeGreaterThanOrEqual(4.5);
+
+    // 4. CSS File Audit: src/styles/components.css
+    const componentsCssPath = path.resolve(process.cwd(), 'src/styles/components.css');
+    const componentsCss = fs.readFileSync(componentsCssPath, 'utf8');
+
+    // Strip comments to check for raw hardcoded hex in rules
+    const strippedCss = componentsCss.replace(/\/\*[\s\S]*?\*\//g, '');
+    const hexMatches = strippedCss.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
+    expect(hexMatches.length).toBe(0);
+
+    // Check minimum touch target of 44px in components
+    expect(componentsCss.includes('min-height: 44px') || componentsCss.includes('height: 44px')).toBe(true);
+    expect(componentsCss.includes('.pill-type-btn.active')).toBe(true);
+    expect(componentsCss.includes('var(--accent-primary)')).toBe(true);
   });
 });
