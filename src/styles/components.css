@@ -269,6 +269,97 @@
   color: #f87171;
 }
 
+/* Native Confirmation Dialog */
+.delete-dialog {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--foreground);
+  max-width: 400px;
+  width: calc(100% - 32px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+  margin: auto;
+}
+
+.delete-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.delete-dialog-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.delete-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.delete-dialog-desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.delete-dialog-desc strong {
+  color: var(--foreground);
+}
+
+.delete-dialog-warning {
+  font-size: 13px;
+  background: var(--amber-100);
+  color: var(--amber-800);
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.4;
+}
+
+.delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.btn-dialog-cancel {
+  min-height: 44px;
+  min-width: 80px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-dialog-delete {
+  min-height: 44px;
+  min-width: 80px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--error);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-dialog-delete:disabled,
+.btn-dialog-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Section Header */
 .section-header {
   display: flex;

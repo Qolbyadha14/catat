@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import type { Transaction } from '../../lib/schemas';
 import { useAccounts } from '../accounts/useAccounts';
@@ -56,6 +56,8 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [duplicateData, setDuplicateData] = useState<DuplicateFormValues | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
 
   const handleDuplicate = (tx: Transaction) => {
     const dup = prepareTransactionDuplicate(tx, accounts, categories);
@@ -155,11 +157,22 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     setFilterCriteria(DEFAULT_FILTER_CRITERIA);
   };
 
-  const handleDelete = async (txId: string) => {
-    if (!window.confirm('Hapus transaksi ini?')) return;
+  const openDeleteModal = (tx: Transaction) => {
+    setTxToDelete(tx);
+    deleteDialogRef.current?.showModal();
+  };
+
+  const closeDeleteModal = () => {
+    deleteDialogRef.current?.close();
+    setTxToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!txToDelete) return;
     try {
-      setDeletingId(txId);
-      await deleteTransaction(user.uid, txId);
+      setDeletingId(txToDelete.id);
+      await deleteTransaction(user.uid, txToDelete.id);
+      closeDeleteModal();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Gagal menghapus');
     } finally {
@@ -411,7 +424,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                           type="button"
                           className="btn-tx-delete"
                           disabled={deletingId === tx.id}
-                          onClick={() => handleDelete(tx.id)}
+                          onClick={() => openDeleteModal(tx)}
                         >
                           {deletingId === tx.id ? '...' : 'Hapus'}
                         </button>
@@ -480,6 +493,56 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         accounts={accounts}
         categories={categories}
       />
+
+      {/* Native Delete Confirmation Dialog */}
+      <dialog
+        ref={deleteDialogRef}
+        className="delete-dialog"
+        onCancel={closeDeleteModal}
+        onClick={(e) => {
+          if (e.target === deleteDialogRef.current) {
+            closeDeleteModal();
+          }
+        }}
+      >
+        {txToDelete && (
+          <div className="delete-dialog-content">
+            <h3 className="delete-dialog-title">Konfirmasi Hapus</h3>
+            <p className="delete-dialog-desc">
+              Hapus transaksi{' '}
+              <strong>{formatIdr(txToDelete.amount)}</strong> (
+              {txToDelete.type === 'transfer'
+                ? `${accountMap.get(txToDelete.fromAccountId)?.name ?? 'Akun'} ➔ ${accountMap.get(txToDelete.toAccountId)?.name ?? 'Akun'}`
+                : (categoryMap.get(txToDelete.categoryId)?.name ?? 'Kategori')}
+              , {formatDate(txToDelete.date)})?
+            </p>
+            {txToDelete.type === 'transfer' && (
+              <div className="delete-dialog-warning">
+                ⚠️ Transaksi transfer: kedua sisi transfer (rekening asal dan tujuan) akan ikut terhapus secara atomik dan saldo masing-masing dikembalikan.
+              </div>
+            )}
+            <div className="delete-dialog-actions">
+              <button
+                type="button"
+                className="btn-dialog-cancel"
+                onClick={closeDeleteModal}
+                disabled={deletingId !== null}
+                autoFocus
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="btn-dialog-delete"
+                onClick={handleConfirmDelete}
+                disabled={deletingId !== null}
+              >
+                {deletingId !== null ? 'Menghapus...' : 'Hapus'}
+              </button>
+            </div>
+          </div>
+        )}
+      </dialog>
     </div>
   );
 }
