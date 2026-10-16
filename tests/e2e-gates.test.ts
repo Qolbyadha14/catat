@@ -11,7 +11,8 @@ import {
 import { updateAccount } from '../src/features/accounts/accountService';
 import { canArchiveAccount } from '../src/lib/canArchiveAccount';
 import { isNameUnique } from '../src/lib/manageValidation';
-import { transactionSchema, type Transaction, type Account, type Category } from '../src/lib/schemas';
+import { exportTransactionsCSV, escapeCsvField } from '../src/lib/exportTransactionsCSV';
+import { transactionSchema, type Transaction, type Account } from '../src/lib/schemas';
 
 let testUid: string;
 
@@ -433,5 +434,104 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     // 7. History label resolution: Even though 'acc_bank' is archived, full map resolves name
     const accountsMap = new Map(allAccounts.map((a) => [a.id, a.name]));
     expect(accountsMap.get('acc_bank')).toBe('Rekening Utama'); // Resolved from seed default
+  });
+
+  it('Gate 8: P0.5 CSV Export — BOM header, RFC 4180 escaping, text formula sanitization, and archived label resolution', () => {
+    const mockAccounts = [
+      { id: 'acc_cash', name: 'Dompet Tunai', isArchived: false },
+      { id: 'acc_bank', name: 'BCA Prioritas', isArchived: true },
+    ];
+
+    const mockCategories = [
+      { id: 'cat_food', name: 'Makan & Minum', isArchived: false },
+      { id: 'cat_sub', name: 'Langganan Cloud', isArchived: true },
+    ];
+
+    const testTxs: Transaction[] = [
+      {
+        id: 'tx_inj1',
+        type: 'expense',
+        amount: 50000,
+        accountId: 'acc_cash',
+        categoryId: 'cat_food',
+        note: '=SUM(A1:A10)', // Formula injection test: =
+        date: new Date('2026-10-16T10:00:00Z').getTime(),
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: 'tx_inj2',
+        type: 'income',
+        amount: 2500000,
+        accountId: 'acc_bank', // Archived account
+        categoryId: 'cat_sub',  // Archived category
+        note: '+cmd|"/C calc"!A0', // Formula injection test: +
+        date: new Date('2026-10-15T09:30:00Z').getTime(),
+        createdAt: 2,
+        updatedAt: 2,
+      },
+      {
+        id: 'tx_escape',
+        type: 'expense',
+        amount: 15000,
+        accountId: 'acc_cash',
+        categoryId: 'cat_food',
+        note: 'Kopi "Gayo", Aceh\nDingin', // RFC 4180 quotes, comma, newline
+        date: new Date('2026-10-14T08:00:00Z').getTime(),
+        createdAt: 3,
+        updatedAt: 3,
+      },
+      {
+        id: 'tx_transfer',
+        type: 'transfer',
+        amount: 100000,
+        fromAccountId: 'acc_bank', // Archived from
+        toAccountId: 'acc_cash',
+        note: '@mention transfer note', // Formula injection test: @
+        date: new Date('2026-10-13T12:00:00Z').getTime(),
+        createdAt: 4,
+        updatedAt: 4,
+      },
+    ];
+
+    const csv = exportTransactionsCSV(testTxs, mockAccounts, mockCategories);
+
+    // 1. BOM header (\uFEFF) present for Excel UTF-8 compatibility
+    expect(csv.startsWith('\uFEFF')).toBe(true);
+
+    // 2. CSV standard headers
+    const lines = csv.replace('\uFEFF', '').trim().split('\r\n');
+    expect(lines[0]).toBe('tanggal,tipe,jumlah,akun,kategori,catatan');
+    expect(lines.length).toBe(5); // Header + 4 rows
+
+    // 3. Formula injection sanitization prefix (') on text columns only
+    // Row 1: '=SUM(A1:A10)' -> "'=SUM(A1:A10)"
+    expect(lines[1]).toContain("'=SUM(A1:A10)");
+    // Row 2: '+cmd|...' -> "'+cmd|..."
+    expect(lines[2]).toContain("'+cmd");
+    // Row 4: '@mention...' -> "'@mention..."
+    expect(lines[4]).toContain("'@mention");
+
+    // 4. Raw numeric amount (not prefixed with ' even if positive/negative)
+    expect(lines[1]).toContain(',50000,');
+    expect(lines[2]).toContain(',2500000,');
+    expect(lines[3]).toContain(',15000,');
+    expect(lines[4]).toContain(',100000,');
+
+    // 5. RFC 4180 escaping: double quotes, commas, newlines wrapped
+    expect(lines[3]).toContain('"Kopi ""Gayo"", Aceh\nDingin"');
+
+    // 6. Archived label resolution: '(Arsip)' appended to archived account/category
+    expect(lines[2]).toContain('BCA Prioritas (Arsip)');
+    expect(lines[2]).toContain('Langganan Cloud (Arsip)');
+
+    // 7. Transfer formatting: "From -> To" and category "Transfer"
+    expect(lines[4]).toContain('BCA Prioritas (Arsip) → Dompet Tunai,Transfer');
+
+    // 8. Single field escape helper safety checks
+    expect(escapeCsvField('=cmd', true)).toBe("'=cmd");
+    expect(escapeCsvField('-123', true)).toBe("'-123");
+    expect(escapeCsvField(-123, false)).toBe('-123'); // raw number untouched
+    expect(escapeCsvField(45000, false)).toBe('45000');
   });
 });
