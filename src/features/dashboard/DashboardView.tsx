@@ -7,11 +7,14 @@ import { useTransactions } from '../transactions/useTransactions';
 import { deleteTransaction } from '../transactions/transactionService';
 import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
+import { isInRange, getPresetRange, type PresetRange } from '../../lib/dateRange';
 
 interface DashboardViewProps {
   user: User;
   onSignOut: () => Promise<void>;
 }
+
+type DateFilterMode = 'all' | PresetRange | 'custom';
 
 export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const { accounts, loading: accLoading } = useAccounts(user.uid);
@@ -25,6 +28,12 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [keyword, setKeyword] = useState<string>('');
+  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('all');
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
+  const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
+  const [tempFrom, setTempFrom] = useState('');
+  const [tempTo, setTempTo] = useState('');
+
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -56,7 +65,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     return map;
   }, [accounts]);
 
-  // Totals calculation
+  // Totals calculation (hero saldo stays invariant to date/other filters)
   const totalBalance = useMemo(() => {
     return accounts.reduce((acc, a) => acc + a.balance, 0);
   }, [accounts]);
@@ -85,6 +94,19 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     return categories;
   }, [categories, filterType]);
 
+  const activeDateRange = useMemo(() => {
+    if (dateFilterMode === 'all') return null;
+    if (dateFilterMode === 'custom') return customRange;
+    return getPresetRange(dateFilterMode);
+  }, [dateFilterMode, customRange]);
+
+  const isFiltered =
+    filterType !== 'all' ||
+    selectedAccountId !== 'all' ||
+    selectedCategoryId !== 'all' ||
+    keyword.trim() !== '' ||
+    dateFilterMode !== 'all';
+
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -109,9 +131,19 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         const catMatch = catName?.includes(q);
         if (!noteMatch && !catMatch) return false;
       }
+      if (!isInRange(tx.date, activeDateRange)) return false;
       return true;
     });
-  }, [transactions, filterType, selectedAccountId, selectedCategoryId, keyword, categoryMap]);
+  }, [transactions, filterType, selectedAccountId, selectedCategoryId, keyword, categoryMap, activeDateRange]);
+
+  const handleResetFilters = () => {
+    setFilterType('all');
+    setSelectedAccountId('all');
+    setSelectedCategoryId('all');
+    setKeyword('');
+    setDateFilterMode('all');
+    setCustomRange(null);
+  };
 
   const handleDelete = async (txId: string) => {
     if (!window.confirm('Hapus transaksi ini?')) return;
@@ -204,13 +236,57 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
+
+            {/* Date Range Chips */}
+            <div className="date-range-chips">
+              <button
+                type="button"
+                className={`date-chip ${dateFilterMode === 'all' ? 'active' : ''}`}
+                onClick={() => setDateFilterMode('all')}
+              >
+                Semua
+              </button>
+              <button
+                type="button"
+                className={`date-chip ${dateFilterMode === 'this_month' ? 'active' : ''}`}
+                onClick={() => setDateFilterMode('this_month')}
+              >
+                Bulan Ini
+              </button>
+              <button
+                type="button"
+                className={`date-chip ${dateFilterMode === '7d' ? 'active' : ''}`}
+                onClick={() => setDateFilterMode('7d')}
+              >
+                7 Hari
+              </button>
+              <button
+                type="button"
+                className={`date-chip ${dateFilterMode === '30d' ? 'active' : ''}`}
+                onClick={() => setDateFilterMode('30d')}
+              >
+                30 Hari
+              </button>
+              <button
+                type="button"
+                className={`date-chip ${dateFilterMode === 'custom' ? 'active' : ''}`}
+                onClick={() => {
+                  setTempFrom(customRange?.from ?? '');
+                  setTempTo(customRange?.to ?? '');
+                  setIsCustomPickerOpen(true);
+                }}
+              >
+                {dateFilterMode === 'custom' && customRange ? `${customRange.from} – ${customRange.to}` : 'Kustom'}
+              </button>
+            </div>
+
             <div className="type-filter-pills">
               <button
                 type="button"
                 className={`type-filter-btn ${filterType === 'all' ? 'active' : ''}`}
                 onClick={() => setFilterType('all')}
               >
-                Semua
+                Semua Tipe
               </button>
               <button
                 type="button"
@@ -272,22 +348,38 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               Memuat data transaksi...
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div className="empty-state-card">
-              <div className="empty-illustration">📝</div>
-              <h3>Belum ada transaksi</h3>
-              <p>Mulai catat transaksi pertamamu untuk melacak pemasukan dan pengeluaran.</p>
-              <button
-                type="button"
-                className="btn-hero"
-                style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
-                onClick={() => {
-                  setEditingTx(null);
-                  setIsSheetOpen(true);
-                }}
-              >
-                + Catat Transaksi Pertama
-              </button>
-            </div>
+            isFiltered ? (
+              <div className="empty-state-card">
+                <div className="empty-illustration">🔍</div>
+                <h3>Tidak ada transaksi pada periode ini</h3>
+                <p>Coba sesuaikan kata kunci, kategori, akun, atau rentang tanggal filter.</p>
+                <button
+                  type="button"
+                  className="btn-hero"
+                  style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
+                  onClick={handleResetFilters}
+                >
+                  Reset Filter
+                </button>
+              </div>
+            ) : (
+              <div className="empty-state-card">
+                <div className="empty-illustration">📝</div>
+                <h3>Belum ada transaksi</h3>
+                <p>Mulai catat transaksi pertamamu untuk melacak pemasukan dan pengeluaran.</p>
+                <button
+                  type="button"
+                  className="btn-hero"
+                  style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
+                  onClick={() => {
+                    setEditingTx(null);
+                    setIsSheetOpen(true);
+                  }}
+                >
+                  + Catat Transaksi Pertama
+                </button>
+              </div>
+            )
           ) : (
             <div className="card-list">
               {filteredTransactions.map((tx) => {
@@ -378,6 +470,75 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           + Catat Transaksi
         </button>
       </div>
+
+      {/* Custom Date Range Picker Bottom Sheet */}
+      {isCustomPickerOpen && (
+        <div className="sheet-backdrop" onClick={() => setIsCustomPickerOpen(false)}>
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-handle-bar">
+              <div className="sheet-handle" />
+            </div>
+
+            <div className="sheet-header">
+              <h3>Pilih Rentang Tanggal</h3>
+              <button
+                type="button"
+                className="btn-close-sheet"
+                onClick={() => setIsCustomPickerOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              className="transaction-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!tempFrom || !tempTo || tempFrom > tempTo) return;
+                setCustomRange({ from: tempFrom, to: tempTo });
+                setDateFilterMode('custom');
+                setIsCustomPickerOpen(false);
+              }}
+            >
+              <div className="form-group">
+                <label className="form-label">Dari Tanggal</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={tempFrom}
+                  onChange={(e) => setTempFrom(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Sampai Tanggal</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={tempTo}
+                  onChange={(e) => setTempTo(e.target.value)}
+                  required
+                />
+              </div>
+
+              {tempFrom && tempTo && tempFrom > tempTo && (
+                <div style={{ color: 'var(--error)', fontSize: 13, marginBottom: 8 }}>
+                  Tanggal mulai tidak boleh melebihi tanggal akhir
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn-hero"
+                disabled={!tempFrom || !tempTo || tempFrom > tempTo}
+              >
+                Terapkan
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Sheet Form */}
       {isSheetOpen && (
