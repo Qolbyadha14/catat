@@ -356,5 +356,24 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     // AND filter non-matching -> 0 items (triggers empty state)
     const resEmpty = runFilter('income', 'acc_cash', 'all', 'nonexistent');
     expect(resEmpty.length).toBe(0);
+
+    // Gate P0.1 Regression: switch type must reset category filter
+    // If categoryId stays 'cat_food' (expense) when switching to 'income' -> 0 results (stale category trap)
+    const staleCategoryResult = runFilter('income', 'all', 'cat_food', '');
+    expect(staleCategoryResult.length).toBe(0);
+
+    // After reset categoryId to 'all' on type switch -> returns expected income
+    const resetCategoryResult = runFilter('income', 'all', 'all', '');
+    expect(resetCategoryResult.length).toBe(1);
+    expect(resetCategoryResult[0]?.id).toBe('tx3');
+
+    // Switch to transfer with stale category -> 0 results (transfers have no category)
+    const staleTransferResult = runFilter('transfer', 'all', 'cat_food', '');
+    expect(staleTransferResult.length).toBe(0);
+
+    // Switch to transfer with reset category -> returns transfer
+    const resetTransferResult = runFilter('transfer', 'all', 'all', '');
+    expect(resetTransferResult.length).toBe(1);
+    expect(resetTransferResult[0]?.id).toBe('tx4');
   });
 });
