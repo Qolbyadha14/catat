@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "emulators": "export PATH=\"/opt/homebrew/opt/openjdk@25/bin:$PATH\" && firebase emulators:start --only auth,firestore",
     "preview": "vite preview"
   },
   "dependencies": {
