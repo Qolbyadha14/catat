@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { User } from 'firebase/auth';
+import type { Transaction } from '../../lib/schemas';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { useTransactions } from '../transactions/useTransactions';
@@ -21,8 +22,11 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [keyword, setKeyword] = useState<string>('');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,10 +79,29 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     return { monthIncome: income, monthExpense: expense };
   }, [transactions, startOfMonth]);
 
+  const availableFilterCategories = useMemo(() => {
+    if (filterType === 'expense') return categories.filter((c) => c.type === 'expense');
+    if (filterType === 'income') return categories.filter((c) => c.type === 'income');
+    return categories;
+  }, [categories, filterType]);
+
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
       if (filterType !== 'all' && tx.type !== filterType) return false;
+      if (selectedAccountId !== 'all') {
+        if (tx.type === 'transfer') {
+          if (tx.fromAccountId !== selectedAccountId && tx.toAccountId !== selectedAccountId) {
+            return false;
+          }
+        } else if (tx.accountId !== selectedAccountId) {
+          return false;
+        }
+      }
+      if (selectedCategoryId !== 'all') {
+        if (tx.type === 'transfer') return false;
+        if (tx.categoryId !== selectedCategoryId) return false;
+      }
       if (keyword.trim()) {
         const q = keyword.toLowerCase();
         const noteMatch = tx.note?.toLowerCase().includes(q);
@@ -88,7 +111,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       }
       return true;
     });
-  }, [transactions, filterType, keyword, categoryMap]);
+  }, [transactions, filterType, selectedAccountId, selectedCategoryId, keyword, categoryMap]);
 
   const handleDelete = async (txId: string) => {
     if (!window.confirm('Hapus transaksi ini?')) return;
@@ -211,6 +234,36 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                 Transfer
               </button>
             </div>
+            <div className="filter-dropdowns-row">
+              <select
+                className="form-select filter-select"
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+              >
+                <option value="all">Semua Akun</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+
+              {filterType !== 'transfer' && (
+                <select
+                  className="form-select filter-select"
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                >
+                  <option value="all">Semua Kategori</option>
+                  {availableFilterCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon ? `${cat.icon} ` : ''}
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           {/* List or Empty State */}
@@ -227,7 +280,10 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                 type="button"
                 className="btn-hero"
                 style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
-                onClick={() => setIsSheetOpen(true)}
+                onClick={() => {
+                  setEditingTx(null);
+                  setIsSheetOpen(true);
+                }}
               >
                 + Catat Transaksi Pertama
               </button>
@@ -280,14 +336,26 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                         {isIncome ? '+' : isExpense ? '-' : ''}
                         {formatIdr(tx.amount)}
                       </span>
-                      <button
-                        type="button"
-                        className="btn-tx-delete"
-                        disabled={deletingId === tx.id}
-                        onClick={() => handleDelete(tx.id)}
-                      >
-                        {deletingId === tx.id ? '...' : 'Hapus'}
-                      </button>
+                      <div className="tx-actions">
+                        <button
+                          type="button"
+                          className="btn-tx-edit"
+                          onClick={() => {
+                            setEditingTx(tx);
+                            setIsSheetOpen(true);
+                          }}
+                        >
+                          Ubah
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-tx-delete"
+                          disabled={deletingId === tx.id}
+                          onClick={() => handleDelete(tx.id)}
+                        >
+                          {deletingId === tx.id ? '...' : 'Hapus'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -299,19 +367,33 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
       {/* Floating Bottom Action */}
       <div className="fab-bottom">
-        <button type="button" className="btn-hero" onClick={() => setIsSheetOpen(true)}>
+        <button
+          type="button"
+          className="btn-hero"
+          onClick={() => {
+            setEditingTx(null);
+            setIsSheetOpen(true);
+          }}
+        >
           + Catat Transaksi
         </button>
       </div>
 
       {/* Bottom Sheet Form */}
-      <TransactionFormSheet
-        uid={user.uid}
-        isOpen={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-        accounts={accounts}
-        categories={categories}
-      />
+      {isSheetOpen && (
+        <TransactionFormSheet
+          key={editingTx?.id ?? 'new'}
+          uid={user.uid}
+          isOpen={isSheetOpen}
+          onClose={() => {
+            setIsSheetOpen(false);
+            setEditingTx(null);
+          }}
+          accounts={accounts}
+          categories={categories}
+          initialTx={editingTx}
+        />
+      )}
     </div>
   );
 }

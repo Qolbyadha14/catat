@@ -1,7 +1,7 @@
 import { useState, useId, type FormEvent } from 'react';
-import type { Account, Category } from '../../lib/schemas';
+import type { Account, Category, Transaction } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
-import { createTransaction } from './transactionService';
+import { createTransaction, updateTransaction } from './transactionService';
 
 interface TransactionFormSheetProps {
   uid: string;
@@ -9,6 +9,7 @@ interface TransactionFormSheetProps {
   onClose: () => void;
   accounts: Account[];
   categories: Category[];
+  initialTx?: Transaction | null;
   initialDraft?: TransactionDraft;
   onSuccess?: () => void;
 }
@@ -19,16 +20,37 @@ export function TransactionFormSheet({
   onClose,
   accounts,
   categories,
+  initialTx,
   onSuccess,
 }: TransactionFormSheetProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>('manual');
-  const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
-  const [rawAmount, setRawAmount] = useState<string>('');
-  const [accountId, setAccountId] = useState<string>(accounts[0]?.id ?? '');
-  const [toAccountId, setToAccountId] = useState<string>(accounts[1]?.id ?? '');
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [dateStr, setDateStr] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [note, setNote] = useState<string>('');
+  const [type, setType] = useState<'expense' | 'income' | 'transfer'>(
+    initialTx?.type ?? 'expense'
+  );
+  const [rawAmount, setRawAmount] = useState<string>(
+    initialTx ? String(initialTx.amount) : ''
+  );
+  const [accountId, setAccountId] = useState<string>(
+    initialTx
+      ? initialTx.type === 'transfer'
+        ? initialTx.fromAccountId
+        : initialTx.accountId
+      : accounts[0]?.id ?? ''
+  );
+  const [toAccountId, setToAccountId] = useState<string>(
+    initialTx && initialTx.type === 'transfer'
+      ? initialTx.toAccountId
+      : accounts[1]?.id ?? ''
+  );
+  const [categoryId, setCategoryId] = useState<string>(
+    initialTx && initialTx.type !== 'transfer' ? initialTx.categoryId : ''
+  );
+  const [dateStr, setDateStr] = useState<string>(() =>
+    initialTx
+      ? new Date(initialTx.date).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10)
+  );
+  const [note, setNote] = useState<string>(initialTx?.note ?? '');
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +60,8 @@ export function TransactionFormSheet({
   if (!isOpen) return null;
 
   const filteredCategories = categories.filter((c) => c.type === type);
-  const currentCategoryId = categoryId || filteredCategories[0]?.id || '';
+  const isCategoryValid = filteredCategories.some((c) => c.id === categoryId);
+  const currentCategoryId = isCategoryValid ? categoryId : filteredCategories[0]?.id || '';
   const currentAccountId = accountId || accounts[0]?.id || '';
 
   // Transfer: exclude fromAccountId from toAccountId choices
@@ -82,27 +105,37 @@ export function TransactionFormSheet({
           setError('Pilih akun tujuan transfer yang berbeda');
           return;
         }
-        await createTransaction(uid, {
-          type: 'transfer',
+        const payload = {
+          type: 'transfer' as const,
           amount: amountNum,
           fromAccountId: currentAccountId,
           toAccountId: currentToAccountId,
           date: epochDate,
           note: note.trim(),
-        });
+        };
+        if (initialTx) {
+          await updateTransaction(uid, initialTx.id, payload);
+        } else {
+          await createTransaction(uid, payload);
+        }
       } else {
         if (!currentCategoryId) {
           setError('Pilih kategori transaksi');
           return;
         }
-        await createTransaction(uid, {
+        const payload = {
           type,
           amount: amountNum,
           accountId: currentAccountId,
           categoryId: currentCategoryId,
           date: epochDate,
           note: note.trim(),
-        });
+        };
+        if (initialTx) {
+          await updateTransaction(uid, initialTx.id, payload);
+        } else {
+          await createTransaction(uid, payload);
+        }
       }
 
       // Reset
@@ -126,7 +159,7 @@ export function TransactionFormSheet({
         </div>
 
         <div className="sheet-header">
-          <h3>Catat Transaksi</h3>
+          <h3>{initialTx ? 'Ubah Transaksi' : 'Catat Transaksi'}</h3>
           <button type="button" className="btn-close-sheet" onClick={onClose}>
             ✕
           </button>
@@ -323,7 +356,7 @@ export function TransactionFormSheet({
             style={{ marginTop: 12, marginBottom: 8 }}
             disabled={saving}
           >
-            {saving ? 'Menyimpan...' : 'Simpan Transaksi'}
+            {saving ? 'Menyimpan...' : initialTx ? 'Simpan Perubahan' : 'Simpan Transaksi'}
           </button>
         </form>
       </div>

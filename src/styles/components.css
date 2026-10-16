@@ -256,6 +256,18 @@
   color: white;
 }
 
+.filter-dropdowns-row {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-select {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 10px;
+  min-height: 34px;
+}
+
 /* Card List */
 .card-list {
   background: var(--card);
@@ -333,6 +345,22 @@
   color: var(--accent);
 }
 
+.tx-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-tx-edit {
+  font-size: 11px;
+  color: var(--slate-600);
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  min-height: 20px;
+  cursor: pointer;
+}
+
 .btn-tx-delete {
   font-size: 11px;
   color: var(--error);
@@ -340,6 +368,7 @@
   border: none;
   padding: 2px 4px;
   min-height: 20px;
+  cursor: pointer;
 }
 
 /* Empty State */

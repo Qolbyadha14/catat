@@ -123,3 +123,71 @@ export async function deleteTransaction(
     txn.delete(txRef);
   });
 }
+
+export async function updateTransaction(
+  uid: string,
+  txId: string,
+  input: CreateTransactionInput
+): Promise<Transaction> {
+  return runTransaction(db, async (txn) => {
+    const txRef = doc(db, 'users', uid, 'transactions', txId);
+    const txSnap = await txn.get(txRef);
+
+    if (!txSnap.exists()) {
+      throw new Error('Transaksi tidak ditemukan');
+    }
+
+    const oldTx = transactionSchema.parse(txSnap.data());
+
+    // Balance deltas map: accountId -> delta (positive adds to balance, negative deducts)
+    const deltas = new Map<string, number>();
+    const addDelta = (accId: string, delta: number) => {
+      deltas.set(accId, (deltas.get(accId) ?? 0) + delta);
+    };
+
+    // 1. Revert old transaction effects
+    if (oldTx.type === 'transfer') {
+      addDelta(oldTx.fromAccountId, oldTx.amount);
+      addDelta(oldTx.toAccountId, -oldTx.amount);
+    } else {
+      const revertDelta = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
+      addDelta(oldTx.accountId, revertDelta);
+    }
+
+    // 2. Apply new transaction effects
+    if (input.type === 'transfer') {
+      addDelta(input.fromAccountId, -input.amount);
+      addDelta(input.toAccountId, input.amount);
+    } else {
+      const applyDelta = input.type === 'income' ? input.amount : -input.amount;
+      addDelta(input.accountId, applyDelta);
+    }
+
+    // 3. Read all affected accounts (reads MUST precede writes in Firestore transaction)
+    const affectedAccountIds = Array.from(deltas.keys());
+    const accountRefs = affectedAccountIds.map((id) => doc(db, 'users', uid, 'accounts', id));
+    const accountSnaps = await Promise.all(accountRefs.map((ref) => txn.get(ref)));
+
+    accountSnaps.forEach((snap, idx) => {
+      const ref = accountRefs[idx];
+      const accId = affectedAccountIds[idx];
+      if (!snap.exists() || !ref || !accId) {
+        throw new Error('Akun transaksi tidak ditemukan');
+      }
+      const currentBal = (snap.data()['balance'] as number) ?? 0;
+      const delta = deltas.get(accId) ?? 0;
+      txn.update(ref, { balance: currentBal + delta });
+    });
+
+    const now = Date.now();
+    const validated = transactionSchema.parse({
+      ...input,
+      id: txId,
+      createdAt: oldTx.createdAt,
+      updatedAt: now,
+    });
+
+    txn.set(txRef, validated);
+    return validated;
+  });
+}
