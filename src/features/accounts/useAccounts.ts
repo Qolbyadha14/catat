@@ -3,17 +3,13 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { accountSchema, type Account } from '../../lib/schemas';
 
-export function useAccounts(uid: string | undefined) {
+export function useAccounts(uid: string) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!uid) {
-      setAccounts([]);
-      setLoading(false);
-      return;
-    }
+    if (!uid) return;
 
     const q = query(
       collection(db, 'users', uid, 'accounts'),

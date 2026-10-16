@@ -3,17 +3,13 @@ import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestor
 import { db } from '../../lib/firebase';
 import { transactionSchema, type Transaction } from '../../lib/schemas';
 
-export function useTransactions(uid: string | undefined, maxItems: number = 50) {
+export function useTransactions(uid: string, maxItems: number = 50) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!uid) {
-      setTransactions([]);
-      setLoading(false);
-      return;
-    }
+    if (!uid) return;
 
     const q = query(
       collection(db, 'users', uid, 'transactions'),

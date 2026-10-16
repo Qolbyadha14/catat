@@ -3,17 +3,13 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { categorySchema, type Category } from '../../lib/schemas';
 
-export function useCategories(uid: string | undefined) {
+export function useCategories(uid: string) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!uid) {
-      setCategories([]);
-      setLoading(false);
-      return;
-    }
+    if (!uid) return;
 
     const q = query(
       collection(db, 'users', uid, 'categories'),
