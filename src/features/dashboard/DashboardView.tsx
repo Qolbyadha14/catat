@@ -27,6 +27,11 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+
+  const pickType = (type: 'all' | 'expense' | 'income' | 'transfer') => {
+    setFilterType(type);
+    setSelectedCategoryId('all');
+  };
   const [keyword, setKeyword] = useState<string>('');
   const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('all');
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
@@ -242,6 +247,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               <button
                 type="button"
                 className={`date-chip ${dateFilterMode === 'all' ? 'active' : ''}`}
+                aria-pressed={dateFilterMode === 'all'}
                 onClick={() => setDateFilterMode('all')}
               >
                 Semua
@@ -249,6 +255,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               <button
                 type="button"
                 className={`date-chip ${dateFilterMode === 'this_month' ? 'active' : ''}`}
+                aria-pressed={dateFilterMode === 'this_month'}
                 onClick={() => setDateFilterMode('this_month')}
               >
                 Bulan Ini
@@ -256,6 +263,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               <button
                 type="button"
                 className={`date-chip ${dateFilterMode === '7d' ? 'active' : ''}`}
+                aria-pressed={dateFilterMode === '7d'}
                 onClick={() => setDateFilterMode('7d')}
               >
                 7 Hari
@@ -263,6 +271,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               <button
                 type="button"
                 className={`date-chip ${dateFilterMode === '30d' ? 'active' : ''}`}
+                aria-pressed={dateFilterMode === '30d'}
                 onClick={() => setDateFilterMode('30d')}
               >
                 30 Hari
@@ -270,6 +279,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               <button
                 type="button"
                 className={`date-chip ${dateFilterMode === 'custom' ? 'active' : ''}`}
+                aria-pressed={dateFilterMode === 'custom'}
                 onClick={() => {
                   setTempFrom(customRange?.from ?? '');
                   setTempTo(customRange?.to ?? '');
@@ -284,28 +294,32 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
               <button
                 type="button"
                 className={`type-filter-btn ${filterType === 'all' ? 'active' : ''}`}
-                onClick={() => setFilterType('all')}
+                aria-pressed={filterType === 'all'}
+                onClick={() => pickType('all')}
               >
                 Semua Tipe
               </button>
               <button
                 type="button"
                 className={`type-filter-btn ${filterType === 'expense' ? 'active' : ''}`}
-                onClick={() => setFilterType('expense')}
+                aria-pressed={filterType === 'expense'}
+                onClick={() => pickType('expense')}
               >
                 Pengeluaran
               </button>
               <button
                 type="button"
                 className={`type-filter-btn ${filterType === 'income' ? 'active' : ''}`}
-                onClick={() => setFilterType('income')}
+                aria-pressed={filterType === 'income'}
+                onClick={() => pickType('income')}
               >
                 Pemasukan
               </button>
               <button
                 type="button"
                 className={`type-filter-btn ${filterType === 'transfer' ? 'active' : ''}`}
-                onClick={() => setFilterType('transfer')}
+                aria-pressed={filterType === 'transfer'}
+                onClick={() => pickType('transfer')}
               >
                 Transfer
               </button>
