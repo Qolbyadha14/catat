@@ -41,6 +41,10 @@ function assert(condition: boolean, msg: string) {
 
   const pMonth = getPresetRange('this_month', ref);
   assert(pMonth.from === new Date(2026, 9, 1, 0, 0, 0).getTime(), 'this_month from must be 1st of month');
+
+  const pLastMonth = getPresetRange('last_month', ref);
+  assert(pLastMonth.from === new Date(2026, 8, 1, 0, 0, 0).getTime(), 'last_month from must be 1st of previous month (1 Sep)');
+  assert(pLastMonth.to === new Date(2026, 8, 30, 0, 0, 0).getTime(), 'last_month to must be last day of previous month (30 Sep)');
 }
 
 // 5. Null or empty range returns true (no filter)

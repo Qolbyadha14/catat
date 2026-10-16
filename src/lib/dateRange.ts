@@ -37,7 +37,7 @@ export function isInRange(date: number, range?: DateRange | null): boolean {
   return date >= start && date < end;
 }
 
-export type PresetRange = '7d' | '30d' | 'this_month';
+export type PresetRange = '7d' | '30d' | 'this_month' | 'last_month';
 
 export function getPresetRange(preset: PresetRange, now: Date = new Date()): DateRange {
   const today = new Date(now);
@@ -58,6 +58,12 @@ export function getPresetRange(preset: PresetRange, now: Date = new Date()): Dat
   if (preset === 'this_month') {
     const from = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
     return { from: from.getTime(), to: today.getTime() };
+  }
+
+  if (preset === 'last_month') {
+    const from = new Date(today.getFullYear(), today.getMonth() - 1, 1, 0, 0, 0, 0);
+    const to = new Date(today.getFullYear(), today.getMonth(), 0, 0, 0, 0, 0);
+    return { from: from.getTime(), to: to.getTime() };
   }
 
   throw new Error(`Unknown preset: ${String(preset)}`);

@@ -6,17 +6,21 @@ import { useCategories } from '../categories/useCategories';
 import { useTransactions } from '../transactions/useTransactions';
 import { deleteTransaction } from '../transactions/transactionService';
 import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
+import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
 import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
-import { isInRange, getPresetRange, type PresetRange } from '../../lib/dateRange';
 import { useTheme, type ThemeMode } from '../../lib/theme';
+import {
+  filterTransactions,
+  countActiveFilters,
+  DEFAULT_FILTER_CRITERIA,
+  type FilterCriteria,
+} from '../../lib/transactionFilter';
 
 interface DashboardViewProps {
   user: User;
   onSignOut: () => Promise<void>;
 }
-
-type DateFilterMode = 'all' | PresetRange | 'custom';
 
 export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const { theme, setTheme } = useTheme();
@@ -27,20 +31,19 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
-  const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
 
-  const pickType = (type: 'all' | 'expense' | 'income' | 'transfer') => {
-    setFilterType(type);
-    setSelectedCategoryId('all');
-  };
-  const [keyword, setKeyword] = useState<string>('');
-  const [dateFilterMode, setDateFilterMode] = useState<DateFilterMode>('all');
-  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
-  const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
-  const [tempFrom, setTempFrom] = useState('');
-  const [tempTo, setTempTo] = useState('');
+  // Search & Filter state
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(DEFAULT_FILTER_CRITERIA);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState<boolean>(false);
+
+  // Debounce search input 200ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilterCriteria((prev) => ({ ...prev, keyword: searchInput }));
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isManageOpen, setIsManageOpen] = useState(false);
@@ -65,19 +68,21 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
   // Category map for quick lookup
   const categoryMap = useMemo(() => {
-    const map = new Map<string, { name: string; icon?: string }>();
-    categories.forEach((c) => map.set(c.id, { name: c.name, icon: c.icon }));
+    const map = new Map<string, { name: string; icon?: string; isArchived?: boolean }>();
+    categories.forEach((c) =>
+      map.set(c.id, { name: c.name, icon: c.icon, isArchived: c.isArchived })
+    );
     return map;
   }, [categories]);
 
   // Account map for quick lookup
   const accountMap = useMemo(() => {
-    const map = new Map<string, string>();
-    accounts.forEach((a) => map.set(a.id, a.name));
+    const map = new Map<string, { name: string; isArchived?: boolean }>();
+    accounts.forEach((a) => map.set(a.id, { name: a.name, isArchived: a.isArchived }));
     return map;
   }, [accounts]);
 
-  // Totals calculation (hero saldo stays invariant to date/other filters)
+  // Totals calculation (hero saldo stays invariant to filters)
   const totalBalance = useMemo(() => {
     return activeAccounts.reduce((acc, a) => acc + a.balance, 0);
   }, [activeAccounts]);
@@ -100,61 +105,21 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     return { monthIncome: income, monthExpense: expense };
   }, [transactions, startOfMonth]);
 
-  const availableFilterCategories = useMemo(() => {
-    if (filterType === 'expense') return activeCategories.filter((c) => c.type === 'expense');
-    if (filterType === 'income') return activeCategories.filter((c) => c.type === 'income');
-    return activeCategories;
-  }, [activeCategories, filterType]);
+  const activeFilterCount = useMemo(
+    () => countActiveFilters(filterCriteria),
+    [filterCriteria]
+  );
 
-  const activeDateRange = useMemo(() => {
-    if (dateFilterMode === 'all') return null;
-    if (dateFilterMode === 'custom') return customRange;
-    return getPresetRange(dateFilterMode);
-  }, [dateFilterMode, customRange]);
-
-  const isFiltered =
-    filterType !== 'all' ||
-    selectedAccountId !== 'all' ||
-    selectedCategoryId !== 'all' ||
-    keyword.trim() !== '' ||
-    dateFilterMode !== 'all';
+  const isFiltered = activeFilterCount > 0 || searchInput.trim() !== '';
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (filterType !== 'all' && tx.type !== filterType) return false;
-      if (selectedAccountId !== 'all') {
-        if (tx.type === 'transfer') {
-          if (tx.fromAccountId !== selectedAccountId && tx.toAccountId !== selectedAccountId) {
-            return false;
-          }
-        } else if (tx.accountId !== selectedAccountId) {
-          return false;
-        }
-      }
-      if (selectedCategoryId !== 'all') {
-        if (tx.type === 'transfer') return false;
-        if (tx.categoryId !== selectedCategoryId) return false;
-      }
-      if (keyword.trim()) {
-        const q = keyword.toLowerCase();
-        const noteMatch = tx.note?.toLowerCase().includes(q);
-        const catName = tx.type !== 'transfer' ? categoryMap.get(tx.categoryId)?.name.toLowerCase() : '';
-        const catMatch = catName?.includes(q);
-        if (!noteMatch && !catMatch) return false;
-      }
-      if (!isInRange(tx.date, activeDateRange)) return false;
-      return true;
-    });
-  }, [transactions, filterType, selectedAccountId, selectedCategoryId, keyword, categoryMap, activeDateRange]);
+    return filterTransactions(transactions, filterCriteria, accountMap, categoryMap);
+  }, [transactions, filterCriteria, accountMap, categoryMap]);
 
   const handleResetFilters = () => {
-    setFilterType('all');
-    setSelectedAccountId('all');
-    setSelectedCategoryId('all');
-    setKeyword('');
-    setDateFilterMode('all');
-    setCustomRange(null);
+    setSearchInput('');
+    setFilterCriteria(DEFAULT_FILTER_CRITERIA);
   };
 
   const handleDelete = async (txId: string) => {
@@ -265,125 +230,41 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           </div>
 
           <div className="filters-bar">
-            <input
-              type="text"
-              placeholder="Cari transaksi atau catatan..."
-              className="search-input"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-
-            {/* Date Range Chips */}
-            <div className="date-range-chips">
+            <div className="search-filter-row">
+              <div className="search-input-wrap">
+                <input
+                  type="search"
+                  placeholder="Cari catatan..."
+                  className="search-input"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  aria-label="Cari catatan"
+                />
+              </div>
               <button
                 type="button"
-                className={`date-chip ${dateFilterMode === 'all' ? 'active' : ''}`}
-                aria-pressed={dateFilterMode === 'all'}
-                onClick={() => setDateFilterMode('all')}
+                className={`btn-filter-trigger ${activeFilterCount > 0 ? 'has-active' : ''}`}
+                onClick={() => setIsFilterSheetOpen(true)}
+                aria-label="Filter transaksi"
+                title="Buka filter transaksi"
               >
-                Semua
-              </button>
-              <button
-                type="button"
-                className={`date-chip ${dateFilterMode === 'this_month' ? 'active' : ''}`}
-                aria-pressed={dateFilterMode === 'this_month'}
-                onClick={() => setDateFilterMode('this_month')}
-              >
-                Bulan Ini
-              </button>
-              <button
-                type="button"
-                className={`date-chip ${dateFilterMode === '7d' ? 'active' : ''}`}
-                aria-pressed={dateFilterMode === '7d'}
-                onClick={() => setDateFilterMode('7d')}
-              >
-                7 Hari
-              </button>
-              <button
-                type="button"
-                className={`date-chip ${dateFilterMode === '30d' ? 'active' : ''}`}
-                aria-pressed={dateFilterMode === '30d'}
-                onClick={() => setDateFilterMode('30d')}
-              >
-                30 Hari
-              </button>
-              <button
-                type="button"
-                className={`date-chip ${dateFilterMode === 'custom' ? 'active' : ''}`}
-                aria-pressed={dateFilterMode === 'custom'}
-                onClick={() => {
-                  setTempFrom(customRange?.from ?? '');
-                  setTempTo(customRange?.to ?? '');
-                  setIsCustomPickerOpen(true);
-                }}
-              >
-                {dateFilterMode === 'custom' && customRange ? `${customRange.from} – ${customRange.to}` : 'Kustom'}
-              </button>
-            </div>
-
-            <div className="type-filter-pills">
-              <button
-                type="button"
-                className={`type-filter-btn ${filterType === 'all' ? 'active' : ''}`}
-                aria-pressed={filterType === 'all'}
-                onClick={() => pickType('all')}
-              >
-                Semua Tipe
-              </button>
-              <button
-                type="button"
-                className={`type-filter-btn ${filterType === 'expense' ? 'active' : ''}`}
-                aria-pressed={filterType === 'expense'}
-                onClick={() => pickType('expense')}
-              >
-                Pengeluaran
-              </button>
-              <button
-                type="button"
-                className={`type-filter-btn ${filterType === 'income' ? 'active' : ''}`}
-                aria-pressed={filterType === 'income'}
-                onClick={() => pickType('income')}
-              >
-                Pemasukan
-              </button>
-              <button
-                type="button"
-                className={`type-filter-btn ${filterType === 'transfer' ? 'active' : ''}`}
-                aria-pressed={filterType === 'transfer'}
-                onClick={() => pickType('transfer')}
-              >
-                Transfer
-              </button>
-            </div>
-            <div className="filter-dropdowns-row">
-              <select
-                className="form-select filter-select"
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-              >
-                <option value="all">Semua Akun</option>
-                {activeAccounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.name}
-                  </option>
-                ))}
-              </select>
-
-              {filterType !== 'transfer' && (
-                <select
-                  className="form-select filter-select"
-                  value={selectedCategoryId}
-                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
                 >
-                  <option value="all">Semua Kategori</option>
-                  {availableFilterCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.icon ? `${cat.icon} ` : ''}
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              )}
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+                {activeFilterCount > 0 && (
+                  <span className="filter-badge-counter">{activeFilterCount}</span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -395,16 +276,15 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           ) : filteredTransactions.length === 0 ? (
             isFiltered ? (
               <div className="empty-state-card">
-                <div className="empty-illustration">🔍</div>
-                <h3>Tidak ada transaksi pada periode ini</h3>
-                <p>Coba sesuaikan kata kunci, kategori, akun, atau rentang tanggal filter.</p>
+                <div className="empty-illustration" style={{ opacity: 0.5 }}>🔍</div>
+                <h3>Tidak ada transaksi cocok</h3>
+                <p>Coba sesuaikan kata kunci atau atur ulang filter pencarian.</p>
                 <button
                   type="button"
-                  className="btn-hero"
-                  style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
+                  className="btn-link-action"
                   onClick={handleResetFilters}
                 >
-                  Reset Filter
+                  Reset filter
                 </button>
               </div>
             ) : (
@@ -438,15 +318,27 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
                 if (isTransfer) {
                   icon = '🔄';
-                  const fromName = accountMap.get(tx.fromAccountId) || 'Akun';
-                  const toName = accountMap.get(tx.toAccountId) || 'Akun';
+                  const fromAcc = accountMap.get(tx.fromAccountId);
+                  const toAcc = accountMap.get(tx.toAccountId);
+                  const fromName = fromAcc
+                    ? `${fromAcc.name}${fromAcc.isArchived ? ' (Arsip)' : ''}`
+                    : 'Akun';
+                  const toName = toAcc
+                    ? `${toAcc.name}${toAcc.isArchived ? ' (Arsip)' : ''}`
+                    : 'Akun';
                   title = `${fromName} → ${toName}`;
                   sub = `${formatDate(tx.date)}${tx.note ? ` • ${tx.note}` : ''}`;
                 } else {
                   const cat = categoryMap.get(tx.categoryId);
                   if (cat?.icon) icon = cat.icon;
-                  const accName = accountMap.get(tx.accountId) || '';
-                  title = cat?.name || (isIncome ? 'Pemasukan' : 'Pengeluaran');
+                  const catName = cat
+                    ? `${cat.name}${cat.isArchived ? ' (Arsip)' : ''}`
+                    : (isIncome ? 'Pemasukan' : 'Pengeluaran');
+                  const acc = accountMap.get(tx.accountId);
+                  const accName = acc
+                    ? `${acc.name}${acc.isArchived ? ' (Arsip)' : ''}`
+                    : '';
+                  title = catName;
                   sub = `${formatDate(tx.date)} • ${accName}${tx.note ? ` • ${tx.note}` : ''}`;
                 }
 
@@ -516,73 +408,18 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         </button>
       </div>
 
-      {/* Custom Date Range Picker Bottom Sheet */}
-      {isCustomPickerOpen && (
-        <div className="sheet-backdrop" onClick={() => setIsCustomPickerOpen(false)}>
-          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-handle-bar">
-              <div className="sheet-handle" />
-            </div>
-
-            <div className="sheet-header">
-              <h3>Pilih Rentang Tanggal</h3>
-              <button
-                type="button"
-                className="btn-close-sheet"
-                onClick={() => setIsCustomPickerOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form
-              className="transaction-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!tempFrom || !tempTo || tempFrom > tempTo) return;
-                setCustomRange({ from: tempFrom, to: tempTo });
-                setDateFilterMode('custom');
-                setIsCustomPickerOpen(false);
-              }}
-            >
-              <div className="form-group">
-                <label className="form-label">Dari Tanggal</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={tempFrom}
-                  onChange={(e) => setTempFrom(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Sampai Tanggal</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={tempTo}
-                  onChange={(e) => setTempTo(e.target.value)}
-                  required
-                />
-              </div>
-
-              {tempFrom && tempTo && tempFrom > tempTo && (
-                <div style={{ color: 'var(--error)', fontSize: 13, marginBottom: 8 }}>
-                  Tanggal mulai tidak boleh melebihi tanggal akhir
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn-hero"
-                disabled={!tempFrom || !tempTo || tempFrom > tempTo}
-              >
-                Terapkan
-              </button>
-            </form>
-          </div>
-        </div>
+      {/* Filter Bottom Sheet */}
+      {isFilterSheetOpen && (
+        <TransactionFilterSheet
+          isOpen={isFilterSheetOpen}
+          onClose={() => setIsFilterSheetOpen(false)}
+          criteria={filterCriteria}
+          onApply={(nextCriteria) => setFilterCriteria(nextCriteria)}
+          onReset={handleResetFilters}
+          accounts={accounts}
+          categories={categories}
+          transactions={transactions}
+        />
       )}
 
       {/* Bottom Sheet Form */}
