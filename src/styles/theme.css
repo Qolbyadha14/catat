@@ -45,8 +45,14 @@
   --info-fg: #1e40af;
 
   /* Hero Card Tokens (dark gradient background in all modes) */
+  --hero-bg: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  --hero-text-muted: #94a3b8;
   --hero-income: #34d399;
   --hero-expense: #f87171;
+
+  /* Third-party button branding */
+  --google-btn-bg: #ffffff;
+  --google-btn-fg: #1e293b;
 
   /* Legacy Aliases for seamless backward compatibility */
   --background: var(--surface-base);
