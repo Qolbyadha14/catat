@@ -7,6 +7,7 @@ import { useTransactions } from '../transactions/useTransactions';
 import { deleteTransaction } from '../transactions/transactionService';
 import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
+import { TransactionHistoryHeader } from '../transactions/TransactionHistoryHeader';
 import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { useTheme, type ThemeMode } from '../../lib/theme';
@@ -222,51 +223,16 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
         {/* Transactions Section & Filters */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="section-header">
-            <span className="section-title">Riwayat Transaksi</span>
-            <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>
-              {filteredTransactions.length} transaksi
-            </span>
-          </div>
-
-          <div className="filters-bar">
-            <div className="search-filter-row">
-              <div className="search-input-wrap">
-                <input
-                  type="search"
-                  placeholder="Cari catatan..."
-                  className="search-input"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  aria-label="Cari catatan"
-                />
-              </div>
-              <button
-                type="button"
-                className={`btn-filter-trigger ${activeFilterCount > 0 ? 'has-active' : ''}`}
-                onClick={() => setIsFilterSheetOpen(true)}
-                aria-label="Filter transaksi"
-                title="Buka filter transaksi"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                </svg>
-                {activeFilterCount > 0 && (
-                  <span className="filter-badge-counter">{activeFilterCount}</span>
-                )}
-              </button>
-            </div>
-          </div>
+          <TransactionHistoryHeader
+            transactionCount={filteredTransactions.length}
+            searchInput={searchInput}
+            onSearchChange={setSearchInput}
+            activeFilterCount={activeFilterCount}
+            onOpenFilter={() => setIsFilterSheetOpen(true)}
+            filteredTransactions={filteredTransactions}
+            accountMap={accountMap}
+            categoryMap={categoryMap}
+          />
 
           {/* List or Empty State */}
           {isLoading ? (

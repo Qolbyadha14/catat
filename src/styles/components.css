@@ -283,7 +283,8 @@
   border-color: var(--accent);
 }
 
-.btn-filter-trigger {
+.btn-filter-trigger,
+.btn-export-trigger {
   min-width: 44px;
   min-height: 44px;
   width: 44px;
@@ -300,8 +301,14 @@
   transition: all 0.15s ease;
 }
 
-.btn-filter-trigger:hover {
+.btn-filter-trigger:hover,
+.btn-export-trigger:hover:not(:disabled) {
   background: var(--surface-secondary);
+}
+
+.btn-export-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .btn-filter-trigger.has-active {
