@@ -719,5 +719,10 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(componentsCss.includes('.tab-btn.active')).toBe(true);
     expect(componentsCss.includes('.type-toggle-btn.active')).toBe(true);
     expect(componentsCss.includes('var(--accent-primary)')).toBe(true);
+
+    // Check .btn-manage-add text contrast >= 4.5:1 (var(--foreground) on surface-secondary)
+    expect(componentsCss.includes('.btn-manage-add')).toBe(true);
+    const manageAddRatio = getContrastRatio('#f9fafb', '#1e293b');
+    expect(manageAddRatio).toBeGreaterThanOrEqual(4.5);
   });
 });

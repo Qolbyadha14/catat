@@ -23,9 +23,9 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
   const isBusy = loading || submitting;
 
   return (
-    <div className="login-wrap">
+    <main className="login-wrap">
       <div className="login-icon">💳</div>
-      <h2 className="login-title">Catat Coreboy</h2>
+      <h1 className="login-title">Catat Coreboy</h1>
       <p className="login-sub">Your money, under control.</p>
 
       {error && (
@@ -60,6 +60,6 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
         </svg>
         <span>{isBusy ? 'Menghubungkan...' : 'Masuk dengan Google'}</span>
       </button>
-    </div>
+    </main>
   );
 }

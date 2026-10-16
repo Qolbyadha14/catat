@@ -23,7 +23,8 @@ export const db = initializeFirestore(app, {
 // ponytail: connect local emulators during development. Set VITE_USE_FIREBASE_EMULATOR=false to hit cloud.
 const proc = (globalThis as unknown as { process?: { env?: Record<string, string> } }).process;
 const isDev = Boolean(import.meta.env.DEV ?? (proc?.env?.NODE_ENV !== 'production'));
-if (isDev && import.meta.env.VITE_USE_FIREBASE_EMULATOR !== 'false') {
+const isTest = Boolean(proc?.env?.NODE_ENV === 'test' || proc?.env?.BUN_ENV === 'test' || proc?.env?.FIREBASE_AUTH_EMULATOR_HOST);
+if (isTest || (isDev && import.meta.env.VITE_USE_FIREBASE_EMULATOR !== 'false')) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
 }
