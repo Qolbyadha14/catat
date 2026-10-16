@@ -71,15 +71,27 @@ export function filterTransactions(
 
     // 4. Keyword search (note, category name, or account name)
     if (query) {
-      const noteMatch = tx.note?.toLowerCase().includes(query) ?? false;
+      const noteMatch = tx.note ? tx.note.toLowerCase().includes(query) : false;
       let nameMatch = false;
       if (tx.type === 'transfer') {
-        const fromName = accountMap.get(tx.fromAccountId)?.name.toLowerCase() ?? '';
-        const toName = accountMap.get(tx.toAccountId)?.name.toLowerCase() ?? '';
+        const fromAcc = accountMap.get(tx.fromAccountId);
+        const toAcc = accountMap.get(tx.toAccountId);
+        const fromName = fromAcc
+          ? `${fromAcc.name}${fromAcc.isArchived ? ' (arsip)' : ''}`.toLowerCase()
+          : '';
+        const toName = toAcc
+          ? `${toAcc.name}${toAcc.isArchived ? ' (arsip)' : ''}`.toLowerCase()
+          : '';
         nameMatch = fromName.includes(query) || toName.includes(query);
       } else {
-        const catName = categoryMap.get(tx.categoryId)?.name.toLowerCase() ?? '';
-        const accName = accountMap.get(tx.accountId)?.name.toLowerCase() ?? '';
+        const cat = categoryMap.get(tx.categoryId);
+        const acc = accountMap.get(tx.accountId);
+        const catName = cat
+          ? `${cat.name}${cat.isArchived ? ' (arsip)' : ''}`.toLowerCase()
+          : '';
+        const accName = acc
+          ? `${acc.name}${acc.isArchived ? ' (arsip)' : ''}`.toLowerCase()
+          : '';
         nameMatch = catName.includes(query) || accName.includes(query);
       }
       if (!noteMatch && !nameMatch) return false;

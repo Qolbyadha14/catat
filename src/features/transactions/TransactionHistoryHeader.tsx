@@ -5,6 +5,7 @@ import {
   type AccountLookup,
   type CategoryLookup,
 } from '../../lib/exportTransactionsCSV';
+import { TransactionSearchBar } from './TransactionSearchBar';
 
 export interface TransactionHistoryHeaderProps {
   transactionCount: number;
@@ -63,13 +64,11 @@ export function TransactionHistoryHeader({
       <div className="filters-bar">
         <div className="search-filter-row">
           <div className="search-input-wrap">
-            <input
-              type="search"
-              placeholder="Cari catatan..."
-              className="search-input"
+            <TransactionSearchBar
               value={searchInput}
-              onChange={(e) => onSearchChange(e.target.value)}
-              aria-label="Cari catatan"
+              onChange={onSearchChange}
+              debounceMs={150}
+              placeholder="Cari catatan, akun, atau kategori..."
             />
           </div>
           <button

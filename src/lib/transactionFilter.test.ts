@@ -172,4 +172,100 @@ const sampleTransactions: Transaction[] = [
   }
 }
 
+// Scenario 5: Search bar substring match, archived resolution, and regex character safety
+{
+  // 5a. Empty / whitespace query passes all through
+  const whitespaceRes = filterTransactions(
+    sampleTransactions,
+    { ...DEFAULT_FILTER_CRITERIA, keyword: '   ' },
+    mockAccounts,
+    mockCategories
+  );
+  assert(
+    whitespaceRes.length === sampleTransactions.length,
+    'Whitespace query must pass-through all transactions'
+  );
+
+  // 5b. Case-insensitive note match
+  const noteRes = filterTransactions(
+    sampleTransactions,
+    { ...DEFAULT_FILTER_CRITERIA, keyword: 'BAKSO' },
+    mockAccounts,
+    mockCategories
+  );
+  assert(noteRes.length === 1 && noteRes[0]?.id === 'tx_1', 'Upper case note search must match tx_1');
+
+  // 5c. Category name match
+  const catRes = filterTransactions(
+    sampleTransactions,
+    { ...DEFAULT_FILTER_CRITERIA, keyword: 'makanan' },
+    mockAccounts,
+    mockCategories
+  );
+  assert(catRes.length === 2, 'Category search "makanan" must match tx_1 and tx_5');
+
+  // 5d. Account name match on standard transaction
+  const accRes = filterTransactions(
+    sampleTransactions,
+    { ...DEFAULT_FILTER_CRITERIA, keyword: 'bca' },
+    mockAccounts,
+    mockCategories
+  );
+  // tx_2 (account acc_bank = Bank BCA) and tx_4 (transfer from acc_bank = Bank BCA)
+  assert(accRes.length === 2, 'Account search "bca" must match tx_2 and tx_4');
+
+  // 5e. Transfer destination account match
+  const transferToRes = filterTransactions(
+    sampleTransactions,
+    { ...DEFAULT_FILTER_CRITERIA, keyword: 'tunai' },
+    mockAccounts,
+    mockCategories
+  );
+  // tx_1 (Tunai), tx_4 (transfer to Tunai), tx_5 (Tunai), tx_4 note ('Tarik tunai ATM')
+  assert(transferToRes.length === 3, 'Account search "tunai" must match tx_1, tx_4, and tx_5');
+
+  // 5f. Archived entity match via "arsip" or "(arsip)"
+  const archivedSearchRes = filterTransactions(
+    sampleTransactions,
+    { ...DEFAULT_FILTER_CRITERIA, keyword: '(arsip)' },
+    mockAccounts,
+    mockCategories
+  );
+  assert(
+    archivedSearchRes.length === 1 && archivedSearchRes[0]?.id === 'tx_3',
+    'Search for "(arsip)" must match transaction with archived account/category'
+  );
+
+  // 5g. Regex special characters must not crash (String.prototype.includes safety)
+  const specialChars = ['[', '(', '*', '+', '?', '\\', ')', '{'];
+  for (const char of specialChars) {
+    const safeRes = filterTransactions(
+      sampleTransactions,
+      { ...DEFAULT_FILTER_CRITERIA, keyword: char },
+      mockAccounts,
+      mockCategories
+    );
+    // Should not throw, and tx_3 matches '(' and ')' because of (arsip) label
+    if (char === '(' || char === ')') {
+      assert(safeRes.some((t) => t.id === 'tx_3'), `Special char "${char}" should safely match tx_3`);
+    } else {
+      assert(Array.isArray(safeRes), `Special char "${char}" must safely evaluate without error`);
+    }
+  }
+
+  // 5h. AND logic with active filter sheet
+  const andRes = filterTransactions(
+    sampleTransactions,
+    {
+      ...DEFAULT_FILTER_CRITERIA,
+      keyword: 'makanan',
+      accountIds: ['acc_cash'],
+      type: 'expense',
+    },
+    mockAccounts,
+    mockCategories
+  );
+  assert(andRes.length === 2, 'Conjunction of keyword + accountId + type must resolve correctly');
+}
+
 console.log('Transaction filter tests pass');

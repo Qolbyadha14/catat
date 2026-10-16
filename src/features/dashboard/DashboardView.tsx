@@ -39,13 +39,10 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(DEFAULT_FILTER_CRITERIA);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState<boolean>(false);
 
-  // Debounce search input 200ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilterCriteria((prev) => ({ ...prev, keyword: searchInput }));
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const handleSearchChange = (val: string) => {
+    setSearchInput(val);
+    setFilterCriteria((prev) => ({ ...prev, keyword: val }));
+  };
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isManageOpen, setIsManageOpen] = useState(false);
@@ -234,7 +231,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           <TransactionHistoryHeader
             transactionCount={filteredTransactions.length}
             searchInput={searchInput}
-            onSearchChange={setSearchInput}
+            onSearchChange={handleSearchChange}
             activeFilterCount={activeFilterCount}
             onOpenFilter={() => setIsFilterSheetOpen(true)}
             filteredTransactions={filteredTransactions}
