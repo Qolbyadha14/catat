@@ -8,6 +8,7 @@ import { deleteTransaction } from '../transactions/transactionService';
 import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
 import { TransactionHistoryHeader } from '../transactions/TransactionHistoryHeader';
+import { CategoryBreakdown } from './CategoryBreakdown';
 import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { useTheme, type ThemeMode } from '../../lib/theme';
@@ -205,6 +206,13 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
             </div>
           </div>
         </div>
+
+        {/* Category Breakdown */}
+        <CategoryBreakdown
+          transactions={transactions}
+          categoryMap={categoryMap}
+          startOfMonth={startOfMonth}
+        />
 
         {/* Accounts Scroller */}
         <section>
