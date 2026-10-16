@@ -262,11 +262,11 @@
 
 /* Ensure WCAG AA contrast over dark hero gradient in all theme modes */
 .hero-card .stat-val-income {
-  color: #34d399;
+  color: var(--hero-income);
 }
 
 .hero-card .stat-val-expense {
-  color: #f87171;
+  color: var(--hero-expense);
 }
 
 /* Native Confirmation Dialog */
@@ -1519,7 +1519,7 @@
 
 .template-chip-del:hover {
   background: var(--destructive);
-  color: #ffffff;
+  color: var(--text-inverse);
 }
 
 .template-chip-save {
