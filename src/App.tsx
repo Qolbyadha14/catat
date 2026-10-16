@@ -1,8 +1,10 @@
 import { useAuth } from './features/auth/useAuth';
 import { LoginView } from './features/auth/LoginView';
 import { DashboardView } from './features/dashboard/DashboardView';
+import { useTheme } from './lib/theme';
 
 export default function App() {
+  useTheme();
   const { user, loading, error, signInWithGoogle, signOut } = useAuth();
 
   return (

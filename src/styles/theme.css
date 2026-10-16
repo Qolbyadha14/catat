@@ -1,5 +1,7 @@
-/* Color Palette */
+/* Color Palette & Design Tokens */
 :root {
+  color-scheme: light;
+
   /* Neutrals */
   --slate-50: #f8fafc;
   --slate-100: #f1f5f9;
@@ -12,19 +14,11 @@
   --slate-800: #1e293b;
   --slate-900: #0f172a;
 
-  /* Semantic: Status & Intent */
-  --success: #10b981;
-  --success-light: #d1fae5;
-  --warning: #f59e0b;
-  --warning-light: #fef3c7;
-  --error: #ef4444;
-  --error-light: #fee2e2;
-  --info: #3b82f6;
-  --info-light: #dbeafe;
-
-  /* Semantic: Amber (for draft/low-confidence fields) */
-  --amber-100: #fef3c7;
-  --amber-800: #92400e;
+  /* Brand Logos */
+  --brand-google-blue: #4285f4;
+  --brand-google-green: #34a853;
+  --brand-google-yellow: #fbbc05;
+  --brand-google-red: #ea4335;
 
   /* Functional */
   --background: #ffffff;
@@ -34,7 +28,37 @@
   --foreground: #0f172a;
   --muted-foreground: #64748b;
   --card: #ffffff;
-  --accent: #3b82f6;
+  --accent: #2563eb;
+
+  /* Status semantic: light bg + dark text (WCAG AA > 4.5:1) */
+  --success: #059669;
+  --success-light: #ecfdf5;
+  --success-fg: #065f46;
+  --warning: #d97706;
+  --warning-light: #fffbeb;
+  --warning-fg: #92400e;
+  --error: #dc2626;
+  --error-light: #fef2f2;
+  --error-fg: #991b1b;
+  --info: #2563eb;
+  --info-light: #eff6ff;
+  --info-fg: #1e40af;
+
+  /* Semantic: Amber */
+  --amber-100: #fef3c7;
+  --amber-800: #92400e;
+
+  /* Element tokens */
+  --avatar-bg: #e0e7ff;
+  --avatar-fg: #3730a3;
+  --offline-bg: #fef2f2;
+  --offline-fg: #991b1b;
+  --offline-border: #fee2e2;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 
   /* Spacing (8pt grid) */
   --space-1: 0.5rem;
@@ -78,12 +102,6 @@
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-
   /* Z-Index */
   --z-dropdown: 1000;
   --z-modal: 1100;
@@ -95,15 +113,77 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark mode (future, not P0) */
+/* Dark mode */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-secondary: #334155;
+  --border: #334155;
+  --foreground: #f8fafc;
+  --muted-foreground: #94a3b8;
+  --card: #1e293b;
+  --accent: #3b82f6;
+
+  /* Status semantic: subtle tint + vibrant fg */
+  --success: #34d399;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --success-fg: #6ee7b7;
+  --warning: #fbbf24;
+  --warning-light: rgba(245, 158, 11, 0.15);
+  --warning-fg: #fde68a;
+  --error: #f87171;
+  --error-light: rgba(239, 68, 68, 0.15);
+  --error-fg: #fca5a5;
+  --info: #60a5fa;
+  --info-light: rgba(59, 130, 246, 0.15);
+  --info-fg: #93c5fd;
+
+  --avatar-bg: #312e81;
+  --avatar-fg: #c7d2fe;
+  --offline-bg: #450a0a;
+  --offline-fg: #fca5a5;
+  --offline-border: #7f1d1d;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
     --background: #0f172a;
     --surface: #1e293b;
     --surface-secondary: #334155;
-    --border: #475569;
+    --border: #334155;
     --foreground: #f8fafc;
     --muted-foreground: #94a3b8;
     --card: #1e293b;
+    --accent: #3b82f6;
+
+    /* Status semantic: subtle tint + vibrant fg */
+    --success: #34d399;
+    --success-light: rgba(16, 185, 129, 0.15);
+    --success-fg: #6ee7b7;
+    --warning: #fbbf24;
+    --warning-light: rgba(245, 158, 11, 0.15);
+    --warning-fg: #fde68a;
+    --error: #f87171;
+    --error-light: rgba(239, 68, 68, 0.15);
+    --error-fg: #fca5a5;
+    --info: #60a5fa;
+    --info-light: rgba(59, 130, 246, 0.15);
+    --info-fg: #93c5fd;
+
+    --avatar-bg: #312e81;
+    --avatar-fg: #c7d2fe;
+    --offline-bg: #450a0a;
+    --offline-fg: #fca5a5;
+    --offline-border: #7f1d1d;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
   }
 }

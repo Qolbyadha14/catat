@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>catat</title>
+    <script>
+      (function() {
+        document.documentElement.classList.add('preload');
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+          else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        } catch (e) {}
+        window.addEventListener('DOMContentLoaded', function() {
+          document.documentElement.classList.remove('preload');
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

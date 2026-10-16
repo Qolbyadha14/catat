@@ -3,7 +3,7 @@
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  background-color: var(--slate-100);
+  background-color: var(--surface-secondary);
 }
 
 .app-container {
@@ -14,7 +14,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Header */
@@ -34,7 +34,7 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--slate-900);
+  color: var(--foreground);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -65,8 +65,8 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-full);
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--avatar-bg);
+  color: var(--avatar-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,6 +74,37 @@
   font-weight: 600;
   border: 1px solid var(--border);
   overflow: hidden;
+}
+
+.theme-toggle-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.theme-toggle-icon {
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.theme-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
 }
 
 .btn-signout {
@@ -89,9 +120,9 @@
 
 /* Offline Alert Banner */
 .offline-banner {
-  background: #fef2f2;
-  border-bottom: 1px solid #fee2e2;
-  color: #991b1b;
+  background: var(--offline-bg);
+  border-bottom: 1px solid var(--offline-border);
+  color: var(--offline-fg);
   font-size: 12px;
   font-weight: 500;
   padding: 8px 16px;
@@ -113,7 +144,7 @@
 
 /* Hero Balance Card */
 .hero-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(135deg, var(--slate-800) 0%, var(--slate-900) 100%);
   color: white;
   border-radius: var(--radius-xl);
   padding: 20px;
@@ -157,13 +188,13 @@
 .stat-val-income {
   font-size: 14px;
   font-weight: 600;
-  color: #34d399;
+  color: var(--success);
 }
 
 .stat-val-expense {
   font-size: 14px;
   font-weight: 600;
-  color: #f87171;
+  color: var(--error);
 }
 
 /* Section Header */
@@ -650,7 +681,7 @@
   border-radius: var(--radius-md);
   font-size: 14px;
   background: var(--card);
-  color: var(--slate-900);
+  color: var(--foreground);
   outline: none;
 }
 
@@ -661,13 +692,13 @@
 
 .form-error-banner {
   background: var(--error-light);
-  border: 1px solid #fca5a5;
+  border: 1px solid var(--offline-border);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #991b1b;
+  color: var(--error-fg);
   font-size: 12px;
   font-weight: 500;
 }

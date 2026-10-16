@@ -194,7 +194,7 @@ export function TransactionFormSheet({
           </div>
 
           {activeTab !== 'manual' && (
-            <div className="offline-banner" style={{ background: '#f8fafc', color: '#475569', borderColor: '#e2e8f0' }}>
+            <div className="offline-banner" style={{ background: 'var(--surface)', color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
               Mode asisten ({activeTab === 'text' ? 'Ketik' : 'Scan Struk'}) dijadwalkan untuk rilis P1. Gunakan input manual.
             </div>
           )}

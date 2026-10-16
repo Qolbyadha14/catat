@@ -8,6 +8,7 @@ import { deleteTransaction } from '../transactions/transactionService';
 import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { isInRange, getPresetRange, type PresetRange } from '../../lib/dateRange';
+import { useTheme, type ThemeMode } from '../../lib/theme';
 
 interface DashboardViewProps {
   user: User;
@@ -17,6 +18,7 @@ interface DashboardViewProps {
 type DateFilterMode = 'all' | PresetRange | 'custom';
 
 export function DashboardView({ user, onSignOut }: DashboardViewProps) {
+  const { theme, setTheme } = useTheme();
   const { accounts, loading: accLoading } = useAccounts(user.uid);
   const { categories, loading: catLoading } = useCategories(user.uid);
   const { transactions, loading: txLoading } = useTransactions(user.uid);
@@ -182,6 +184,21 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           <p className="brand-sub">Your money, under control.</p>
         </div>
         <div className="user-profile-menu">
+          <div className="theme-toggle-wrap" title="Pilih tema">
+            <span className="theme-toggle-icon" aria-hidden="true">
+              {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🌓'}
+            </span>
+            <select
+              className="theme-select"
+              aria-label="Pilih tema"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value as ThemeMode)}
+            >
+              <option value="system">Tema: Ikuti sistem</option>
+              <option value="light">Tema: Terang</option>
+              <option value="dark">Tema: Gelap</option>
+            </select>
+          </div>
           <div className="user-avatar" title={user.email ?? ''}>
             {user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'U'}
           </div>
