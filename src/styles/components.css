@@ -17,6 +17,82 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* ==========================================================================
+   Design System Primitives (Buttons, Inputs, Cards, Dialogs)
+   ========================================================================== */
+
+/* 1. Button Primitives */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: var(--font-medium);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--foreground);
+  transition: all var(--transition-fast) ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border-color: transparent;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--surface-secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--slate-200);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--foreground);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+/* 2. Card Primitive */
+.card {
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
 /* Header */
 .app-header {
   background: var(--card);
@@ -270,9 +346,10 @@
 }
 
 /* Native Confirmation Dialog */
+dialog,
 .delete-dialog {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 0;
   background: var(--surface);
   color: var(--foreground);
@@ -282,9 +359,9 @@
   margin: auto;
 }
 
+dialog::backdrop,
 .delete-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
 }
 
 .delete-dialog-content {
@@ -317,14 +394,14 @@
   background: var(--amber-100);
   color: var(--amber-800);
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   line-height: 1.4;
 }
 
 .delete-dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
   margin-top: 8px;
 }
 
@@ -332,26 +409,44 @@
   min-height: 44px;
   min-width: 80px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface-secondary);
   color: var(--foreground);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-dialog-cancel:hover:not(:disabled) {
+  background: var(--slate-200);
+}
+
+.btn-dialog-cancel:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-dialog-delete {
   min-height: 44px;
   min-width: 80px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: none;
   background: var(--error);
-  color: white;
+  color: var(--text-inverse);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-dialog-delete:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-dialog-delete:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-dialog-delete:disabled,
@@ -436,14 +531,18 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: var(--card);
+  background: var(--surface);
   color: var(--foreground);
   min-height: 44px;
   outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast) ease, outline var(--transition-fast) ease;
 }
 
 .search-input:focus {
-  border-color: var(--accent);
+  border-color: transparent;
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
 }
 
 .btn-filter-trigger,
@@ -553,6 +652,7 @@
 
 .btn-outline {
   flex: 1;
+  min-height: 44px;
   height: 44px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -561,28 +661,37 @@
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all var(--transition-fast) ease;
 }
 
-.btn-outline:hover {
+.btn-outline:hover:not(:disabled) {
   background: var(--surface-secondary);
+}
+
+.btn-outline:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-solid {
   flex: 1;
+  min-height: 44px;
   height: 44px;
   border-radius: var(--radius-md);
   border: none;
-  background: var(--accent);
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: all var(--transition-fast) ease;
 }
 
-.btn-solid:hover {
-  opacity: 0.9;
+.btn-solid:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.btn-solid:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-link-action {
@@ -833,8 +942,9 @@
 .btn-hero {
   width: 100%;
   height: 48px;
-  background: var(--accent);
-  color: white;
+  min-height: 48px;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
   border: none;
   border-radius: var(--radius-lg);
   font-size: 15px;
@@ -844,7 +954,16 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-hero:hover {
+  background: var(--accent-primary-hover);
+}
+
+.btn-hero:active {
+  transform: scale(0.98);
 }
 
 /* Bottom Sheet */
@@ -1036,22 +1155,31 @@
   color: white;
 }
 
+.input,
+.select,
 .form-select,
 .form-input {
   width: 100%;
+  min-height: 44px;
   height: 44px;
   padding: 0 12px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: var(--card);
+  background: var(--surface);
   color: var(--foreground);
   outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast) ease, outline var(--transition-fast) ease;
 }
 
+.input:focus,
+.select:focus,
 .form-select:focus,
 .form-input:focus {
-  border-color: var(--accent);
+  border-color: transparent;
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
 }
 
 .form-error-banner {
@@ -1321,23 +1449,43 @@
 }
 
 .btn-manage-cancel {
+  min-height: 44px;
   height: 44px;
-  border: 1.5px solid var(--border);
-  background: var(--card);
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
   color: var(--foreground);
   font-weight: 600;
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-manage-cancel:hover:not(:disabled) {
+  background: var(--slate-200);
+}
+
+.btn-manage-cancel:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-manage-save {
+  min-height: 44px;
   height: 44px;
   border: none;
-  background: var(--accent);
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
   font-weight: 600;
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-manage-save:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.btn-manage-save:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-manage-save:disabled,
