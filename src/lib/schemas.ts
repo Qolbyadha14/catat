@@ -5,6 +5,7 @@ export const accountSchema = z.object({
   name: z.string().trim().min(1).max(40),
   kind: z.enum(['asset', 'liability']),
   balance: z.number().int(),
+  icon: z.string().max(8).optional(),
   isArchived: z.boolean().default(false),
   createdAt: z.number().int(),
 });
