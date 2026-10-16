@@ -632,6 +632,31 @@
   gap: 6px;
 }
 
+.btn-tx-duplicate {
+  font-size: 13px;
+  background: none;
+  border: none;
+  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-tx-duplicate:hover {
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.btn-tx-duplicate:active {
+  transform: scale(0.92);
+}
+
 .btn-tx-edit {
   font-size: 11px;
   color: var(--slate-600);

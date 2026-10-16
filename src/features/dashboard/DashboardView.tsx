@@ -20,6 +20,10 @@ import {
   DEFAULT_FILTER_CRITERIA,
   type FilterCriteria,
 } from '../../lib/transactionFilter';
+import {
+  prepareTransactionDuplicate,
+  type DuplicateFormValues,
+} from '../../lib/transactionDuplicate';
 
 interface DashboardViewProps {
   user: User;
@@ -49,7 +53,15 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [duplicateData, setDuplicateData] = useState<DuplicateFormValues | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDuplicate = (tx: Transaction) => {
+    const dup = prepareTransactionDuplicate(tx, accounts, categories);
+    setEditingTx(null);
+    setDuplicateData(dup);
+    setIsSheetOpen(true);
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -295,6 +307,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                   style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
                   onClick={() => {
                     setEditingTx(null);
+                    setDuplicateData(null);
                     setIsSheetOpen(true);
                   }}
                 >
@@ -365,9 +378,19 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                       <div className="tx-actions">
                         <button
                           type="button"
+                          className="btn-tx-duplicate"
+                          title="Duplikat transaksi"
+                          aria-label="Duplikat transaksi"
+                          onClick={() => handleDuplicate(tx)}
+                        >
+                          📋
+                        </button>
+                        <button
+                          type="button"
                           className="btn-tx-edit"
                           onClick={() => {
                             setEditingTx(tx);
+                            setDuplicateData(null);
                             setIsSheetOpen(true);
                           }}
                         >
@@ -398,6 +421,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           className="btn-hero"
           onClick={() => {
             setEditingTx(null);
+            setDuplicateData(null);
             setIsSheetOpen(true);
           }}
         >
@@ -422,16 +446,18 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       {/* Bottom Sheet Form */}
       {isSheetOpen && (
         <TransactionFormSheet
-          key={editingTx?.id ?? 'new'}
+          key={editingTx?.id ?? (duplicateData ? 'dup' : 'new')}
           uid={user.uid}
           isOpen={isSheetOpen}
           onClose={() => {
             setIsSheetOpen(false);
             setEditingTx(null);
+            setDuplicateData(null);
           }}
           accounts={activeAccounts}
           categories={activeCategories}
           initialTx={editingTx}
+          duplicateData={duplicateData}
         />
       )}
 

@@ -3,6 +3,7 @@ import type { Account, Category, Transaction } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction } from './transactionService';
 import { TransactionTemplateBar } from './TransactionTemplateBar';
+import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 
 interface TransactionFormSheetProps {
   uid: string;
@@ -11,6 +12,7 @@ interface TransactionFormSheetProps {
   accounts: Account[];
   categories: Category[];
   initialTx?: Transaction | null;
+  duplicateData?: DuplicateFormValues | null;
   initialDraft?: TransactionDraft;
   onSuccess?: () => void;
 }
@@ -22,36 +24,59 @@ export function TransactionFormSheet({
   accounts,
   categories,
   initialTx,
+  duplicateData,
   onSuccess,
 }: TransactionFormSheetProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>('manual');
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>(
-    initialTx?.type ?? 'expense'
+    initialTx?.type ?? duplicateData?.type ?? 'expense'
   );
-  const [rawAmount, setRawAmount] = useState<string>(
-    initialTx ? String(initialTx.amount) : ''
-  );
-  const [accountId, setAccountId] = useState<string>(
-    initialTx
-      ? initialTx.type === 'transfer'
+  const [rawAmount, setRawAmount] = useState<string>(() => {
+    if (initialTx) return String(initialTx.amount);
+    if (duplicateData) return String(duplicateData.amount);
+    return '';
+  });
+  const [accountId, setAccountId] = useState<string>(() => {
+    if (initialTx) {
+      return initialTx.type === 'transfer'
         ? initialTx.fromAccountId
-        : initialTx.accountId
-      : accounts[0]?.id ?? ''
+        : initialTx.accountId;
+    }
+    if (duplicateData) {
+      return duplicateData.accountId;
+    }
+    return accounts[0]?.id ?? '';
+  });
+  const [toAccountId, setToAccountId] = useState<string>(() => {
+    if (initialTx && initialTx.type === 'transfer') {
+      return initialTx.toAccountId;
+    }
+    if (duplicateData && duplicateData.type === 'transfer') {
+      return duplicateData.toAccountId;
+    }
+    return accounts[1]?.id ?? '';
+  });
+  const [categoryId, setCategoryId] = useState<string>(() => {
+    if (initialTx && initialTx.type !== 'transfer') {
+      return initialTx.categoryId;
+    }
+    if (duplicateData && duplicateData.type !== 'transfer') {
+      return duplicateData.categoryId;
+    }
+    return '';
+  });
+  const [dateStr, setDateStr] = useState<string>(() => {
+    if (initialTx) {
+      return new Date(initialTx.date).toISOString().slice(0, 10);
+    }
+    if (duplicateData) {
+      return duplicateData.date.toISOString().slice(0, 10);
+    }
+    return new Date().toISOString().slice(0, 10);
+  });
+  const [note, setNote] = useState<string>(
+    initialTx?.note ?? duplicateData?.note ?? ''
   );
-  const [toAccountId, setToAccountId] = useState<string>(
-    initialTx && initialTx.type === 'transfer'
-      ? initialTx.toAccountId
-      : accounts[1]?.id ?? ''
-  );
-  const [categoryId, setCategoryId] = useState<string>(
-    initialTx && initialTx.type !== 'transfer' ? initialTx.categoryId : ''
-  );
-  const [dateStr, setDateStr] = useState<string>(() =>
-    initialTx
-      ? new Date(initialTx.date).toISOString().slice(0, 10)
-      : new Date().toISOString().slice(0, 10)
-  );
-  const [note, setNote] = useState<string>(initialTx?.note ?? '');
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,15 +87,21 @@ export function TransactionFormSheet({
 
   const filteredCategories = categories.filter((c) => c.type === type);
   const isCategoryValid = filteredCategories.some((c) => c.id === categoryId);
-  const currentCategoryId = isCategoryValid ? categoryId : filteredCategories[0]?.id || '';
-  const currentAccountId = accountId || accounts[0]?.id || '';
+  const currentCategoryId = isCategoryValid
+    ? categoryId
+    : (duplicateData ? '' : filteredCategories[0]?.id || '');
+
+  const isAccountValid = accounts.some((a) => a.id === accountId);
+  const currentAccountId = isAccountValid
+    ? accountId
+    : (duplicateData ? '' : accounts[0]?.id || '');
 
   // Transfer: exclude fromAccountId from toAccountId choices
   const toAccountOptions = accounts.filter((a) => a.id !== currentAccountId);
-  const currentToAccountId =
-    toAccountId && toAccountId !== currentAccountId
-      ? toAccountId
-      : toAccountOptions[0]?.id || '';
+  const isToAccountValid = toAccountOptions.some((a) => a.id === toAccountId);
+  const currentToAccountId = isToAccountValid
+    ? toAccountId
+    : (duplicateData ? '' : toAccountOptions[0]?.id || '');
 
   const handleAmountChange = (val: string) => {
     // Only allow numbers
@@ -160,7 +191,7 @@ export function TransactionFormSheet({
         </div>
 
         <div className="sheet-header">
-          <h3>{initialTx ? 'Ubah Transaksi' : 'Catat Transaksi'}</h3>
+          <h3>{initialTx ? 'Ubah Transaksi' : duplicateData ? 'Duplikat Transaksi' : 'Catat Transaksi'}</h3>
           <button type="button" className="btn-close-sheet" onClick={onClose}>
             ✕
           </button>
@@ -293,6 +324,11 @@ export function TransactionFormSheet({
                   value={currentAccountId}
                   onChange={(e) => setAccountId(e.target.value)}
                 >
+                  {!currentAccountId && (
+                    <option value="" disabled>
+                      -- Pilih Akun Asal --
+                    </option>
+                  )}
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -308,6 +344,11 @@ export function TransactionFormSheet({
                   value={currentToAccountId}
                   onChange={(e) => setToAccountId(e.target.value)}
                 >
+                  {!currentToAccountId && (
+                    <option value="" disabled>
+                      -- Pilih Akun Tujuan --
+                    </option>
+                  )}
                   {toAccountOptions.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -325,6 +366,11 @@ export function TransactionFormSheet({
                   value={currentAccountId}
                   onChange={(e) => setAccountId(e.target.value)}
                 >
+                  {!currentAccountId && (
+                    <option value="" disabled>
+                      -- Pilih Akun --
+                    </option>
+                  )}
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -340,6 +386,11 @@ export function TransactionFormSheet({
                   value={currentCategoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                 >
+                  {!currentCategoryId && (
+                    <option value="" disabled>
+                      -- Pilih Kategori --
+                    </option>
+                  )}
                   {filteredCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.icon ? `${c.icon} ` : ''}
