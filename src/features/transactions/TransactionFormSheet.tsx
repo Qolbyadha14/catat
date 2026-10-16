@@ -2,6 +2,7 @@ import { useState, useId, type FormEvent } from 'react';
 import type { Account, Category, Transaction } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction } from './transactionService';
+import { TransactionTemplateBar } from './TransactionTemplateBar';
 
 interface TransactionFormSheetProps {
   uid: string;
@@ -166,6 +167,31 @@ export function TransactionFormSheet({
         </div>
 
         <form onSubmit={handleSubmit} className="sheet-scroll-body">
+          <TransactionTemplateBar
+            accounts={accounts}
+            categories={categories}
+            currentForm={{
+              type,
+              rawAmount,
+              accountId: currentAccountId,
+              toAccountId: currentToAccountId,
+              categoryId: currentCategoryId,
+              note,
+            }}
+            onApply={(resolved) => {
+              setType(resolved.type);
+              setRawAmount(String(resolved.amount));
+              setAccountId(resolved.accountId);
+              if (resolved.type === 'transfer') {
+                setToAccountId(resolved.toAccountId);
+              } else {
+                setCategoryId(resolved.categoryId);
+              }
+              setNote(resolved.note);
+            }}
+            onError={setError}
+          />
+
           {/* Tabs */}
           <div className="tabs-segmented">
             <button
