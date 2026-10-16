@@ -142,11 +142,11 @@
   color-scheme: dark;
 
   /* Semantic Core Tokens (Dark Mode) */
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #818cf8;
+  --accent-primary: #4f46e5;
+  --accent-primary-hover: #4338ca;
   --surface-base: #0b0f19;
   --surface-card: #111827;
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.15);
   --text-primary: #f9fafb;
   --text-muted: #94a3b8;
   --text-inverse: #ffffff;
@@ -173,7 +173,7 @@
   --background: var(--surface-base);
   --surface: var(--surface-card);
   --surface-secondary: #1e293b;
-  --border: var(--border-subtle);
+  --border: rgba(255, 255, 255, 0.35);
   --foreground: var(--text-primary);
   --muted-foreground: var(--text-muted);
   --card: var(--surface-card);
@@ -197,11 +197,11 @@
     color-scheme: dark;
 
     /* Semantic Core Tokens (Dark Mode) */
-    --accent-primary: #6366f1;
-    --accent-primary-hover: #818cf8;
+    --accent-primary: #4f46e5;
+    --accent-primary-hover: #4338ca;
     --surface-base: #0b0f19;
     --surface-card: #111827;
-    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.15);
     --text-primary: #f9fafb;
     --text-muted: #94a3b8;
     --text-inverse: #ffffff;
@@ -228,7 +228,7 @@
     --background: var(--surface-base);
     --surface: var(--surface-card);
     --surface-secondary: #1e293b;
-    --border: var(--border-subtle);
+    --border: rgba(255, 255, 255, 0.35);
     --foreground: var(--text-primary);
     --muted-foreground: var(--text-muted);
     --card: var(--surface-card);

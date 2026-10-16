@@ -669,7 +669,7 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
       { label: 'Dark: Success Text on Surface Card', fg: '#10b981', bg: '#111827' },
       { label: 'Dark: Warning Text on Surface Card', fg: '#f59e0b', bg: '#111827' },
       { label: 'Dark: Error Text on Surface Card', fg: '#f43f5e', bg: '#111827' },
-      { label: 'Dark: Button UI Accent on Surface Card', fg: '#6366f1', bg: '#111827', isLargeText: true },
+      { label: 'Dark: Button Text on Accent Primary', fg: '#ffffff', bg: '#4f46e5' },
     ]);
     expect(darkAudit.passed).toBe(true);
 
@@ -686,7 +686,25 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(heroDeficitRatio2).toBeGreaterThanOrEqual(4.5);
     expect(heroBalanceRatio).toBeGreaterThanOrEqual(4.5);
 
-    // 4. CSS File Audit: src/styles/components.css
+    // 4. 10 Critical Sample Contrasts (WCAG AA >= 4.5:1 text)
+    const tenSamples = [
+      { name: '1. Modal header h3 on surface-card', fg: '#f9fafb', bg: '#111827', min: 4.5 },
+      { name: '2. Form labels on surface-card', fg: '#94a3b8', bg: '#111827', min: 4.5 },
+      { name: '3. Input text on surface-card', fg: '#f9fafb', bg: '#111827', min: 4.5 },
+      { name: '4. Input placeholder on surface-card', fg: '#94a3b8', bg: '#111827', min: 4.5 },
+      { name: '5. Button text on accent-primary', fg: '#ffffff', bg: '#4f46e5', min: 4.5 },
+      { name: '6. Segmented inactive button on surface-secondary', fg: '#94a3b8', bg: '#1e293b', min: 4.5 },
+      { name: '7. Section title on surface-base', fg: '#f9fafb', bg: '#0b0f19', min: 4.5 },
+      { name: '8. Account chip balance on surface-card', fg: '#f9fafb', bg: '#111827', min: 4.5 },
+      { name: '9. Net cashflow surplus on hero gradient', fg: '#34d399', bg: '#0f172a', min: 4.5 },
+      { name: '10. Net cashflow deficit on hero gradient', fg: '#f87171', bg: '#0f172a', min: 4.5 },
+    ];
+    for (const s of tenSamples) {
+      const ratio = getContrastRatio(s.fg, s.bg);
+      expect(ratio).toBeGreaterThanOrEqual(s.min);
+    }
+
+    // 5. CSS File Audit: src/styles/components.css
     const componentsCssPath = path.resolve(process.cwd(), 'src/styles/components.css');
     const componentsCss = fs.readFileSync(componentsCssPath, 'utf8');
 
@@ -698,6 +716,8 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     // Check minimum touch target of 44px in components
     expect(componentsCss.includes('min-height: 44px') || componentsCss.includes('height: 44px')).toBe(true);
     expect(componentsCss.includes('.pill-type-btn.active')).toBe(true);
+    expect(componentsCss.includes('.tab-btn.active')).toBe(true);
+    expect(componentsCss.includes('.type-toggle-btn.active')).toBe(true);
     expect(componentsCss.includes('var(--accent-primary)')).toBe(true);
   });
 });

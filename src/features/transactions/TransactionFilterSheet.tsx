@@ -111,6 +111,7 @@ export function TransactionFilterSheet({
             className="btn-close-sheet"
             onClick={onClose}
             aria-label="Tutup filter"
+            title="Tutup filter"
           >
             ✕
           </button>

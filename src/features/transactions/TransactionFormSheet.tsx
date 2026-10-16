@@ -249,7 +249,7 @@ export function TransactionFormSheet({
 
         <div className="sheet-header">
           <h3>{initialTx ? 'Ubah Transaksi' : duplicateData ? 'Duplikat Transaksi' : 'Catat Transaksi'}</h3>
-          <button type="button" className="btn-close-sheet" onClick={onClose}>
+          <button type="button" className="btn-close-sheet" onClick={onClose} aria-label="Tutup" title="Tutup modal">
             ✕
           </button>
         </div>

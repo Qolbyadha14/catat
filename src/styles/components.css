@@ -226,7 +226,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 96px;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
 }
 
 /* Month Navigator */
@@ -478,9 +478,9 @@ dialog::backdrop,
 .section-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--muted-foreground);
+  color: var(--foreground);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 /* Accounts Scroller */
@@ -555,6 +555,14 @@ dialog::backdrop,
   border-color: transparent;
   outline: 2px solid var(--accent-primary);
   outline-offset: 1px;
+}
+
+.search-input::placeholder,
+.form-input::placeholder,
+.input::placeholder,
+.input-hero-amount::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
 }
 
 .btn-filter-trigger,
@@ -1007,10 +1015,14 @@ dialog::backdrop,
   bottom: 0;
   width: 100%;
   max-width: 440px;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
   background: var(--card);
   border-top: 1px solid var(--border);
   z-index: 30;
+  box-sizing: border-box;
 }
 
 .btn-hero {
@@ -1165,7 +1177,7 @@ dialog::backdrop,
   font-weight: 500;
   color: var(--muted-foreground);
   border-radius: var(--radius-sm);
-  min-height: 38px;
+  min-height: 44px;
   cursor: pointer;
   transition: all var(--transition-fast) ease;
 }
@@ -1175,8 +1187,8 @@ dialog::backdrop,
 }
 
 .tab-btn.active {
-  background: var(--card);
-  color: var(--foreground);
+  background: var(--accent-primary);
+  color: var(--text-inverse);
   font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
@@ -1259,7 +1271,7 @@ dialog::backdrop,
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 44px;
   cursor: pointer;
   transition: all var(--transition-fast) ease;
 }
@@ -1426,8 +1438,8 @@ dialog::backdrop,
 }
 
 .type-toggle-btn.active {
-  background: var(--card);
-  color: var(--foreground);
+  background: var(--accent-primary);
+  color: var(--text-inverse);
   font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
@@ -1460,7 +1472,7 @@ dialog::backdrop,
   min-height: 44px;
   height: 44px;
   background: var(--surface-secondary);
-  border: 1.5px dashed var(--accent-primary);
+  border: 1.5px dashed var(--muted-foreground);
   border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 600;
@@ -1474,6 +1486,7 @@ dialog::backdrop,
 
 .btn-manage-add:hover {
   background: var(--surface);
+  border-color: var(--accent-primary);
   border-style: solid;
 }
 
@@ -1835,7 +1848,7 @@ dialog::backdrop,
   min-height: 44px;
   padding: 0 14px;
   border-radius: var(--radius-full);
-  border: 1px dashed var(--accent-primary);
+  border: 1.5px dashed var(--muted-foreground);
   background: var(--surface-secondary);
   color: var(--accent-primary);
   font-size: 13px;
@@ -1848,5 +1861,6 @@ dialog::backdrop,
 
 .template-chip-save:hover {
   background: var(--surface);
+  border-color: var(--accent-primary);
   border-style: solid;
 }

@@ -42,6 +42,7 @@ export function TransactionSearchBar({
       onChange={(e) => setLocalValue(e.target.value)}
       disabled={disabled}
       aria-label="Cari catatan, akun, atau kategori"
+      title="Cari catatan, akun, atau kategori"
     />
   );
 }

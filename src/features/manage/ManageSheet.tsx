@@ -187,6 +187,7 @@ export function ManageSheet({
             className="btn-close-sheet"
             onClick={onClose}
             aria-label="Tutup"
+            title="Tutup kelola akun"
           >
             ✕
           </button>

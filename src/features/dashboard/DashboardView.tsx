@@ -412,6 +412,8 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                         <button
                           type="button"
                           className="btn-tx-edit"
+                          title="Ubah transaksi"
+                          aria-label="Ubah transaksi"
                           onClick={() => {
                             setEditingTx(tx);
                             setDuplicateData(null);
@@ -423,6 +425,8 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                         <button
                           type="button"
                           className="btn-tx-delete"
+                          title="Hapus transaksi"
+                          aria-label="Hapus transaksi"
                           disabled={deletingId === tx.id}
                           onClick={() => openDeleteModal(tx)}
                         >
