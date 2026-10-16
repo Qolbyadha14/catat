@@ -7,7 +7,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import * as fs from 'fs';
 import * as path from 'path';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 let testEnv: RulesTestEnvironment;
 
@@ -106,8 +106,9 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
     await assertSucceeds(
       setDoc(doc(userADb, 'users/user-a/accounts/acc_cash'), {
         name: 'Tunai',
-        type: 'cash',
+        kind: 'asset',
         balance: 100000,
+        isArchived: false,
       }),
     );
     await assertSucceeds(getDoc(doc(userADb, 'users/user-a/accounts/acc_cash')));
@@ -118,5 +119,71 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
       }),
     );
     await assertSucceeds(getDoc(doc(userADb, 'users/user-a/transactions/tx_1')));
+  });
+
+  it('Hard delete di accounts dan categories ditolak (archive-only)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/user-a/accounts/acc_cash'), {
+        id: 'acc_cash',
+        name: 'Tunai',
+        kind: 'asset',
+        balance: 0,
+        isArchived: false,
+      });
+      await setDoc(doc(context.firestore(), 'users/user-a/categories/cat_food'), {
+        id: 'cat_food',
+        name: 'Makan',
+        type: 'expense',
+        isArchived: false,
+      });
+    });
+
+    const userA = testEnv.authenticatedContext('user-a');
+    const db = userA.firestore();
+
+    await assertFails(deleteDoc(doc(db, 'users/user-a/accounts/acc_cash')));
+    await assertFails(deleteDoc(doc(db, 'users/user-a/categories/cat_food')));
+  });
+
+  it('Immutability guard: ubah kind akun atau type kategori ditolak', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/user-a/accounts/acc_cash'), {
+        id: 'acc_cash',
+        name: 'Tunai',
+        kind: 'asset',
+        balance: 0,
+        isArchived: false,
+      });
+      await setDoc(doc(context.firestore(), 'users/user-a/categories/cat_food'), {
+        id: 'cat_food',
+        name: 'Makan',
+        type: 'expense',
+        isArchived: false,
+      });
+    });
+
+    const userA = testEnv.authenticatedContext('user-a');
+    const db = userA.firestore();
+
+    // Mutasi kind akun ditolak
+    await assertFails(updateDoc(doc(db, 'users/user-a/accounts/acc_cash'), { kind: 'liability' }));
+
+    // Mutasi type kategori ditolak
+    await assertFails(updateDoc(doc(db, 'users/user-a/categories/cat_food'), { type: 'income' }));
+
+    // Update mutable fields (name, icon, isArchived) diizinkan
+    await assertSucceeds(
+      updateDoc(doc(db, 'users/user-a/accounts/acc_cash'), {
+        name: 'Kas Dompet',
+        isArchived: true,
+      })
+    );
+    await assertSucceeds(
+      updateDoc(doc(db, 'users/user-a/categories/cat_food'), {
+        name: 'Kuliner',
+        icon: '🍜',
+        isArchived: true,
+      })
+    );
   });
 });
