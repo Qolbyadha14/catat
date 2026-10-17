@@ -1864,3 +1864,306 @@ dialog::backdrop,
   border-color: var(--accent-primary);
   border-style: solid;
 }
+
+/* ==========================================================================
+   OCR Scan Tab & Review Component
+   ========================================================================== */
+
+.ocr-tab-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ocr-disclosure-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ocr-disclosure-icon {
+  font-size: 40px;
+  margin-bottom: 2px;
+}
+
+.ocr-disclosure-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.ocr-disclosure-desc {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ocr-disclosure-points {
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 14px;
+  width: 100%;
+}
+
+.ocr-quota-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 2px;
+}
+
+.ocr-quota-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ocr-quota-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.ocr-quota-pill.low {
+  background: var(--warning-light);
+  color: var(--warning-fg);
+  border-color: var(--warning);
+}
+
+.ocr-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--surface);
+  transition: all var(--transition-fast) ease;
+}
+
+.ocr-dropzone.dragging {
+  border-color: var(--accent-primary);
+  background: var(--surface-secondary);
+}
+
+.ocr-dropzone.disabled {
+  opacity: 0.7;
+}
+
+.ocr-dropzone-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.ocr-dropzone-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.ocr-dropzone-subtitle {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin: 4px 0 16px;
+  max-width: 280px;
+  line-height: 1.4;
+}
+
+.ocr-hidden-input {
+  display: none;
+}
+
+.ocr-action-buttons {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.ocr-btn-camera,
+.ocr-btn-gallery {
+  flex: 1;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+.ocr-dropzone-hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 14px;
+}
+
+.ocr-limit-warning {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: var(--warning-light);
+  color: var(--warning-fg);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--warning);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ocr-processing-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--surface);
+}
+
+.ocr-preview-wrap {
+  width: 100%;
+  height: 160px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+}
+
+.ocr-preview-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ocr-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.ocr-skeleton-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.ocr-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.ocr-skeleton-line {
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--surface-secondary) 25%, var(--border) 50%, var(--surface-secondary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.ocr-sk-amount {
+  width: 55%;
+  height: 28px;
+}
+
+.ocr-sk-merchant {
+  width: 75%;
+  height: 18px;
+}
+
+.ocr-sk-date {
+  width: 40%;
+  height: 18px;
+}
+
+.ocr-review-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  margin-bottom: 2px;
+  gap: 10px;
+}
+
+.ocr-review-badge.high {
+  background: var(--success-light);
+  border-color: var(--success);
+  color: var(--success-fg);
+}
+
+.ocr-review-badge.low {
+  background: var(--warning-light);
+  border-color: var(--warning);
+  color: var(--warning-fg);
+}
+
+.ocr-review-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ocr-review-text strong {
+  font-size: 13px;
+}
+
+.btn-close-ocr-banner {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
