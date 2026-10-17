@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentSingleTabManager, connectFirestoreEmulator } from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,4 +28,33 @@ const isTest = Boolean(proc?.env?.NODE_ENV === 'test' || proc?.env?.BUN_ENV === 
 if (isTest || (isDev && import.meta.env.VITE_USE_FIREBASE_EMULATOR !== 'false')) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
+}
+
+export const RECAPTCHA_ENTERPRISE_SITE_KEY =
+  import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY ?? '6LeeOPMtAAAAAHCpJLmuT4kkAAd9yNMLgPuyoP-N';
+
+export let appCheck: AppCheck | undefined;
+
+if (typeof window !== 'undefined') {
+  const debugToken =
+    import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN ??
+    (globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN;
+
+  if (debugToken) {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
+  } else if (isDev) {
+    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+
+  try {
+    appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_ENTERPRISE_SITE_KEY),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch (err) {
+    // ponytail: ignore duplicate init or missing DOM during dev hot-reload
+    if (isDev) {
+      console.warn('[firebase] AppCheck init notice:', err);
+    }
+  }
 }
