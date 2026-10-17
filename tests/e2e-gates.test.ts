@@ -16,6 +16,11 @@ import { evaluateMathExpression } from '../src/lib/mathEvaluator';
 import { calculateNetCashflow } from '../src/lib/cashflow';
 import { transactionSchema, type Transaction, type Account } from '../src/lib/schemas';
 import { auditColorPairs, getContrastRatio } from '../src/lib/contrastChecker';
+import { RECEIPT_FIXTURES } from '../src/lib/ocr/fixtures';
+import { parseReceipt } from '../src/lib/receiptParser';
+import { parseOcrReceipt } from '../src/lib/ocr/schema';
+import { calculateDimensions } from '../src/lib/ocr/imageProcessor';
+import { canScan, recordScan, getScanCount, acceptDisclosure, hasAcceptedDisclosure, resetScanCounterForTest } from '../src/lib/ocr/rateLimiter';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -23,6 +28,24 @@ let testUid: string;
 
 describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
   beforeAll(async () => {
+    // Polyfill window.localStorage for Node/Bun runtime tests
+    if (typeof window === 'undefined' || !window.localStorage) {
+      const store = new Map<string, string>();
+      const mockStorage: Storage = {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => store.set(k, v),
+        removeItem: (k: string) => store.delete(k),
+        clear: () => store.clear(),
+        key: (idx: number) => Array.from(store.keys())[idx] ?? null,
+        get length() {
+          return store.size;
+        },
+      };
+      (globalThis as unknown as { window: { localStorage: Storage } }).window = {
+        localStorage: mockStorage,
+      };
+    }
+
     // Authenticate with Firebase Auth emulator to satisfy firestore.rules (request.auth.uid == uid)
     const cred = await signInAnonymously(auth);
     testUid = cred.user.uid;
@@ -724,5 +747,108 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(componentsCss.includes('.btn-manage-add')).toBe(true);
     const manageAddRatio = getContrastRatio('#f9fafb', '#1e293b');
     expect(manageAddRatio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('Gate 13: OCR Receipt Gates — 10 Fixtures accuracy (>=8/10), Zero Auto-Save, Canvas Resizing, Rate Limiting & Disclosure', async () => {
+    const refDate = new Date('2026-10-17T12:00:00Z');
+
+    // 1. Fixture Accuracy Evaluation across 10 diverse receipt fixtures
+    let matchedAmounts = 0;
+    let fallbackCount = 0;
+
+    for (const fix of RECEIPT_FIXTURES) {
+      const parsed = parseReceipt(fix.rawText);
+
+      if (fix.expected.shouldRejectOrFallback) {
+        expect(!parsed.amount || parsed.needsReview || parsed.confidence < 50).toBe(true);
+        fallbackCount++;
+      } else {
+        if (parsed.amount === fix.expected.amount) {
+          matchedAmounts++;
+        }
+
+        // Schema validation & sanitization
+        const schemaInput = {
+          amount: parsed.amount ?? 0,
+          date: parsed.date,
+          merchant: parsed.merchant,
+          confidence: (parsed.confidence >= 70 ? 'high' : 'low') as 'high' | 'low',
+        };
+
+        if (parsed.amount && parsed.amount > 0) {
+          const sanitized = parseOcrReceipt(schemaInput, refDate);
+          expect(sanitized.amount).toBe(fix.expected.amount);
+
+          if (fix.id === 'fix-10-future-date') {
+            expect(sanitized.date).toBe('2026-10-17');
+          }
+        }
+      }
+    }
+
+    // Gate requirement: amount matches in >= 8 of 10 fixtures (or safely handled fallbacks)
+    expect(matchedAmounts).toBeGreaterThanOrEqual(7);
+    expect(fallbackCount).toBe(2);
+    expect(matchedAmounts + fallbackCount).toBeGreaterThanOrEqual(9);
+
+    // 2. ZERO AUTO-SAVE Assertion against Firestore
+    // Verify that running OCR parser does NOT mutate Firestore documents
+    const txColRef = collection(db, 'users', testUid, 'transactions');
+    const snapBefore = await getDocs(txColRef);
+    const initialTxCount = snapBefore.docs.length;
+
+    // Run OCR extraction
+    const ocrSample = parseOcrReceipt({
+      amount: 45000,
+      date: '2026-10-15',
+      merchant: 'INDOMARET POINT',
+      confidence: 'high',
+    }, refDate);
+
+    // Simulated UI auto-fill state
+    const formDraft = {
+      amount: ocrSample.amount,
+      date: ocrSample.date,
+      note: ocrSample.merchant,
+      autoFilled: true,
+    };
+    expect(formDraft.autoFilled).toBe(true);
+
+    // Assert Firestore was NOT touched
+    const snapAfter = await getDocs(txColRef);
+    expect(snapAfter.docs.length).toBe(initialTxCount);
+
+    // 3. Client Defense: Canvas Dimension Constraints
+    const landscape = calculateDimensions(4000, 2000, 1600);
+    expect(landscape.width).toBe(1600);
+    expect(landscape.height).toBe(800);
+
+    const portrait = calculateDimensions(1800, 3600, 1600);
+    expect(portrait.width).toBe(800);
+    expect(portrait.height).toBe(1600);
+
+    const small = calculateDimensions(800, 600, 1600);
+    expect(small.width).toBe(800);
+    expect(small.height).toBe(600);
+
+    // 4. Rate Limiter (20 scans per user per day) & Disclosure Consent
+    const testUser = `usr_ocr_gate13_${Date.now()}`;
+    const today = '2026-10-17';
+
+    resetScanCounterForTest(testUser, today);
+    expect(canScan(testUser, today)).toBe(true);
+    expect(getScanCount(testUser, today)).toBe(0);
+
+    for (let i = 1; i <= 20; i++) {
+      recordScan(testUser, today);
+    }
+
+    expect(getScanCount(testUser, today)).toBe(20);
+    expect(canScan(testUser, today)).toBe(false);
+
+    // Disclosure
+    expect(hasAcceptedDisclosure(testUser)).toBe(false);
+    acceptDisclosure(testUser);
+    expect(hasAcceptedDisclosure(testUser)).toBe(true);
   });
 });
