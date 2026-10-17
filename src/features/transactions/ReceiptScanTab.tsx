@@ -29,11 +29,18 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Abort only when component unmounts
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+    };
+  }, []);
+
+  // Revoke object URL when previewUrl changes or unmounts
+  useEffect(() => {
+    return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
@@ -93,8 +100,15 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
       if (controller.signal.aborted) {
         setError('Pemindaian struk dibatalkan.');
       } else {
-        const msg = err instanceof Error ? err.message : 'Gagal membaca struk. Coba unggah ulang.';
-        setError(msg);
+        const raw = err instanceof Error ? err.message : 'Gagal membaca struk. Coba unggah ulang.';
+        // Strip technical prefixes if any
+        let clean = raw.replace(/^AI:\s*/i, '').replace(/\(AI\/[^)]+\)$/i, '').trim();
+        if (clean.includes('timeout')) {
+          clean = 'Waktu pemrosesan struk habis (timeout). Silakan coba lagi.';
+        } else if (clean.includes('fetch-error') || clean.includes('Failed to fetch')) {
+          clean = 'Gagal terhubung ke server OCR. Periksa koneksi internet Anda.';
+        }
+        setError(clean);
       }
     } finally {
       setIsProcessing(false);
@@ -216,6 +230,11 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
         /* Idle Upload Area */
         <div
           className={`ocr-dropzone ${isDragging ? 'dragging' : ''} ${remaining <= 0 ? 'disabled' : ''}`}
+          onClick={(e) => {
+            if (remaining > 0 && (e.target as HTMLElement).tagName !== 'BUTTON') {
+              fileInputRef.current?.click();
+            }
+          }}
           onDragOver={remaining > 0 ? handleDragOver : undefined}
           onDragLeave={remaining > 0 ? handleDragLeave : undefined}
           onDrop={remaining > 0 ? handleDrop : undefined}
@@ -240,7 +259,7 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/*"
             className="ocr-hidden-input"
             onChange={handleFileChange}
             disabled={remaining <= 0}

@@ -49,7 +49,7 @@ describe('Live OCR Test Suite (App Check Debug Token & Gate Verification)', () =
     expect(DEBUG_TOKEN).toBe('51561ED6-6CB7-4A7B-9068-C845B5E7AE4F');
     expect((globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN)
       .toBe('51561ED6-6CB7-4A7B-9068-C845B5E7AE4F');
-    expect(DEFAULT_OCR_MODEL).toBe('gemini-2.5-flash');
+    expect(DEFAULT_OCR_MODEL).toBe('gemini-3.8-flash');
   });
 
   it('2. Gate 8/10: 10 Receipt Fixtures Accuracy & Fallback Handling', () => {

@@ -11,24 +11,53 @@ export interface ScanOptions {
 }
 
 export const OCR_DAILY_LIMIT = 20;
-export const DEFAULT_OCR_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_OCR_MODEL = 'gemini-3.8-flash';
 
 export async function blobToGenerativePart(
   blob: Blob
 ): Promise<{ type: 'inlineData'; inlineData: { data: string; mimeType: string } }> {
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]!);
+  const mimeType = blob.type || 'image/jpeg';
+
+  if (typeof FileReader !== 'undefined') {
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = (reader.result as string) || '';
+        const base64Data = result.split(',')[1] || '';
+        resolve(base64Data);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return {
+      type: 'inlineData',
+      inlineData: {
+        data: base64,
+        mimeType,
+      },
+    };
   }
-  const base64 = btoa(binary);
+
+  const buffer = await blob.arrayBuffer();
+  let base64 = '';
+  const maybeBuffer = (globalThis as unknown as { Buffer?: { from: (b: ArrayBuffer) => { toString: (enc: string) => string } } }).Buffer;
+  if (typeof maybeBuffer !== 'undefined') {
+    base64 = maybeBuffer.from(buffer).toString('base64');
+  } else {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]!);
+    }
+    base64 = btoa(binary);
+  }
+
   return {
     type: 'inlineData',
     inlineData: {
       data: base64,
-      mimeType: blob.type || 'image/jpeg',
+      mimeType,
     },
   };
 }
@@ -157,7 +186,13 @@ export async function scanReceiptWithGemini(
       'Ekstrak informasi struk transaksi ini sesuai JSON schema.',
     ]);
     const text = res.response.text();
-    const rawJson = JSON.parse(text);
+    const cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+    const rawJson = JSON.parse(cleaned);
+
+    if (!rawJson.amount || typeof rawJson.amount !== 'number' || rawJson.amount <= 0) {
+      throw new Error('Nominal total struk tidak terdeteksi jelas. Pastikan foto struk terang dan angka total terlihat.');
+    }
+
     return parseOcrReceipt(rawJson);
   })();
 

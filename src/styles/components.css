@@ -1875,6 +1875,7 @@ dialog::backdrop,
   align-items: center;
   text-align: center;
   background: var(--surface);
+  cursor: pointer;
   transition: all var(--transition-fast) ease;
 }
 
@@ -1883,8 +1884,13 @@ dialog::backdrop,
   background: var(--surface-secondary);
 }
 
+.ocr-dropzone.dragging * {
+  pointer-events: none;
+}
+
 .ocr-dropzone.disabled {
   opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .ocr-dropzone-icon {
