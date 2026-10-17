@@ -1,5 +1,5 @@
 import { getAI, getGenerativeModel, GoogleAIBackend, SchemaType } from 'firebase/ai';
-import { doc, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, runTransaction } from 'firebase/firestore';
 import { app, db } from '../firebase';
 import { parseOcrReceipt, type OcrReceiptResult } from './schema';
 import { recordScan } from './rateLimiter';
@@ -7,9 +7,11 @@ import { recordScan } from './rateLimiter';
 export interface ScanOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
+  modelName?: string;
 }
 
 export const OCR_DAILY_LIMIT = 20;
+export const DEFAULT_OCR_MODEL = 'gemini-2.5-flash';
 
 export async function blobToGenerativePart(
   blob: Blob
@@ -36,6 +38,18 @@ export function formatOcrDateKey(d: Date = new Date()): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+export async function checkScanQuota(uid: string, today: Date = new Date()): Promise<number> {
+  const dateKey = formatOcrDateKey(today);
+  const usageId = `${uid}_${dateKey}`;
+  const usageRef = doc(db, 'scanUsage', usageId);
+  const snap = await getDoc(usageRef);
+  const current = snap.exists() ? (snap.data().count ?? 0) : 0;
+  if (current >= OCR_DAILY_LIMIT) {
+    throw new Error('Batas kuota harian tercapai (maksimal 20 scan per hari).');
+  }
+  return current;
 }
 
 export async function incrementScanUsage(uid: string, today: Date = new Date()): Promise<number> {
@@ -67,10 +81,10 @@ export async function incrementScanUsage(uid: string, today: Date = new Date()):
   return nextCount;
 }
 
-export function getGeminiModel() {
+export function getGeminiModel(modelName: string = DEFAULT_OCR_MODEL) {
   const ai = getAI(app, { backend: new GoogleAIBackend() });
   return getGenerativeModel(ai, {
-    model: 'gemini-3.8-flash',
+    model: modelName,
     systemInstruction:
       'Kamu adalah sistem OCR struk belanja Indonesia. Ekstrak total belanja (nominal rupiah integer positif, abaikan subtotal atau diskon), tanggal transaksi format YYYY-MM-DD, dan nama merchant/toko. Jika tidak ada informasi tanggal atau merchant, set null. Confidence bernilai "high" jika total terlihat jelas, atau "low" jika struk pudar, miring parah, atau angka diragukan.',
     generationConfig: {
@@ -109,14 +123,14 @@ export async function scanReceiptWithGemini(
   uid: string,
   options: ScanOptions = {}
 ): Promise<OcrReceiptResult> {
-  const { timeoutMs = 15000, signal } = options;
+  const { timeoutMs = 15000, signal, modelName = DEFAULT_OCR_MODEL } = options;
 
-  // 1. Atomic Firestore transaction counter check
-  await incrementScanUsage(uid);
+  // 1. Pre-check quota BEFORE invoking AI (do not increment yet)
+  await checkScanQuota(uid);
 
   // 2. Prepare part & model
   const imagePart = await blobToGenerativePart(blob);
-  const model = getGeminiModel();
+  const model = getGeminiModel(modelName);
 
   // 3. Request with 15s timeout
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -147,10 +161,15 @@ export async function scanReceiptWithGemini(
     return parseOcrReceipt(rawJson);
   })();
 
+  let result: OcrReceiptResult;
   try {
-    const result = await Promise.race([generatePromise, timeoutPromise]);
-    return result;
+    result = await Promise.race([generatePromise, timeoutPromise]);
   } finally {
     if (timer) clearTimeout(timer);
   }
+
+  // 4. Only commit quota increment on successful AI extraction
+  await incrementScanUsage(uid);
+
+  return result;
 }
