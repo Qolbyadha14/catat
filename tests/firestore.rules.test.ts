@@ -186,4 +186,56 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
       })
     );
   });
+
+  describe('scanUsage Quota & Isolation Guard', () => {
+    it('Update count <= 20 diizinkan untuk pemilik sah', async () => {
+      const userA = testEnv.authenticatedContext('user-a');
+      const dbA = userA.firestore();
+      const usageRef = doc(dbA, 'scanUsage/user-a_2026-10-17');
+
+      // Create awal count 1
+      await assertSucceeds(setDoc(usageRef, { uid: 'user-a', count: 1 }));
+
+      // Increment count sampai batas 20
+      await assertSucceeds(updateDoc(usageRef, { count: 20 }));
+    });
+
+    it('Attempt count ke-21 ditolak (permission denied)', async () => {
+      const userA = testEnv.authenticatedContext('user-a');
+      const dbA = userA.firestore();
+      const usageRef = doc(dbA, 'scanUsage/user-a_2026-10-17');
+
+      // Create awal count 20
+      await assertSucceeds(setDoc(usageRef, { uid: 'user-a', count: 20 }));
+
+      // Increment ke 21 ditolak
+      await assertFails(updateDoc(usageRef, { count: 21 }));
+
+      // Create langsung dengan count > 20 juga ditolak
+      const overLimitRef = doc(dbA, 'scanUsage/user-a_2026-10-18');
+      await assertFails(setDoc(overLimitRef, { uid: 'user-a', count: 21 }));
+    });
+
+    it('User lain dilarang membaca atau memanipulasi usage milik UID berbeda', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'scanUsage/user-a_2026-10-17'), {
+          uid: 'user-a',
+          count: 5,
+        });
+      });
+
+      const userB = testEnv.authenticatedContext('user-b');
+      const dbB = userB.firestore();
+      const targetRef = doc(dbB, 'scanUsage/user-a_2026-10-17');
+
+      // Baca milik user-a ditolak
+      await assertFails(getDoc(targetRef));
+
+      // Update milik user-a ditolak
+      await assertFails(updateDoc(targetRef, { count: 6 }));
+
+      // Buat dokumen dengan id user-a dari auth user-b ditolak
+      await assertFails(setDoc(targetRef, { uid: 'user-b', count: 1 }));
+    });
+  });
 });
