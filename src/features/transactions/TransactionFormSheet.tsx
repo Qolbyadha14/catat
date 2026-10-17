@@ -295,23 +295,23 @@ export function TransactionFormSheet({
               type="button"
               className={`tab-btn ${activeTab === 'text' ? 'active' : ''}`}
               onClick={() => setActiveTab('text')}
-              title="Fitur Input Asisten Teks hadir di P1"
+              title="Input Asisten Teks"
             >
-              Ketik (P1)
+              Ketik
             </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
               onClick={() => setActiveTab('ocr')}
-              title="Fitur Scan Struk OCR hadir di P1"
+              title="Scan Struk OCR"
             >
-              Scan (P1)
+              Scan
             </button>
           </div>
 
           {activeTab !== 'manual' && (
             <div className="offline-banner" style={{ background: 'var(--surface)', color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
-              Mode asisten ({activeTab === 'text' ? 'Ketik' : 'Scan Struk'}) dijadwalkan untuk rilis P1. Gunakan input manual.
+              Mode asisten ({activeTab === 'text' ? 'Ketik' : 'Scan Struk'}) sedang disiapkan. Gunakan input manual jika perlu.
             </div>
           )}
 
