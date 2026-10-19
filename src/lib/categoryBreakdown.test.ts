@@ -154,4 +154,51 @@ const nextMonth = new Date(2026, 10, 1).getTime(); // Nov 1, 2026
   assert(res.items[0]?.categoryIcon === '🏷️', 'Fallback icon');
 }
 
+// 6. Smart Budgeting progress integration
+{
+  const categoriesWithBudget = new Map([
+    ['cat_food', { name: 'Makan & Minum', icon: '🍔', isArchived: false, monthlyBudget: 1_000_000 }],
+    ['cat_bills', { name: 'Tagihan', icon: '⚡', isArchived: false, monthlyBudget: 500_000 }],
+  ]);
+
+  const txs: Transaction[] = [
+    {
+      id: 'tx1',
+      type: 'expense',
+      amount: 400_000,
+      accountId: 'acc1',
+      categoryId: 'cat_food',
+      note: '',
+      date: new Date(2026, 9, 5).getTime(),
+      createdAt: 1,
+      updatedAt: 1,
+    },
+    {
+      id: 'tx2',
+      type: 'expense',
+      amount: 600_000,
+      accountId: 'acc1',
+      categoryId: 'cat_bills',
+      note: '',
+      date: new Date(2026, 9, 10).getTime(),
+      createdAt: 1,
+      updatedAt: 1,
+    },
+  ];
+
+  const res = computeCategoryBreakdown(txs, categoriesWithBudget, baseTime, nextMonth);
+  const foodItem = res.items.find((i) => i.categoryId === 'cat_food');
+  const billsItem = res.items.find((i) => i.categoryId === 'cat_bills');
+
+  assert(foodItem?.monthlyBudget === 1_000_000, 'foodItem monthlyBudget is 1000000');
+  assert(foodItem?.budgetStatus === 'safe', 'foodItem (40%) is safe');
+  assert(foodItem?.budgetRemaining === 600_000, 'foodItem remaining is 600000');
+  assert(foodItem?.budgetPercentage === 40, 'foodItem percentage is 40%');
+
+  assert(billsItem?.monthlyBudget === 500_000, 'billsItem monthlyBudget is 500000');
+  assert(billsItem?.budgetStatus === 'exceeded', 'billsItem (120%) is exceeded');
+  assert(billsItem?.overbudgetAmount === 100_000, 'billsItem overbudget by 100000');
+}
+
 console.log('Category breakdown tests pass');
+

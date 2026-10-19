@@ -170,9 +170,9 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
   // Category map for quick lookup
   const categoryMap = useMemo(() => {
-    const map = new Map<string, { name: string; icon?: string; isArchived?: boolean }>();
+    const map = new Map<string, { name: string; icon?: string; isArchived?: boolean; monthlyBudget?: number }>();
     categories.forEach((c) =>
-      map.set(c.id, { name: c.name, icon: c.icon, isArchived: c.isArchived })
+      map.set(c.id, { name: c.name, icon: c.icon, isArchived: c.isArchived, monthlyBudget: c.monthlyBudget })
     );
     return map;
   }, [categories]);

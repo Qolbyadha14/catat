@@ -4307,6 +4307,60 @@ dialog::backdrop,
   font-size: 11px;
 }
 
+/* Smart Budgeting Dashboard Elements */
+.category-breakdown-item-budget {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.category-breakdown-badge {
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.category-breakdown-badge.bar-safe {
+  color: var(--success);
+}
+
+.category-breakdown-badge.bar-warning {
+  color: var(--warning);
+}
+
+.category-breakdown-badge.bar-exceeded {
+  color: var(--error);
+}
+
+.category-breakdown-bar-fill.bar-safe {
+  background: linear-gradient(90deg, var(--success) 0%, var(--success-fg) 100%);
+}
+
+.category-breakdown-bar-fill.bar-warning {
+  background: linear-gradient(90deg, var(--warning) 0%, var(--warning-fg) 100%);
+}
+
+.category-breakdown-bar-fill.bar-exceeded {
+  background: linear-gradient(90deg, var(--error) 0%, var(--error-fg) 100%);
+}
+
+.category-budget-pace-row {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.category-budget-pace-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.category-budget-pace-text.exceeded {
+  color: var(--error);
+  font-weight: 600;
+}
+
+
 
 
 

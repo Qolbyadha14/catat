@@ -1,4 +1,5 @@
 import type { Transaction } from './schemas';
+import { computeCategoryBudget, type CategoryBudgetProgress } from './budgeting';
 
 export interface CategoryBreakdownItem {
   categoryId: string;
@@ -7,6 +8,12 @@ export interface CategoryBreakdownItem {
   isArchived: boolean;
   total: number;
   percentage: number;
+  monthlyBudget?: number;
+  budgetStatus?: 'safe' | 'warning' | 'exceeded';
+  budgetRemaining?: number;
+  budgetPercentage?: number;
+  safeDailyPace?: number;
+  overbudgetAmount?: number;
 }
 
 export interface CategoryBreakdownResult {
@@ -16,7 +23,7 @@ export interface CategoryBreakdownResult {
 
 export function computeCategoryBreakdown(
   transactions: Transaction[],
-  categoryMap: Map<string, { name: string; icon?: string; isArchived?: boolean }>,
+  categoryMap: Map<string, { name: string; icon?: string; isArchived?: boolean; monthlyBudget?: number }>,
   startOfMonth: number,
   endOfMonth?: number
 ): CategoryBreakdownResult {
@@ -58,6 +65,12 @@ export function computeCategoryBreakdown(
     const rawPct = Math.round((amount / totalExpense) * 100);
     const percentage = Math.min(100, Math.max(0, rawPct));
 
+    const monthlyBudget = catInfo?.monthlyBudget;
+    let budgetProgress: CategoryBudgetProgress | undefined;
+    if (monthlyBudget && monthlyBudget > 0) {
+      budgetProgress = computeCategoryBudget(amount, monthlyBudget, new Date(startOfMonth));
+    }
+
     items.push({
       categoryId: catId,
       categoryName,
@@ -65,6 +78,12 @@ export function computeCategoryBreakdown(
       isArchived,
       total: amount,
       percentage,
+      monthlyBudget: budgetProgress?.monthlyBudget,
+      budgetStatus: budgetProgress?.status,
+      budgetRemaining: budgetProgress?.remaining,
+      budgetPercentage: budgetProgress?.percentage,
+      safeDailyPace: budgetProgress?.safeDailyPace,
+      overbudgetAmount: budgetProgress?.overbudgetAmount,
     });
   }
 
