@@ -138,25 +138,26 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark mode (Midnight Obsidian) */
+/* Dark mode (Midnight Obsidian Pro) */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Surfaces (Midnight Obsidian) */
+  /* Surfaces (Midnight Obsidian Pro) */
   --surface-base: #09090b;             /* Pure Obsidian Black */
-  --surface-card: #141417;             /* Elevated Slate-Charcoal */
-  --surface-secondary: #1c1c21;        /* Secondary Hover & Input Fill */
-  --border-subtle: rgba(255, 255, 255, 0.08); /* Delicate 8% White Border */
-  --border: rgba(255, 255, 255, 0.12);        /* Crisp 12% White Border */
+  --surface-card: #131418;             /* Refined Charcoal Onyx */
+  --surface-secondary: #1b1c24;        /* Elevated Subtle Fill */
+  --border-subtle: rgba(255, 255, 255, 0.07); /* Delicate 7% White Border */
+  --border: rgba(255, 255, 255, 0.11);        /* Crisp 11% White Border */
 
   /* Text & Foreground */
   --text-primary: #f4f4f5;             /* Soft Crisp White (no glare) */
-  --text-muted: #a1a1aa;               /* Silver Zinc (WCAG AA > 4.5:1) */
-  --text-inverse: #09090b;
+  --text-muted: #9ca3af;               /* Neutral Silver Zinc (WCAG AA > 7:1) */
+  --text-inverse: #ffffff;             /* Crisp White for Filled Buttons */
 
   /* Accents */
   --accent-primary: #5e5bf0;           /* Electric Indigo */
   --accent-primary-hover: #4f46e5;
+  --accent-glow: rgba(94, 91, 240, 0.25);
 
   /* Status semantic: subtle tint + vibrant fg (WCAG AA compliant) */
   --success: #10b981;                  /* Vibrant Emerald Mint */
@@ -172,15 +173,21 @@
   --info-light: rgba(56, 189, 248, 0.14);
   --info-fg: #7dd3fc;
 
-  /* Hero Card Tokens */
+  /* Hero Card Tokens (Dark Titanium Card) */
+  --hero-bg: linear-gradient(145deg, #181926 0%, #12131c 50%, #0d0e14 100%);
+  --hero-text-muted: #9ca3af;
   --hero-income: #34d399;
-  --hero-expense: #f87171;
+  --hero-expense: #fb7185;
+
+  /* Third-party button branding (Dark Mode) */
+  --google-btn-bg: #181820;
+  --google-btn-fg: #f4f4f5;
 
   /* Legacy Aliases */
   --background: var(--surface-base);
   --surface: var(--surface-card);
-  --surface-secondary: #1c1c21;
-  --border: rgba(255, 255, 255, 0.12);
+  --surface-secondary: #1b1c24;
+  --border: rgba(255, 255, 255, 0.11);
   --foreground: var(--text-primary);
   --muted-foreground: var(--text-muted);
   --card: var(--surface-card);
@@ -204,21 +211,22 @@
   :root:not([data-theme='light']) {
     color-scheme: dark;
 
-    /* Surfaces (Midnight Obsidian) */
+    /* Surfaces (Midnight Obsidian Pro) */
     --surface-base: #09090b;             /* Pure Obsidian Black */
-    --surface-card: #141417;             /* Elevated Slate-Charcoal */
-    --surface-secondary: #1c1c21;        /* Secondary Hover & Input Fill */
-    --border-subtle: rgba(255, 255, 255, 0.08); /* Delicate 8% White Border */
-    --border: rgba(255, 255, 255, 0.12);        /* Crisp 12% White Border */
+    --surface-card: #131418;             /* Refined Charcoal Onyx */
+    --surface-secondary: #1b1c24;        /* Elevated Subtle Fill */
+    --border-subtle: rgba(255, 255, 255, 0.07); /* Delicate 7% White Border */
+    --border: rgba(255, 255, 255, 0.11);        /* Crisp 11% White Border */
 
     /* Text & Foreground */
     --text-primary: #f4f4f5;             /* Soft Crisp White (no glare) */
-    --text-muted: #a1a1aa;               /* Silver Zinc (WCAG AA > 4.5:1) */
-    --text-inverse: #09090b;
+    --text-muted: #9ca3af;               /* Neutral Silver Zinc (WCAG AA > 7:1) */
+    --text-inverse: #ffffff;             /* Crisp White for Filled Buttons */
 
     /* Accents */
     --accent-primary: #5e5bf0;           /* Electric Indigo */
     --accent-primary-hover: #4f46e5;
+    --accent-glow: rgba(94, 91, 240, 0.25);
 
     /* Status semantic: subtle tint + vibrant fg (WCAG AA compliant) */
     --success: #10b981;                  /* Vibrant Emerald Mint */
@@ -234,15 +242,21 @@
     --info-light: rgba(56, 189, 248, 0.14);
     --info-fg: #7dd3fc;
 
-    /* Hero Card Tokens */
+    /* Hero Card Tokens (Dark Titanium Card) */
+    --hero-bg: linear-gradient(145deg, #181926 0%, #12131c 50%, #0d0e14 100%);
+    --hero-text-muted: #9ca3af;
     --hero-income: #34d399;
-    --hero-expense: #f87171;
+    --hero-expense: #fb7185;
+
+    /* Third-party button branding (Dark Mode) */
+    --google-btn-bg: #181820;
+    --google-btn-fg: #f4f4f5;
 
     /* Legacy Aliases */
     --background: var(--surface-base);
     --surface: var(--surface-card);
-    --surface-secondary: #1c1c21;
-    --border: rgba(255, 255, 255, 0.12);
+    --surface-secondary: #1b1c24;
+    --border: rgba(255, 255, 255, 0.11);
     --foreground: var(--text-primary);
     --muted-foreground: var(--text-muted);
     --card: var(--surface-card);

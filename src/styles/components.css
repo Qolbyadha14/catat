@@ -97,13 +97,20 @@
 .app-header {
   background: var(--card);
   padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 20;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+:root[data-theme='dark'] .app-header {
+  background: rgba(9, 9, 11, 0.85);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .brand-group h1 {
@@ -255,7 +262,7 @@
   align-items: center;
   justify-content: space-between;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 4px 8px;
   box-shadow: var(--shadow-sm);
@@ -300,9 +307,16 @@
   background: var(--hero-bg);
   color: white;
   border-radius: var(--radius-xl);
-  padding: 20px;
+  padding: 22px 20px;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-theme='dark'] .hero-card {
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.8), 0 0 24px -6px rgba(94, 91, 240, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hero-label {
@@ -518,12 +532,19 @@ dialog::backdrop,
 
 .account-chip {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
   min-width: 130px;
   flex-shrink: 0;
   box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast) ease, border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+}
+
+.account-chip:hover {
+  border-color: var(--border);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .account-chip-name {
@@ -856,7 +877,7 @@ dialog::backdrop,
 /* Card List */
 .card-list {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
@@ -867,7 +888,12 @@ dialog::backdrop,
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color var(--transition-fast) ease;
+}
+
+.tx-item:hover {
+  background-color: var(--surface-secondary);
 }
 
 .tx-item:last-child {
@@ -1040,19 +1066,26 @@ dialog::backdrop,
   padding: 12px 16px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   background: var(--card);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-subtle);
   z-index: 30;
   box-sizing: border-box;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+:root[data-theme='dark'] .fab-bottom {
+  background: rgba(9, 9, 11, 0.85);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .btn-hero {
   width: 100%;
   height: 48px;
   min-height: 48px;
-  background: var(--accent-primary);
-  color: var(--text-inverse);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%);
+  color: var(--primary-foreground);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   font-size: 15px;
   font-weight: 600;
   display: flex;
@@ -1060,12 +1093,13 @@ dialog::backdrop,
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 6px 20px -4px rgba(94, 91, 240, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
   transition: all var(--transition-fast) ease;
 }
 
 .btn-hero:hover {
-  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -4px rgba(94, 91, 240, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
 }
 
 .btn-hero:active {
@@ -1093,15 +1127,16 @@ dialog::backdrop,
   width: 100%;
   max-width: 480px;
   background: var(--card);
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  box-shadow: var(--shadow-lg);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
   max-height: 90vh;
   max-height: 90dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
+  border-bottom: none;
 }
 
 @media (min-width: 768px) {
@@ -1713,7 +1748,7 @@ dialog::backdrop,
 /* Category Breakdown */
 .category-breakdown-card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   padding: 16px;
   box-shadow: var(--shadow-sm);
@@ -1798,7 +1833,7 @@ dialog::backdrop,
 
 .category-breakdown-bar-fill {
   height: 100%;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent-primary) 0%, var(--info) 100%);
   border-radius: var(--radius-full);
   transition: width 0.3s ease;
 }
@@ -3122,11 +3157,11 @@ dialog::backdrop,
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
   color: var(--foreground);
-  padding: 0 12px;
-  border-radius: var(--radius-md);
+  padding: 0 14px;
+  border-radius: var(--radius-full);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -3137,13 +3172,15 @@ dialog::backdrop,
 }
 
 .btn-header-family:hover {
-  background: var(--surface-secondary);
-  border-color: var(--accent);
+  background: var(--surface);
+  border-color: var(--border);
+  transform: translateY(-1px);
 }
 
 .btn-header-family.active {
   border-color: var(--accent);
   background: var(--surface-secondary);
+  box-shadow: 0 0 12px rgba(94, 91, 240, 0.2);
 }
 
 .btn-family-icon {
@@ -3708,9 +3745,17 @@ dialog::backdrop,
 }
 
 .account-chip-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 20px;
   line-height: 1;
   flex-shrink: 0;
+  border: 1px solid var(--border-subtle);
 }
 
 .account-chip-info {
@@ -3811,9 +3856,9 @@ dialog::backdrop,
   width: 100%;
   max-width: 380px;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   padding: 16px;
   display: flex;
   flex-direction: column;
