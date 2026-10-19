@@ -1914,7 +1914,17 @@ dialog::backdrop,
 }
 
 .ocr-hidden-input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ocr-action-buttons {
@@ -2809,4 +2819,93 @@ dialog::backdrop,
 
 .ocr-staged-actions button {
   flex: 1;
+}
+
+/* Live WebRTC Camera Viewfinder */
+.ocr-camera-modal {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.ocr-camera-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--slate-900);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ocr-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ocr-camera-guide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: 8px;
+}
+
+.ocr-camera-frame {
+  width: 82%;
+  height: 72%;
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius-md);
+}
+
+.ocr-camera-hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-inverse);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+}
+
+.ocr-camera-error {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  background: var(--warning-light);
+  color: var(--warning-fg);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.ocr-camera-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ocr-btn-camera-snap {
+  flex: 2;
+  min-height: 44px;
+  font-weight: 700;
+}
+
+.ocr-btn-camera-cancel,
+.ocr-btn-camera-flip {
+  flex: 1;
+  min-height: 44px;
 }

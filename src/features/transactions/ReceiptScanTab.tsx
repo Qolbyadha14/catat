@@ -60,26 +60,35 @@ export function checkBatchQuota(
   return { allowed: true };
 }
 
-export function extractImageFileFromClipboard(clipboardData: DataTransfer | null): File | null {
-  if (!clipboardData) return null;
-  if (clipboardData.items) {
+export function extractImageFilesFromClipboard(clipboardData: DataTransfer | null): File[] {
+  if (!clipboardData) return [];
+  const files: File[] = [];
+
+  if (clipboardData.files && clipboardData.files.length > 0) {
+    for (let i = 0; i < clipboardData.files.length; i++) {
+      const file = clipboardData.files[i];
+      if (file && file.type.startsWith('image/')) {
+        files.push(file);
+      }
+    }
+  }
+
+  if (files.length === 0 && clipboardData.items) {
     for (let i = 0; i < clipboardData.items.length; i++) {
       const item = clipboardData.items[i];
       if (item && item.type.startsWith('image/')) {
         const file = item.getAsFile();
-        if (file) return file;
+        if (file) files.push(file);
       }
     }
   }
-  if (clipboardData.files) {
-    for (let i = 0; i < clipboardData.files.length; i++) {
-      const file = clipboardData.files[i];
-      if (file && file.type.startsWith('image/')) {
-        return file;
-      }
-    }
-  }
-  return null;
+
+  return files;
+}
+
+export function extractImageFileFromClipboard(clipboardData: DataTransfer | null): File | null {
+  const files = extractImageFilesFromClipboard(clipboardData);
+  return files[0] ?? null;
 }
 
 function cleanErrorMessage(err: unknown): string {
@@ -114,6 +123,13 @@ export function ReceiptScanTab({
   const [stagedThumbnails, setStagedThumbnails] = useState<string[]>([]);
   const [scanMode, setScanMode] = useState<'combine' | 'bulk'>('combine');
 
+  // Live WebRTC Camera state
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -123,6 +139,9 @@ export function ReceiptScanTab({
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
   }, []);
@@ -153,10 +172,10 @@ export function ReceiptScanTab({
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (isProcessing) return;
-      const file = extractImageFileFromClipboard(e.clipboardData);
-      if (file) {
+      const files = extractImageFilesFromClipboard(e.clipboardData);
+      if (files.length > 0) {
         e.preventDefault();
-        handleFilesSelected([file]);
+        handleFilesSelected(files);
       }
     };
 
@@ -463,25 +482,118 @@ export function ReceiptScanTab({
     setStatusMessage('');
   };
 
-  const handlePasteClipboard = async () => {
+  const handleStartCamera = async (facing: 'environment' | 'user' = 'environment') => {
+    setError(null);
+    setCameraError(null);
+
+    // If getUserMedia is not supported, fallback to native file input
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      cameraInputRef.current?.click();
+      return;
+    }
+
+    try {
+      setIsCameraOpen(true);
+      setCameraFacing(facing);
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch {
+      // Permission denied or camera unavailable -> close modal and fallback to native file input
+      setIsCameraOpen(false);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      cameraInputRef.current?.click();
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setCameraError('Kamera belum siap, tunggu sebentar.');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      (blob) => {
+        handleCloseCamera();
+        if (blob) {
+          const file = new File([blob], `camera_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          handleFilesSelected([file]);
+        } else {
+          setError('Gagal mengambil foto dari kamera.');
+        }
+      },
+      'image/jpeg',
+      0.92
+    );
+  };
+
+  const handleCloseCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+    setCameraError(null);
+  };
+
+  const handlePasteClipboard = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setError(null);
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.read) {
         const items = await navigator.clipboard.read();
+        const extractedFiles: File[] = [];
         for (const item of items) {
           const imageType = item.types.find((t) => t.startsWith('image/'));
           if (imageType) {
             const blob = await item.getType(imageType);
-            const file = new File([blob], 'clipboard.png', { type: imageType });
-            handleFilesSelected([file]);
-            return;
+            extractedFiles.push(new File([blob], 'clipboard.png', { type: imageType }));
           }
         }
-        setError('Tidak ada gambar di clipboard Anda. Silakan screenshot atau copy gambar struk terlebih dahulu.');
-      } else {
-        setError('Tekan tombol keyboard Cmd+V (Mac) atau Ctrl+V (Windows) untuk paste gambar.');
+        if (extractedFiles.length > 0) {
+          handleFilesSelected(extractedFiles);
+          return;
+        }
       }
+      setError('Tidak ada gambar di clipboard. Tip: jika file struk ada di folder/Finder, gunakan "Pilih Galeri" atau tekan keyboard Cmd+V / Ctrl+V.');
     } catch {
-      setError('Izin akses clipboard tidak aktif. Gunakan shortcut keyboard Cmd+V atau Ctrl+V.');
+      setError('Akses clipboard otomatis dibatasi oleh browser. Silakan tekan shortcut keyboard Cmd+V (Mac) atau Ctrl+V (Windows) langsung di layar.');
     }
   };
 
@@ -550,11 +662,11 @@ export function ReceiptScanTab({
         </div>
       )}
 
-      {/* Hidden file inputs */}
+      {/* Hidden file inputs with accessible styling */}
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         capture="environment"
         className="ocr-hidden-input"
         onChange={handleFileChange}
@@ -565,7 +677,7 @@ export function ReceiptScanTab({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/*"
+        accept="image/jpeg,image/png,image/webp"
         multiple
         className="ocr-hidden-input"
         onChange={handleFileChange}
@@ -573,8 +685,53 @@ export function ReceiptScanTab({
         aria-label="Pilih file gambar struk dari galeri"
       />
 
-      {/* Processing State: Skeleton + Preview */}
-      {isProcessing ? (
+      {/* Live WebRTC Camera Viewfinder Modal */}
+      {isCameraOpen ? (
+        <div className="ocr-camera-modal" role="dialog" aria-modal="true" aria-label="Kamera Pindai Struk">
+          <div className="ocr-camera-viewport">
+            <video
+              ref={videoRef}
+              playsInline
+              autoPlay
+              muted
+              className="ocr-camera-video"
+            />
+            <div className="ocr-camera-guide">
+              <div className="ocr-camera-frame" />
+              <span className="ocr-camera-hint">Posisikan struk di dalam kotak</span>
+            </div>
+            {cameraError && <div className="ocr-camera-error">{cameraError}</div>}
+          </div>
+
+          <div className="ocr-camera-controls">
+            <button
+              type="button"
+              className="btn-outline ocr-btn-camera-cancel"
+              onClick={handleCloseCamera}
+            >
+              Batal
+            </button>
+
+            <button
+              type="button"
+              className="btn-hero ocr-btn-camera-snap"
+              onClick={handleCapturePhoto}
+            >
+              📸 Jepret Struk
+            </button>
+
+            <button
+              type="button"
+              className="btn-outline ocr-btn-camera-flip"
+              onClick={() => handleStartCamera(cameraFacing === 'environment' ? 'user' : 'environment')}
+              title="Ganti Kamera Depan/Belakang"
+            >
+              🔄
+            </button>
+          </div>
+        </div>
+      ) : isProcessing ? (
+        /* Processing State: Skeleton + Preview */
         <div className="ocr-processing-card">
           {previewUrl && (
             <div className="ocr-preview-wrap">
@@ -611,7 +768,10 @@ export function ReceiptScanTab({
                 <button
                   type="button"
                   className="btn-link-action"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
                 >
                   + Tambah Foto
                 </button>
@@ -620,7 +780,10 @@ export function ReceiptScanTab({
                 type="button"
                 className="btn-link-action"
                 style={{ color: 'var(--muted-foreground)' }}
-                onClick={() => setStagedFiles(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStagedFiles(null);
+                }}
               >
                 Ganti
               </button>
@@ -713,7 +876,10 @@ export function ReceiptScanTab({
             <button
               type="button"
               className="btn-solid ocr-btn-camera"
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStartCamera('environment');
+              }}
               disabled={remaining <= 0}
             >
               📷 Ambil Foto Kamera
@@ -721,7 +887,10 @@ export function ReceiptScanTab({
             <button
               type="button"
               className="btn-outline ocr-btn-gallery"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
               disabled={remaining <= 0}
             >
               🖼️ Pilih Galeri
@@ -729,7 +898,10 @@ export function ReceiptScanTab({
             <button
               type="button"
               className="btn-outline ocr-btn-paste"
-              onClick={handlePasteClipboard}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePasteClipboard(e);
+              }}
               disabled={remaining <= 0}
               title="Paste screenshot dari clipboard"
             >
