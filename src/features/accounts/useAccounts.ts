@@ -3,15 +3,18 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { accountSchema, type Account } from '../../lib/schemas';
 
-export function useAccounts(uid: string) {
+export function useAccounts(uid: string, ledgerId?: string) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid && !ledgerId) return;
 
-    const q = query(collection(db, 'users', uid, 'accounts'));
+    const colRef = ledgerId
+      ? collection(db, 'ledgers', ledgerId, 'accounts')
+      : collection(db, 'users', uid, 'accounts');
+    const q = query(colRef);
 
     const unsubscribe = onSnapshot(
       q,
@@ -33,7 +36,7 @@ export function useAccounts(uid: string) {
     );
 
     return () => unsubscribe();
-  }, [uid]);
+  }, [uid, ledgerId]);
 
   return { accounts, loading, error };
 }

@@ -86,7 +86,7 @@ function throws(fn: () => void) {
   }, refDate);
   assert(itemReceipt.transactionNumber === '578129381293812', 'extracts transactionNumber');
   assert(itemReceipt.referenceKey === 'tiktok#578129381293812', 'computes referenceKey');
-  assert(itemReceipt.items.length === 1 && itemReceipt.items[0].name === 'Kemeja Flannel', 'extracts items');
+  assert(itemReceipt.items?.length === 1 && itemReceipt.items[0]?.name === 'Kemeja Flannel', 'extracts items');
 }
 
 // 2. OCR Image Processor - Dimension Calculation

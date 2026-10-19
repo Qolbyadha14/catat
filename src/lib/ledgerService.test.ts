@@ -27,7 +27,7 @@ assert(msg.includes('https://catat-8897d.web.app/join?code='), 'includes join li
 // 3. createInitialLedger & addMemberToLedger
 const ledger = createInitialLedger({ uid: 'u1', displayName: 'Qolby', email: 'q@test.com' }, 'Keluarga Qolby');
 assert(ledger.ownerUid === 'u1', 'sets owner');
-assert(ledger.members['u1'].role === 'owner', 'sets owner role');
+assert(ledger.members['u1']?.role === 'owner', 'sets owner role');
 
 const newMember: LedgerMember = {
   uid: 'u2',
@@ -37,7 +37,7 @@ const newMember: LedgerMember = {
   joinedAt: Date.now(),
 };
 const updated = addMemberToLedger(ledger, newMember);
-assert(updated.members['u2'].name === 'Sarah', 'adds member');
+assert(updated.members['u2']?.name === 'Sarah', 'adds member');
 
 // 4. findDuplicateReceipt
 const existingTx = {

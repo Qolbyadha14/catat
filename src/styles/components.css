@@ -3090,3 +3090,480 @@ dialog::backdrop,
   flex: 1;
   min-height: 44px;
 }
+
+/* ============================================================
+   Family Collaborative Ledger & Join UI
+   ============================================================ */
+
+/* Header family mode indicator button */
+.btn-header-family {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-header-family:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--accent-primary);
+}
+
+.family-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* Family Ledger Sheet Details */
+.family-ledger-sheet {
+  max-width: 500px;
+}
+
+.family-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+}
+
+/* Invite Code Card */
+.family-invite-card {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.family-invite-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.family-invite-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  letter-spacing: 0.5px;
+}
+
+.family-invite-hint {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.family-invite-code-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px 14px;
+}
+
+.family-invite-code {
+  font-family: monospace;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--foreground);
+}
+
+.btn-copy-code {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  min-height: 38px;
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-copy-code:hover {
+  background: var(--surface);
+  border-color: var(--accent-primary);
+}
+
+/* WhatsApp Share Button */
+.btn-wa-share {
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--success);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-wa-share:hover {
+  opacity: 0.95;
+  box-shadow: 0 6px 16px rgba(4, 120, 87, 0.35);
+}
+
+.btn-wa-share:active {
+  transform: scale(0.98);
+}
+
+.btn-wa-icon {
+  font-size: 18px;
+}
+
+/* Family Members List */
+.family-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.family-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.family-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.family-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.family-member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.family-member-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  color: var(--avatar-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.family-member-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.family-member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.family-member-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.family-member-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.member-self-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  background: var(--info-light);
+  color: var(--info-fg);
+  border-radius: var(--radius-full);
+}
+
+.member-role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.member-role-badge.owner {
+  background: var(--warning-light);
+  color: var(--warning-fg);
+}
+
+.member-role-badge.member {
+  background: var(--surface-secondary);
+  color: var(--muted-foreground);
+}
+
+.family-member-joined {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+/* Family Actions */
+.family-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-family-secondary {
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-family-secondary:hover {
+  background: var(--card);
+  border-color: var(--accent-primary);
+}
+
+.btn-family-tertiary {
+  min-height: 40px;
+  padding: 0 16px;
+  background: none;
+  color: var(--muted-foreground);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--transition-fast) ease;
+}
+
+.btn-family-tertiary:hover {
+  color: var(--foreground);
+}
+
+/* Family Empty State */
+.family-empty-state {
+  text-align: center;
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.family-empty-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.family-empty-state h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.family-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.family-empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 8px;
+}
+
+/* Join Ledger Dialog */
+.join-ledger-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  background: var(--surface);
+  color: var(--foreground);
+  max-width: 420px;
+  width: calc(100% - 32px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+  margin: auto;
+}
+
+.join-ledger-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.join-ledger-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.join-ledger-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.join-ledger-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.join-ledger-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.join-ledger-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.join-ledger-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.join-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--error-light);
+  color: var(--error-fg);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.join-code-input-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.join-code-input {
+  width: 100%;
+  height: 52px;
+  text-align: center;
+  font-family: monospace;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  background: var(--surface-secondary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  outline: none;
+  transition: border-color var(--transition-fast) ease;
+}
+
+.join-code-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.join-ledger-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Transaction List Creator Attribution & Items Indicator */
+.tx-creator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.tx-creator-avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  color: var(--avatar-fg);
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.tx-items-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  background: var(--surface-secondary);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}

@@ -53,3 +53,25 @@ export async function ensureUserDefaults(uid: string): Promise<void> {
 
   await batch.commit();
 }
+
+export async function ensureLedgerDefaults(ledgerId: string): Promise<void> {
+  const accSnap = await getDoc(doc(db, 'ledgers', ledgerId, 'accounts', 'acc_cash'));
+  if (accSnap.exists()) {
+    return;
+  }
+
+  const now = Date.now();
+  const batch = writeBatch(db);
+
+  for (const acc of DEFAULT_ACCOUNTS) {
+    const accRef = doc(db, 'ledgers', ledgerId, 'accounts', acc.id);
+    batch.set(accRef, { ...acc, createdAt: now });
+  }
+
+  for (const cat of DEFAULT_CATEGORIES) {
+    const catRef = doc(db, 'ledgers', ledgerId, 'categories', cat.id);
+    batch.set(catRef, { ...cat, createdAt: now });
+  }
+
+  await batch.commit();
+}

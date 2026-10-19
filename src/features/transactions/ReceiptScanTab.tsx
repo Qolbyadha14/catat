@@ -417,6 +417,9 @@ export function ReceiptScanTab({
             platform: 'other',
             paymentMethod: null,
             suggestedType: 'expense',
+            transactionNumber: null,
+            referenceKey: null,
+            items: [],
           };
           results.push({ result: fallbackResult, previewUrl: preview });
         }

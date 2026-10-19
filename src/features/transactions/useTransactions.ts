@@ -3,16 +3,19 @@ import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestor
 import { db } from '../../lib/firebase';
 import { transactionSchema, type Transaction } from '../../lib/schemas';
 
-export function useTransactions(uid: string, maxItems: number = 50) {
+export function useTransactions(uid: string, maxItems: number = 50, ledgerId?: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid && !ledgerId) return;
 
+    const colRef = ledgerId
+      ? collection(db, 'ledgers', ledgerId, 'transactions')
+      : collection(db, 'users', uid, 'transactions');
     const q = query(
-      collection(db, 'users', uid, 'transactions'),
+      colRef,
       orderBy('date', 'desc'),
       limit(maxItems)
     );
@@ -37,7 +40,7 @@ export function useTransactions(uid: string, maxItems: number = 50) {
     );
 
     return () => unsubscribe();
-  }, [uid, maxItems]);
+  }, [uid, maxItems, ledgerId]);
 
   return { transactions, loading, error };
 }

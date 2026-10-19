@@ -35,7 +35,7 @@ export const transactionItemSchema = z.object({
 export const ledgerMemberSchema = z.object({
   uid: z.string().min(1),
   name: z.string().trim().min(1).max(50),
-  email: z.string().email(),
+  email: z.string().optional().default(''),
   photoURL: z.string().url().optional(),
   role: z.enum(['owner', 'member']),
   joinedAt: z.number().int(),
@@ -57,7 +57,7 @@ const baseTx = z.object({
   date: z.number().int(),
   note: z.string().trim().max(140).optional().default(''),
   referenceKey: z.string().trim().max(120).nullable().optional(),
-  items: z.array(transactionItemSchema).optional().default([]),
+  items: z.array(transactionItemSchema).optional(),
   createdBy: creatorSchema.optional(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
@@ -85,6 +85,7 @@ export type Account = z.infer<typeof accountSchema>;
 export type Category = z.infer<typeof categorySchema>;
 export type Transaction = z.infer<typeof transactionSchema>;
 export type TransactionCreator = z.infer<typeof creatorSchema>;
+export type Creator = TransactionCreator;
 export type TransactionItem = z.infer<typeof transactionItemSchema>;
 export type LedgerMember = z.infer<typeof ledgerMemberSchema>;
 export type Ledger = z.infer<typeof ledgerSchema>;

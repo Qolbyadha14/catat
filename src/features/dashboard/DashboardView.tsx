@@ -25,6 +25,15 @@ import {
   prepareTransactionDuplicate,
   type DuplicateFormValues,
 } from '../../lib/transactionDuplicate';
+import { FamilyLedgerSheet } from '../family/FamilyLedgerSheet';
+import { JoinLedgerDialog } from '../family/JoinLedgerDialog';
+import {
+  getUserActiveLedgerId,
+  setUserActiveLedgerId,
+  subscribeToLedger,
+  createAndSaveLedger,
+} from '../../lib/ledgerService';
+import type { Ledger } from '../../lib/schemas';
 
 interface DashboardViewProps {
   user: User;
@@ -33,9 +42,24 @@ interface DashboardViewProps {
 
 export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const { theme, setTheme } = useTheme();
-  const { accounts, loading: accLoading } = useAccounts(user.uid);
-  const { categories, loading: catLoading } = useCategories(user.uid);
-  const { transactions, loading: txLoading } = useTransactions(user.uid);
+
+  // Family Ledger State
+  const [activeLedgerId, setActiveLedgerId] = useState<string | null>(null);
+  const [activeLedger, setActiveLedger] = useState<Ledger | null>(null);
+  const [isFamilySheetOpen, setIsFamilySheetOpen] = useState(false);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [joinCodeFromUrl, setJoinCodeFromUrl] = useState('');
+  const [isCreatingLedger, setIsCreatingLedger] = useState(false);
+
+  const { accounts, loading: accLoading } = useAccounts(user.uid, activeLedgerId || undefined);
+  const { categories, loading: catLoading } = useCategories(user.uid, activeLedgerId || undefined);
+  const { transactions, loading: txLoading } = useTransactions(user.uid, 50, activeLedgerId || undefined);
+
+  const userProfileCreator = useMemo(() => ({
+    uid: user.uid,
+    name: user.displayName || user.email?.split('@')[0] || 'Pengguna',
+    photoURL: user.photoURL || undefined,
+  }), [user]);
 
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -78,6 +102,63 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Listen for invite code in URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code') || params.get('join');
+      if (code) {
+        setJoinCodeFromUrl(code.toUpperCase());
+        setIsJoinDialogOpen(true);
+      }
+    }
+  }, []);
+
+  // Fetch active ledger on mount
+  useEffect(() => {
+    getUserActiveLedgerId(user.uid).then((storedLedgerId) => {
+      if (storedLedgerId) {
+        setActiveLedgerId(storedLedgerId);
+      }
+    });
+  }, [user.uid]);
+
+  // Subscribe to real-time updates for active ledger
+  useEffect(() => {
+    if (!activeLedgerId) {
+      setActiveLedger(null);
+      return;
+    }
+    const unsub = subscribeToLedger(activeLedgerId, (ledger) => {
+      setActiveLedger(ledger);
+    });
+    return () => unsub();
+  }, [activeLedgerId]);
+
+  const handleCreateLedger = async () => {
+    try {
+      setIsCreatingLedger(true);
+      const newLedger = await createAndSaveLedger(userProfileCreator);
+      setActiveLedgerId(newLedger.id);
+      setActiveLedger(newLedger);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Gagal membuat buku kas keluarga');
+    } finally {
+      setIsCreatingLedger(false);
+    }
+  };
+
+  const handleSwitchToPersonal = async () => {
+    await setUserActiveLedgerId(user.uid, null);
+    setActiveLedgerId(null);
+    setActiveLedger(null);
+  };
+
+  const handleJoinSuccess = (joinedLedger: Ledger) => {
+    setActiveLedgerId(joinedLedger.id);
+    setActiveLedger(joinedLedger);
+  };
 
   const activeAccounts = useMemo(() => accounts.filter((a) => !a.isArchived), [accounts]);
   const activeCategories = useMemo(() => categories.filter((c) => !c.isArchived), [categories]);
@@ -171,7 +252,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     if (!txToDelete) return;
     try {
       setDeletingId(txToDelete.id);
-      await deleteTransaction(user.uid, txToDelete.id);
+      await deleteTransaction(user.uid, txToDelete.id, activeLedgerId || undefined);
       closeDeleteModal();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Gagal menghapus');
@@ -200,6 +281,17 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           <p className="brand-sub">Your money, under control.</p>
         </div>
         <div className="user-profile-menu">
+          <button
+            type="button"
+            className="btn-header-family"
+            onClick={() => setIsFamilySheetOpen(true)}
+            title={activeLedger ? `Buku Kas: ${activeLedger.name}` : 'Buku Kas Keluarga'}
+            aria-label="Buku Kas Keluarga"
+          >
+            <span>👥</span>
+            <span>{activeLedger ? activeLedger.name : 'Keluarga'}</span>
+            {activeLedger && <span className="family-badge-dot" title="Mode Kas Bersama Aktif" />}
+          </button>
           <button
             type="button"
             className="btn-header-gear"
@@ -382,7 +474,28 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
                       <div className="tx-icon">{icon}</div>
                       <div className="tx-info">
                         <span className="tx-title">{title}</span>
-                        <span className="tx-sub">{sub}</span>
+                        <span className="tx-sub">
+                          {sub}
+                          {tx.createdBy?.name && (
+                            <>
+                              {' • '}
+                              <span className="tx-creator-pill" title={`Dicatat oleh ${tx.createdBy.name}`}>
+                                <span className="tx-creator-avatar">
+                                  {tx.createdBy.name.slice(0, 1).toUpperCase()}
+                                </span>
+                                {tx.createdBy.name}
+                              </span>
+                            </>
+                          )}
+                          {tx.items && tx.items.length > 0 && (
+                            <>
+                              {' • '}
+                              <span className="tx-items-indicator" title={`${tx.items.length} rincian barang`}>
+                                🛒 {tx.items.length} item
+                              </span>
+                            </>
+                          )}
+                        </span>
                       </div>
                     </div>
 
@@ -486,6 +599,9 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           categories={activeCategories}
           initialTx={editingTx}
           duplicateData={duplicateData}
+          createdBy={userProfileCreator}
+          ledgerId={activeLedgerId || undefined}
+          existingTransactions={transactions}
         />
       )}
 
@@ -547,6 +663,27 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           </div>
         )}
       </dialog>
+
+      {/* Family Ledger Sheet */}
+      <FamilyLedgerSheet
+        isOpen={isFamilySheetOpen}
+        onClose={() => setIsFamilySheetOpen(false)}
+        currentUserId={user.uid}
+        activeLedger={activeLedger}
+        onOpenJoinDialog={() => setIsJoinDialogOpen(true)}
+        onSwitchToPersonal={activeLedger ? handleSwitchToPersonal : undefined}
+        onCreateLedger={handleCreateLedger}
+        isCreating={isCreatingLedger}
+      />
+
+      {/* Join Ledger Dialog */}
+      <JoinLedgerDialog
+        isOpen={isJoinDialogOpen}
+        onClose={() => setIsJoinDialogOpen(false)}
+        initialCode={joinCodeFromUrl}
+        currentUser={userProfileCreator}
+        onJoinSuccess={handleJoinSuccess}
+      />
     </div>
   );
 }

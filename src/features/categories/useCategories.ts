@@ -3,15 +3,18 @@ import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { categorySchema, type Category } from '../../lib/schemas';
 
-export function useCategories(uid: string) {
+export function useCategories(uid: string, ledgerId?: string) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid && !ledgerId) return;
 
-    const q = query(collection(db, 'users', uid, 'categories'));
+    const colRef = ledgerId
+      ? collection(db, 'ledgers', ledgerId, 'categories')
+      : collection(db, 'users', uid, 'categories');
+    const q = query(colRef);
 
     const unsubscribe = onSnapshot(
       q,
@@ -33,7 +36,7 @@ export function useCategories(uid: string) {
     );
 
     return () => unsubscribe();
-  }, [uid]);
+  }, [uid, ledgerId]);
 
   return { categories, loading, error };
 }

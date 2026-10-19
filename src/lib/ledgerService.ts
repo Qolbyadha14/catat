@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   runTransaction,
   setDoc,
@@ -10,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Ledger, LedgerMember, Transaction } from './schemas';
+import { ensureLedgerDefaults } from '../features/auth/seedDefaults';
 
 // Character set avoiding ambiguous characters (0, O, 1, I)
 const INVITE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -124,7 +126,7 @@ export async function getLedgerByInviteCode(code: string): Promise<Ledger | null
   const cleanCode = code.trim().toUpperCase();
   const q = query(collection(db, 'ledgers'), where('inviteCode', '==', cleanCode));
   const snap = await getDocs(q);
-  if (snap.empty) return null;
+  if (snap.empty || !snap.docs[0]) return null;
   const firstDoc = snap.docs[0];
   return { id: firstDoc.id, ...firstDoc.data() } as Ledger;
 }
@@ -179,4 +181,62 @@ export async function joinLedgerByCode(
       [user.uid]: member,
     },
   };
+}
+
+/**
+ * Creates and persists a new family ledger in Firestore, and sets it as user's active ledger.
+ */
+export async function createAndSaveLedger(
+  owner: { uid: string; displayName?: string | null; email?: string | null; photoURL?: string | null },
+  name?: string
+): Promise<Ledger> {
+  const initial = createInitialLedger(owner, name);
+  const ledgerRef = doc(db, 'ledgers', initial.id);
+  await setDoc(ledgerRef, initial);
+  await ensureLedgerDefaults(initial.id);
+  await setDoc(doc(db, 'users', owner.uid), { activeLedgerId: initial.id }, { merge: true });
+  return initial;
+}
+
+/**
+ * Subscribes to real-time updates for a ledger document.
+ */
+export function subscribeToLedger(
+  ledgerId: string,
+  onUpdate: (ledger: Ledger | null) => void,
+  onError?: (err: Error) => void
+): () => void {
+  return onSnapshot(
+    doc(db, 'ledgers', ledgerId),
+    (snap) => {
+      if (!snap.exists()) {
+        onUpdate(null);
+      } else {
+        onUpdate({ id: snap.id, ...snap.data() } as Ledger);
+      }
+    },
+    (err) => {
+      if (onError) onError(err);
+    }
+  );
+}
+
+/**
+ * Retrieves the user's active ledger ID from their user profile document.
+ */
+export async function getUserActiveLedgerId(uid: string): Promise<string | null> {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (!snap.exists()) return null;
+    return (snap.data() as { activeLedgerId?: string })?.activeLedgerId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sets the user's active ledger ID in their user profile document.
+ */
+export async function setUserActiveLedgerId(uid: string, ledgerId: string | null): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { activeLedgerId: ledgerId }, { merge: true });
 }

@@ -1,5 +1,5 @@
 import { useState, useId, type FormEvent } from 'react';
-import type { Account, Category, Transaction } from '../../lib/schemas';
+import type { Account, Category, Transaction, TransactionItem, Creator } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction, createBatchTransactions } from './transactionService';
 import { ReceiptScanTab } from './ReceiptScanTab';
@@ -10,6 +10,7 @@ import { OcrReviewCard, formatReviewNote } from './OcrReviewCard';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
+import { findDuplicateReceipt } from '../../lib/ledgerService';
 
 interface TransactionFormSheetProps {
   uid: string;
@@ -21,6 +22,9 @@ interface TransactionFormSheetProps {
   duplicateData?: DuplicateFormValues | null;
   initialDraft?: TransactionDraft;
   onSuccess?: () => void;
+  createdBy?: Creator;
+  ledgerId?: string;
+  existingTransactions?: Transaction[];
 }
 
 export function TransactionFormSheet({
@@ -33,6 +37,9 @@ export function TransactionFormSheet({
   duplicateData,
   initialDraft,
   onSuccess,
+  createdBy,
+  ledgerId,
+  existingTransactions = [],
 }: TransactionFormSheetProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>(() => {
     if (initialTx || duplicateData || initialDraft) return 'manual';
@@ -42,6 +49,9 @@ export function TransactionFormSheet({
     result: OcrReceiptResult;
     previewUrl: string | null;
   } | null>(null);
+  const [items, setItems] = useState<TransactionItem[]>(initialTx?.items || []);
+  const [referenceKey, setReferenceKey] = useState<string | null | undefined>(initialTx?.referenceKey);
+  const [duplicateMatch, setDuplicateMatch] = useState<Transaction | null>(null);
   const [batchQueue, setBatchQueue] = useState<BatchReviewItem[] | null>(null);
   const [recommendedCategoryId, setRecommendedCategoryId] = useState<string | null>(null);
   const [ocrFeedback, setOcrFeedback] = useState<{
@@ -283,6 +293,11 @@ export function TransactionFormSheet({
       merchant: res.merchant,
     });
 
+    const dup = findDuplicateReceipt(existingTransactions, res.referenceKey);
+    setDuplicateMatch(dup);
+    setReferenceKey(res.referenceKey || null);
+    setItems(res.items || []);
+
     setOcrReview({
       result: {
         ...res,
@@ -345,10 +360,13 @@ export function TransactionFormSheet({
           categoryId: item.categoryId,
           date: epoch,
           note: noteText,
+          referenceKey: item.result.referenceKey,
+          items: item.result.items,
+          createdBy,
         };
       });
 
-      await createBatchTransactions(uid, payloads);
+      await createBatchTransactions(uid, payloads, ledgerId);
       setBatchQueue(null);
       onSuccess?.();
       onClose();
@@ -381,23 +399,37 @@ export function TransactionFormSheet({
     try {
       setSaving(true);
       if (type === 'transfer') {
-        await createTransaction(uid, {
-          type: 'transfer',
-          amount: finalAmount,
-          fromAccountId: currentAccountId,
-          toAccountId: currentToAccountId,
-          date: epochDate,
-          note,
-        });
+        await createTransaction(
+          uid,
+          {
+            type: 'transfer',
+            amount: finalAmount,
+            fromAccountId: currentAccountId,
+            toAccountId: currentToAccountId,
+            date: epochDate,
+            note,
+            referenceKey: ocrReview.result.referenceKey || referenceKey,
+            items: ocrReview.result.items || items,
+            createdBy,
+          },
+          ledgerId
+        );
       } else {
-        await createTransaction(uid, {
-          type,
-          amount: finalAmount,
-          accountId: currentAccountId,
-          categoryId: currentCategoryId,
-          date: epochDate,
-          note,
-        });
+        await createTransaction(
+          uid,
+          {
+            type,
+            amount: finalAmount,
+            accountId: currentAccountId,
+            categoryId: currentCategoryId,
+            date: epochDate,
+            note,
+            referenceKey: ocrReview.result.referenceKey || referenceKey,
+            items: ocrReview.result.items || items,
+            createdBy,
+          },
+          ledgerId
+        );
       }
       setOcrReview(null);
       onSuccess?.();
@@ -454,11 +486,14 @@ export function TransactionFormSheet({
           toAccountId: currentToAccountId,
           date: epochDate,
           note: note.trim(),
+          referenceKey: referenceKey || initialTx?.referenceKey,
+          items: items.length > 0 ? items : initialTx?.items,
+          createdBy: initialTx?.createdBy || createdBy,
         };
         if (initialTx) {
-          await updateTransaction(uid, initialTx.id, payload);
+          await updateTransaction(uid, initialTx.id, payload, ledgerId);
         } else {
-          await createTransaction(uid, payload);
+          await createTransaction(uid, payload, ledgerId);
         }
       } else {
         if (!currentCategoryId) {
@@ -472,11 +507,14 @@ export function TransactionFormSheet({
           categoryId: currentCategoryId,
           date: epochDate,
           note: note.trim(),
+          referenceKey: referenceKey || initialTx?.referenceKey,
+          items: items.length > 0 ? items : initialTx?.items,
+          createdBy: initialTx?.createdBy || createdBy,
         };
         if (initialTx) {
-          await updateTransaction(uid, initialTx.id, payload);
+          await updateTransaction(uid, initialTx.id, payload, ledgerId);
         } else {
-          await createTransaction(uid, payload);
+          await createTransaction(uid, payload, ledgerId);
         }
       }
 
@@ -485,6 +523,9 @@ export function TransactionFormSheet({
       setAmountInput('');
       setMathError(null);
       setNote('');
+      setReferenceKey(null);
+      setItems([]);
+      setDuplicateMatch(null);
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
@@ -565,6 +606,7 @@ export function TransactionFormSheet({
               <OcrReviewCard
                 result={ocrReview.result}
                 previewUrl={ocrReview.previewUrl}
+                duplicateMatch={duplicateMatch}
                 categoryName={categories.find((c) => c.id === currentCategoryId)?.name}
                 categoryIcon={categories.find((c) => c.id === currentCategoryId)?.icon}
                 accountName={accounts.find((a) => a.id === currentAccountId)?.name}
@@ -573,7 +615,12 @@ export function TransactionFormSheet({
                   setOcrReview(null);
                   setActiveTab('manual');
                 }}
-                onDiscard={() => setOcrReview(null)}
+                onDiscard={() => {
+                  setOcrReview(null);
+                  setDuplicateMatch(null);
+                  setReferenceKey(null);
+                  setItems([]);
+                }}
                 isSaving={saving}
               />
             )}
