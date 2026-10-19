@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { User } from 'firebase/auth';
-import type { Transaction } from '../../lib/schemas';
+import type { Transaction, Account } from '../../lib/schemas';
+import { calculateAccountSummary, getAccountDebt } from '../../lib/accountCalculations';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { useTransactions } from '../transactions/useTransactions';
 import { deleteTransaction } from '../transactions/transactionService';
-import { TransactionFormSheet } from '../transactions/TransactionFormSheet';
+import { TransactionFormSheet, type InitialTransferData } from '../transactions/TransactionFormSheet';
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
 import { TransactionHistoryHeader } from '../transactions/TransactionHistoryHeader';
 import { CategoryBreakdown } from './CategoryBreakdown';
@@ -79,6 +80,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [duplicateData, setDuplicateData] = useState<DuplicateFormValues | null>(null);
+  const [transferPrefill, setTransferPrefill] = useState<InitialTransferData | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -87,6 +89,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     const dup = prepareTransactionDuplicate(tx, accounts, categories);
     setEditingTx(null);
     setDuplicateData(dup);
+    setTransferPrefill(null);
     setIsSheetOpen(true);
   };
 
@@ -179,10 +182,27 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     return map;
   }, [accounts]);
 
-  // Totals calculation (hero saldo stays invariant to filters)
-  const totalBalance = useMemo(() => {
-    return activeAccounts.reduce((acc, a) => acc + a.balance, 0);
-  }, [activeAccounts]);
+  // Account summary calculation (assets, liabilities, net worth)
+  const accountSummary = useMemo(() => calculateAccountSummary(accounts), [accounts]);
+
+  const handlePayBill = (liabilityAccount: Account) => {
+    const debt = getAccountDebt(liabilityAccount);
+    const primaryAsset =
+      accountSummary.assetAccounts.find((a) => a.balance > 0) || accountSummary.assetAccounts[0];
+    if (!primaryAsset) {
+      alert('Tidak ada akun kas/bank untuk membayar tagihan. Tambahkan akun kas/bank terlebih dahulu.');
+      return;
+    }
+    setEditingTx(null);
+    setDuplicateData(null);
+    setTransferPrefill({
+      fromAccountId: primaryAsset.id,
+      toAccountId: liabilityAccount.id,
+      amount: debt,
+      note: `Pelunasan ${liabilityAccount.name}`,
+    });
+    setIsSheetOpen(true);
+  };
 
   // Month summary & navigation state
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
@@ -336,8 +356,19 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
         {/* Balance Hero Card */}
         <div className="hero-card">
-          <div className="hero-label">Total Saldo</div>
-          <div className="hero-balance">{formatIdr(totalBalance)}</div>
+          <div className="hero-label">{accountSummary.hasLiabilities ? 'Saldo Bersih' : 'Total Saldo'}</div>
+          <div className="hero-balance">{formatIdr(accountSummary.netBalance)}</div>
+          {accountSummary.totalLiabilities > 0 && (
+            <div className="hero-liabilities-breakdown">
+              <span className="hero-breakdown-item">
+                <span className="hero-breakdown-label">💰 Total Aset:</span> {formatIdr(accountSummary.totalAssets)}
+              </span>
+              <span className="hero-breakdown-divider">•</span>
+              <span className="hero-breakdown-item text-danger">
+                <span className="hero-breakdown-label">💳 Tagihan PayLater:</span> {formatIdr(accountSummary.totalLiabilities)}
+              </span>
+            </div>
+          )}
           <div className="stats-row">
             <div className="stat-item">
               <span className="stat-title">Pemasukan {monthLabel}</span>
@@ -365,19 +396,85 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           monthLabel={monthLabel}
         />
 
-        {/* Accounts Scroller */}
-        <section>
+        {/* Accounts Section */}
+        <section className="accounts-dashboard-section">
           <div className="section-header" style={{ marginBottom: 10 }}>
             <span className="section-title">Kantong Akun</span>
+            {accountSummary.liabilityAccounts.length > 0 && (
+              <span className="accounts-summary-tag">
+                {accountSummary.assetAccounts.length} Aset • {accountSummary.liabilityAccounts.length} PayLater
+              </span>
+            )}
           </div>
-          <div className="accounts-scroller">
-            {activeAccounts.map((acc) => (
-              <div key={acc.id} className="account-chip">
-                <div className="account-chip-name">{acc.name}</div>
-                <div className="account-chip-balance">{formatIdr(acc.balance)}</div>
+
+          {/* Aset Sub-Group */}
+          <div className="accounts-group-block">
+            <div className="accounts-group-label">
+              <span>💰 Uang Saya (Aset)</span>
+              <span className="accounts-group-total">{formatIdr(accountSummary.totalAssets)}</span>
+            </div>
+            <div className="accounts-scroller">
+              {accountSummary.assetAccounts.map((acc) => (
+                <div key={acc.id} className="account-chip">
+                  <div className="account-chip-icon">{acc.icon || '🏦'}</div>
+                  <div className="account-chip-info">
+                    <div className="account-chip-name">{acc.name}</div>
+                    <div className="account-chip-balance">{formatIdr(acc.balance)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* PayLater & Tagihan Sub-Group (if user has liability accounts) */}
+          {accountSummary.liabilityAccounts.length > 0 && (
+            <div className="accounts-group-block liability-group">
+              <div className="accounts-group-label">
+                <span>💳 PayLater & Tagihan</span>
+                {accountSummary.totalLiabilities > 0 ? (
+                  <span className="accounts-group-total liability-total">
+                    Tagihan: {formatIdr(accountSummary.totalLiabilities)}
+                  </span>
+                ) : (
+                  <span className="accounts-group-total lunas-total">✓ Semua Lunas</span>
+                )}
               </div>
-            ))}
-          </div>
+              <div className="accounts-scroller">
+                {accountSummary.liabilityAccounts.map((acc) => {
+                  const debt = getAccountDebt(acc);
+                  return (
+                    <div
+                      key={acc.id}
+                      className={`account-chip liability-chip ${debt > 0 ? 'has-debt' : 'is-settled'}`}
+                    >
+                      <div className="account-chip-icon">{acc.icon || '💳'}</div>
+                      <div className="account-chip-info">
+                        <div className="account-chip-name">{acc.name}</div>
+                        <div className="account-chip-balance">
+                          {debt > 0 ? (
+                            <span className="tagihan-badge">Tagihan: {formatIdr(debt)}</span>
+                          ) : (
+                            <span className="lunas-badge">✓ Rp 0 (Lunas)</span>
+                          )}
+                        </div>
+                      </div>
+                      {debt > 0 && (
+                        <button
+                          type="button"
+                          className="btn-pay-tagihan"
+                          onClick={() => handlePayBill(acc)}
+                          title={`Bayar tagihan ${acc.name}`}
+                          aria-label={`Bayar tagihan ${acc.name}`}
+                        >
+                          ⚡ Bayar
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Transactions Section & Filters */}
@@ -587,18 +684,20 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       {/* Bottom Sheet Form */}
       {isSheetOpen && (
         <TransactionFormSheet
-          key={editingTx?.id ?? (duplicateData ? 'dup' : 'new')}
+          key={editingTx?.id ?? (duplicateData ? 'dup' : (transferPrefill ? 'pay' : 'new'))}
           uid={user.uid}
           isOpen={isSheetOpen}
           onClose={() => {
             setIsSheetOpen(false);
             setEditingTx(null);
             setDuplicateData(null);
+            setTransferPrefill(null);
           }}
           accounts={activeAccounts}
           categories={activeCategories}
           initialTx={editingTx}
           duplicateData={duplicateData}
+          initialTransfer={transferPrefill}
           createdBy={userProfileCreator}
           ledgerId={activeLedgerId || undefined}
           existingTransactions={transactions}

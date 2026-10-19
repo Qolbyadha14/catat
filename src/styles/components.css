@@ -3634,3 +3634,136 @@ dialog::backdrop,
   padding: 1px 6px;
   border-radius: var(--radius-full);
 }
+
+/* PayLater & Liabilities Kantong Akun */
+.hero-liabilities-breakdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  flex-wrap: wrap;
+}
+
+.hero-breakdown-item.text-danger {
+  color: var(--error-fg);
+  font-weight: 600;
+}
+
+.hero-breakdown-divider {
+  opacity: 0.4;
+}
+
+.accounts-dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.accounts-summary-tag {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  background: var(--surface-secondary);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.accounts-group-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accounts-group-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 0 2px;
+}
+
+.accounts-group-total {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.accounts-group-total.liability-total {
+  color: var(--error-fg);
+}
+
+.accounts-group-total.lunas-total {
+  color: var(--success);
+}
+
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-chip-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.account-chip-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-chip.liability-chip {
+  position: relative;
+  min-width: 170px;
+}
+
+.account-chip.liability-chip.has-debt {
+  background: var(--error-light);
+  border-color: var(--offline-border);
+}
+
+.account-chip.liability-chip.is-settled {
+  border-color: var(--border);
+}
+
+.tagihan-badge {
+  color: var(--error-fg);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.lunas-badge {
+  color: var(--success-fg);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.btn-pay-tagihan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  min-width: 44px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-left: 6px;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast) ease;
+}
+
+.btn-pay-tagihan:hover {
+  opacity: 0.9;
+}
+
