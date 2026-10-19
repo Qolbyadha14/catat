@@ -40,19 +40,25 @@ export function sanitizeAccountUpdate(input: Record<string, unknown>): UpdateAcc
 export async function updateAccount(
   uid: string,
   accountId: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  ledgerId?: string
 ): Promise<UpdateAccountInput> {
   const payload = sanitizeAccountUpdate(input);
-  const ref = doc(db, 'users', uid, 'accounts', accountId);
+  const ref = ledgerId
+    ? doc(db, 'ledgers', ledgerId, 'accounts', accountId)
+    : doc(db, 'users', uid, 'accounts', accountId);
   await updateDoc(ref, payload);
   return payload;
 }
 
 export async function createAccount(
   uid: string,
-  input: CreateAccountInput
+  input: CreateAccountInput,
+  ledgerId?: string
 ): Promise<Account> {
-  const colRef = collection(db, 'users', uid, 'accounts');
+  const colRef = ledgerId
+    ? collection(db, 'ledgers', ledgerId, 'accounts')
+    : collection(db, 'users', uid, 'accounts');
   const newRef = doc(colRef);
   const now = Date.now();
   const acc: Account = {
@@ -72,9 +78,12 @@ export async function createAccount(
 export async function adjustAccountBalance(
   uid: string,
   accountId: string,
-  newBalance: number
+  newBalance: number,
+  ledgerId?: string
 ): Promise<void> {
   const intBalance = Math.round(newBalance);
-  const ref = doc(db, 'users', uid, 'accounts', accountId);
+  const ref = ledgerId
+    ? doc(db, 'ledgers', ledgerId, 'accounts', accountId)
+    : doc(db, 'users', uid, 'accounts', accountId);
   await updateDoc(ref, { balance: intBalance });
 }

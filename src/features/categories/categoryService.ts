@@ -41,19 +41,25 @@ export function sanitizeCategoryUpdate(input: Record<string, unknown>): UpdateCa
 export async function updateCategory(
   uid: string,
   categoryId: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  ledgerId?: string
 ): Promise<UpdateCategoryInput> {
   const payload = sanitizeCategoryUpdate(input);
-  const ref = doc(db, 'users', uid, 'categories', categoryId);
+  const ref = ledgerId
+    ? doc(db, 'ledgers', ledgerId, 'categories', categoryId)
+    : doc(db, 'users', uid, 'categories', categoryId);
   await updateDoc(ref, payload);
   return payload;
 }
 
 export async function createCategory(
   uid: string,
-  input: CreateCategoryInput
+  input: CreateCategoryInput,
+  ledgerId?: string
 ): Promise<Category> {
-  const colRef = collection(db, 'users', uid, 'categories');
+  const colRef = ledgerId
+    ? collection(db, 'ledgers', ledgerId, 'categories')
+    : collection(db, 'users', uid, 'categories');
   const newRef = doc(colRef);
   const now = Date.now();
   const cat: Category = {

@@ -4,6 +4,7 @@ import { canArchiveAccount } from '../../lib/canArchiveAccount';
 import { isNameUnique } from '../../lib/manageValidation';
 import { updateAccount, createAccount, adjustAccountBalance } from '../accounts/accountService';
 import { updateCategory, createCategory } from '../categories/categoryService';
+import { ensureUserDefaults, ensureLedgerDefaults } from '../auth/seedDefaults';
 import { formatIdr } from '../../lib/formatters';
 
 interface ManageSheetProps {
@@ -12,6 +13,7 @@ interface ManageSheetProps {
   onClose: () => void;
   accounts: Account[];
   categories: Category[];
+  ledgerId?: string;
 }
 
 type TabType = 'accounts' | 'categories';
@@ -25,7 +27,11 @@ const ACCOUNT_PRESETS: Array<{ name: string; icon: string; kind: 'asset' | 'liab
   { name: 'ShopeePay', icon: '📱', kind: 'asset' },
   { name: 'OVO', icon: '📱', kind: 'asset' },
   { name: 'DANA', icon: '📱', kind: 'asset' },
-  { name: 'SPayLater', icon: '💳', kind: 'liability' },
+  { name: 'CIMB Niaga CC', icon: '💳', kind: 'liability' },
+  { name: 'CIMB Niaga KTA', icon: '📑', kind: 'liability' },
+  { name: 'TikTok PayLater', icon: '🎵', kind: 'liability' },
+  { name: 'Shopee PayLater', icon: '🛍️', kind: 'liability' },
+  { name: 'BCA CC', icon: '💳', kind: 'liability' },
   { name: 'GoPay Later', icon: '💳', kind: 'liability' },
   { name: 'Kredivo', icon: '💳', kind: 'liability' },
 ];
@@ -46,6 +52,7 @@ export function ManageSheet({
   onClose,
   accounts,
   categories,
+  ledgerId,
 }: ManageSheetProps) {
   const [activeTab, setActiveTab] = useState<TabType>('accounts');
   const [showArchived, setShowArchived] = useState(false);
@@ -82,6 +89,24 @@ export function ManageSheet({
     setTimeout(() => {
       setToastMessage((current) => (current === msg ? null : current));
     }, 3500);
+  };
+
+  const [isSyncingDefaults, setIsSyncingDefaults] = useState(false);
+
+  const handleSyncDefaults = async () => {
+    try {
+      setIsSyncingDefaults(true);
+      if (ledgerId) {
+        await ensureLedgerDefaults(ledgerId);
+      } else {
+        await ensureUserDefaults(uid);
+      }
+      showToast('Akun bawaan berhasil disinkronkan!');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menyinkronkan akun');
+    } finally {
+      setIsSyncingDefaults(false);
+    }
   };
 
   const handleStartEdit = (item: Account | Category) => {
@@ -134,13 +159,13 @@ export function ManageSheet({
         return;
       }
       try {
-        await updateAccount(uid, acc.id, { isArchived: true });
+        await updateAccount(uid, acc.id, { isArchived: true }, ledgerId);
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Gagal mengarsip akun');
       }
     } else {
       try {
-        await updateAccount(uid, acc.id, { isArchived: false });
+        await updateAccount(uid, acc.id, { isArchived: false }, ledgerId);
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Gagal membuka arsip akun');
       }
@@ -149,7 +174,7 @@ export function ManageSheet({
 
   const handleToggleArchiveCategory = async (cat: Category) => {
     try {
-      await updateCategory(uid, cat.id, { isArchived: !cat.isArchived });
+      await updateCategory(uid, cat.id, { isArchived: !cat.isArchived }, ledgerId);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Gagal mengubah arsip kategori');
     }
@@ -181,13 +206,13 @@ export function ManageSheet({
             name: trimmedName,
             icon: icon.trim() || undefined,
             dueDay: validDueDay,
-          });
+          }, ledgerId);
 
           if ('balance' in editingItem && isAdjustingBalance) {
             const rawBal = initialBalanceInput.replace(/\D/g, '');
             const parsedNum = rawBal ? parseInt(rawBal, 10) : 0;
             const newBal = editingItem.kind === 'liability' ? -Math.abs(parsedNum) : Math.abs(parsedNum);
-            await adjustAccountBalance(uid, editingItem.id, newBal);
+            await adjustAccountBalance(uid, editingItem.id, newBal, ledgerId);
           }
         } else {
           const rawBal = initialBalanceInput.replace(/\D/g, '');
@@ -200,7 +225,7 @@ export function ManageSheet({
             kind,
             dueDay: validDueDay ?? undefined,
             balance: initialBal,
-          });
+          }, ledgerId);
         }
         handleCancelForm();
       } catch (err) {
@@ -224,14 +249,14 @@ export function ManageSheet({
             name: trimmedName,
             icon: icon.trim() || undefined,
             monthlyBudget: parsedBudget ?? null,
-          });
+          }, ledgerId);
         } else {
           await createCategory(uid, {
             name: trimmedName,
             icon: icon.trim() || undefined,
             type: categoryType,
             monthlyBudget: parsedBudget,
-          });
+          }, ledgerId);
         }
         handleCancelForm();
       } catch (err) {
@@ -575,14 +600,28 @@ export function ManageSheet({
             </form>
           ) : (
             <>
-              {/* Add CTA */}
-              <button
-                type="button"
-                className="btn-manage-add"
-                onClick={handleStartCreate}
-              >
-                + Tambah {activeTab === 'accounts' ? 'Akun' : 'Kategori'}
-              </button>
+              {/* Add CTA & Sync */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button
+                  type="button"
+                  className="btn-manage-add"
+                  style={{ flex: 1, margin: 0 }}
+                  onClick={handleStartCreate}
+                >
+                  + Tambah {activeTab === 'accounts' ? 'Akun' : 'Kategori'}
+                </button>
+                {activeTab === 'accounts' && (
+                  <button
+                    type="button"
+                    className="manage-sync-btn"
+                    onClick={handleSyncDefaults}
+                    disabled={isSyncingDefaults}
+                    title="Tambahkan akun bawaan (CIMB CC, KTA, TikTok, Shopee, BCA) yang belum ada"
+                  >
+                    {isSyncingDefaults ? '⏳...' : '🔄 Sinkron Akun Bawaan'}
+                  </button>
+                )}
+              </div>
 
               {/* List items */}
               <div className="manage-list">

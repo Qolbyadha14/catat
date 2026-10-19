@@ -15,6 +15,7 @@ import { ManageSheet } from '../manage/ManageSheet';
 import { UpcomingBillsCard } from './UpcomingBillsCard';
 import { DebtPlannerCard } from './DebtPlannerCard';
 import { WeeklyCashflowChart } from './WeeklyCashflowChart';
+import { ensureLedgerDefaults, ensureUserDefaults } from '../auth/seedDefaults';
 import type { UpcomingBill } from '../../lib/bills';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
@@ -133,12 +134,22 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     });
   }, [user.uid]);
 
+  // Ensure default accounts exist for personal user on mount
+  useEffect(() => {
+    if (user?.uid) {
+      ensureUserDefaults(user.uid).catch(console.error);
+    }
+  }, [user?.uid]);
+
   // Subscribe to real-time updates for active ledger
   useEffect(() => {
     if (!activeLedgerId) {
       setActiveLedger(null);
       return;
     }
+    // Ensure all default accounts exist in this active family ledger (including CIMB CC, KTA, TikTok, Shopee, BCA)
+    ensureLedgerDefaults(activeLedgerId).catch(console.error);
+
     const unsub = subscribeToLedger(activeLedgerId, (ledger) => {
       setActiveLedger(ledger);
     });
@@ -738,6 +749,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       {/* Manage Accounts & Categories Sheet */}
       <ManageSheet
         uid={user.uid}
+        ledgerId={activeLedgerId || undefined}
         isOpen={isManageOpen}
         onClose={() => setIsManageOpen(false)}
         accounts={accounts}

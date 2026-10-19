@@ -5153,6 +5153,33 @@ dialog::backdrop,
   font-size: 11px;
 }
 
+.manage-sync-btn {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-primary);
+  border-radius: var(--radius-md, 12px);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.manage-sync-btn:hover:not(:disabled) {
+  background: var(--surface-hover, var(--surface-secondary));
+  border-color: var(--accent-primary);
+}
+
+.manage-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
 
 
 
