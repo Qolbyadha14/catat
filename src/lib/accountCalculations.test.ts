@@ -1,40 +1,48 @@
-import { describe, it, expect } from 'bun:test';
 import { calculateAccountSummary, getAccountDebt } from './accountCalculations';
 import type { Account } from './schemas';
 
-describe('accountCalculations', () => {
-  const accounts: Account[] = [
-    { id: '1', name: 'Kas', kind: 'asset', balance: 500000, isArchived: false, createdAt: 1 },
-    { id: '2', name: 'BCA', kind: 'asset', balance: 2500000, isArchived: false, createdAt: 2 },
-    { id: '3', name: 'SPayLater', kind: 'liability', balance: -450000, isArchived: false, createdAt: 3 },
-    { id: '4', name: 'GoPay Later', kind: 'liability', balance: 0, isArchived: false, createdAt: 4 },
-    { id: '5', name: 'Old Account', kind: 'asset', balance: 100000, isArchived: true, createdAt: 5 },
+function assert(condition: boolean, msg: string) {
+  if (!condition) {
+    throw new Error(`Assertion failed: ${msg}`);
+  }
+}
+
+const accounts: Account[] = [
+  { id: '1', name: 'Kas', kind: 'asset', balance: 500000, isArchived: false, createdAt: 1 },
+  { id: '2', name: 'BCA', kind: 'asset', balance: 2500000, isArchived: false, createdAt: 2 },
+  { id: '3', name: 'SPayLater', kind: 'liability', balance: -450000, isArchived: false, createdAt: 3 },
+  { id: '4', name: 'GoPay Later', kind: 'liability', balance: 0, isArchived: false, createdAt: 4 },
+  { id: '5', name: 'Old Account', kind: 'asset', balance: 100000, isArchived: true, createdAt: 5 },
+];
+
+// Test 1: getAccountDebt
+{
+  assert(getAccountDebt(accounts[2]!) === 450000, 'SPayLater debt must be 450000');
+  assert(getAccountDebt(accounts[3]!) === 0, 'GoPay Later debt must be 0');
+  assert(getAccountDebt(accounts[0]!) === 0, 'Kas asset debt must be 0');
+}
+
+// Test 2: calculateAccountSummary
+{
+  const summary = calculateAccountSummary(accounts);
+  assert(summary.totalAssets === 3000000, 'totalAssets must be 3000000 (excluding archived)');
+  assert(summary.totalLiabilities === 450000, 'totalLiabilities must be 450000');
+  assert(summary.netBalance === 2550000, 'netBalance must be 2550000');
+  assert(summary.assetAccounts.length === 2, 'active assets count must be 2');
+  assert(summary.liabilityAccounts.length === 2, 'active liabilities count must be 2');
+  assert(summary.hasLiabilities === true, 'hasLiabilities must be true');
+}
+
+// Test 3: zero liabilities
+{
+  const assetOnly: Account[] = [
+    { id: '1', name: 'Kas', kind: 'asset', balance: 100000, isArchived: false, createdAt: 1 },
   ];
+  const summary = calculateAccountSummary(assetOnly);
+  assert(summary.totalAssets === 100000, 'totalAssets must be 100000');
+  assert(summary.totalLiabilities === 0, 'totalLiabilities must be 0');
+  assert(summary.netBalance === 100000, 'netBalance must be 100000');
+  assert(summary.hasLiabilities === false, 'hasLiabilities must be false');
+}
 
-  it('calculates getAccountDebt correctly', () => {
-    expect(getAccountDebt(accounts[2]!)).toBe(450000);
-    expect(getAccountDebt(accounts[3]!)).toBe(0);
-    expect(getAccountDebt(accounts[0]!)).toBe(0);
-  });
-
-  it('calculates summary excluding archived accounts', () => {
-    const summary = calculateAccountSummary(accounts);
-    expect(summary.totalAssets).toBe(3000000); // 500k + 2.5m (excludes archived 100k)
-    expect(summary.totalLiabilities).toBe(450000);
-    expect(summary.netBalance).toBe(2550000); // 3m - 450k
-    expect(summary.assetAccounts.length).toBe(2);
-    expect(summary.liabilityAccounts.length).toBe(2);
-    expect(summary.hasLiabilities).toBe(true);
-  });
-
-  it('handles accounts with zero liabilities', () => {
-    const assetOnly: Account[] = [
-      { id: '1', name: 'Kas', kind: 'asset', balance: 100000, isArchived: false, createdAt: 1 },
-    ];
-    const summary = calculateAccountSummary(assetOnly);
-    expect(summary.totalAssets).toBe(100000);
-    expect(summary.totalLiabilities).toBe(0);
-    expect(summary.netBalance).toBe(100000);
-    expect(summary.hasLiabilities).toBe(false);
-  });
-});
+console.log('accountCalculations asserts pass');
