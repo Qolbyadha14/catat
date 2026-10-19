@@ -191,3 +191,76 @@ export async function updateTransaction(
     return validated;
   });
 }
+
+/**
+ * Calculates net balance deltas grouped by accountId for a batch of transactions.
+ */
+export function calculateBatchBalanceDeltas(
+  items: CreateTransactionInput[]
+): Record<string, number> {
+  const deltas: Record<string, number> = {};
+
+  for (const item of items) {
+    if (item.type === 'transfer') {
+      deltas[item.fromAccountId] = (deltas[item.fromAccountId] ?? 0) - item.amount;
+      deltas[item.toAccountId] = (deltas[item.toAccountId] ?? 0) + item.amount;
+    } else if (item.type === 'income') {
+      deltas[item.accountId] = (deltas[item.accountId] ?? 0) + item.amount;
+    } else if (item.type === 'expense') {
+      deltas[item.accountId] = (deltas[item.accountId] ?? 0) - item.amount;
+    }
+  }
+
+  return deltas;
+}
+
+/**
+ * Atomically creates multiple transactions and updates all involved account balances.
+ */
+export async function createBatchTransactions(
+  uid: string,
+  items: CreateTransactionInput[]
+): Promise<Transaction[]> {
+  if (items.length === 0) return [];
+
+  return runTransaction(db, async (txn) => {
+    // 1. Calculate net balance deltas across all accounts
+    const deltas = calculateBatchBalanceDeltas(items);
+    const accountIds = Object.keys(deltas);
+
+    // 2. Read all involved accounts (all reads MUST precede writes in Firestore)
+    const accountRefs = accountIds.map((accId) => doc(db, 'users', uid, 'accounts', accId));
+    const accountSnaps = await Promise.all(accountRefs.map((ref) => txn.get(ref)));
+
+    // 3. Update account balances
+    for (let i = 0; i < accountIds.length; i++) {
+      const snap = accountSnaps[i];
+      const accId = accountIds[i]!;
+      const ref = accountRefs[i]!;
+      if (!snap || !snap.exists()) {
+        throw new Error(`Akun ${accId} tidak ditemukan`);
+      }
+      const currentBal = (snap.data()['balance'] as number) ?? 0;
+      const delta = deltas[accId] ?? 0;
+      txn.update(ref, { balance: currentBal + delta });
+    }
+
+    // 4. Create all transaction records
+    const now = Date.now();
+    const created: Transaction[] = [];
+
+    for (const item of items) {
+      const txRef = doc(collection(db, 'users', uid, 'transactions'));
+      const validated = transactionSchema.parse({
+        ...item,
+        id: txRef.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      txn.set(txRef, validated);
+      created.push(validated);
+    }
+
+    return created;
+  });
+}
