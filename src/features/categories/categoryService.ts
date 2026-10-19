@@ -6,12 +6,14 @@ export interface UpdateCategoryInput {
   name?: string;
   icon?: string;
   isArchived?: boolean;
+  monthlyBudget?: number | null;
 }
 
 export interface CreateCategoryInput {
   name: string;
   type: 'income' | 'expense';
   icon?: string;
+  monthlyBudget?: number;
 }
 
 export function sanitizeCategoryUpdate(input: Record<string, unknown>): UpdateCategoryInput {
@@ -26,6 +28,11 @@ export function sanitizeCategoryUpdate(input: Record<string, unknown>): UpdateCa
   }
   if (typeof input.isArchived === 'boolean') {
     sanitized.isArchived = input.isArchived;
+  }
+  if (typeof input.monthlyBudget === 'number' && !isNaN(input.monthlyBudget) && input.monthlyBudget >= 0) {
+    sanitized.monthlyBudget = Math.round(input.monthlyBudget);
+  } else if (input.monthlyBudget === null) {
+    sanitized.monthlyBudget = null;
   }
 
   return sanitized;
@@ -54,6 +61,7 @@ export async function createCategory(
     name: input.name.trim(),
     type: input.type,
     icon: input.icon?.trim() || undefined,
+    monthlyBudget: input.monthlyBudget && input.monthlyBudget > 0 ? Math.round(input.monthlyBudget) : undefined,
     isArchived: false,
     createdAt: now,
   };

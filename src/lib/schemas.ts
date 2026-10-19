@@ -15,6 +15,7 @@ export const categorySchema = z.object({
   name: z.string().trim().min(1).max(32),
   type: z.enum(['income', 'expense']),
   icon: z.string().max(8).optional(),
+  monthlyBudget: z.number().int().nonnegative().optional(),
   isArchived: z.boolean().default(false),
   createdAt: z.number().int(),
 });
