@@ -1,4 +1,4 @@
-import { useState, useId, type FormEvent } from 'react';
+import { useState, useId, useRef, type FormEvent } from 'react';
 import type { Account, Category, Transaction, TransactionItem, Creator } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction, createBatchTransactions } from './transactionService';
@@ -11,6 +11,7 @@ import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
 import { findDuplicateReceipt } from '../../lib/ledgerService';
+import { formatLiveAmount, calculateNewCursorPosition } from '../../lib/currencyInputFormatter';
 
 export interface InitialTransferData {
   fromAccountId: string;
@@ -98,6 +99,7 @@ export function TransactionFormSheet({
     return '';
   });
   const [mathError, setMathError] = useState<string | null>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
   const [accountId, setAccountId] = useState<string>(() => {
     if (initialTransfer) {
       return initialTransfer.fromAccountId;
@@ -184,10 +186,25 @@ export function TransactionFormSheet({
     : (duplicateData ? '' : toAccountOptions[0]?.id || '');
 
   const handleAmountChange = (val: string) => {
+    const currentCursor = amountInputRef.current?.selectionStart ?? val.length;
     // Allow digits, operators (+, -, *, /), dots, commas, k/rb suffixes, and whitespace
     const sanitized = val.replace(/[^0-9+\-*/.,kKrRbB\s]/g, '');
-    setAmountInput(sanitized);
+    const result = formatLiveAmount(sanitized);
+    const newCursor = calculateNewCursorPosition(val, result.formatted, currentCursor);
+
+    setAmountInput(result.formatted);
+    if (!result.isExpression && result.rawNumber !== null) {
+      setRawAmount(String(result.rawNumber));
+    } else if (!val.trim()) {
+      setRawAmount('');
+    }
     if (mathError) setMathError(null);
+
+    requestAnimationFrame(() => {
+      if (amountInputRef.current) {
+        amountInputRef.current.setSelectionRange(newCursor, newCursor);
+      }
+    });
   };
 
   const evaluateInput = (text: string) => {
@@ -211,8 +228,8 @@ export function TransactionFormSheet({
   };
 
   const handleAmountFocus = () => {
-    if (!mathError && rawAmount) {
-      setAmountInput(rawAmount);
+    if (!mathError && !amountInput && rawAmount) {
+      setAmountInput(new Intl.NumberFormat('id-ID').format(Number(rawAmount)));
     }
   };
 
@@ -757,6 +774,7 @@ export function TransactionFormSheet({
                 <div className="amount-input-wrap">
                   <span>Rp</span>
                   <input
+                    ref={amountInputRef}
                     id={amountInputId}
                     type="text"
                     className="input-hero-amount"
