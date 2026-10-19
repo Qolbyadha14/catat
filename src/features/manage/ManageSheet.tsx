@@ -58,6 +58,7 @@ export function ManageSheet({
   const [icon, setIcon] = useState('');
   const [kind, setKind] = useState<'asset' | 'liability'>('asset');
   const [categoryType, setCategoryType] = useState<'expense' | 'income'>('expense');
+  const [monthlyBudgetInput, setMonthlyBudgetInput] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -85,6 +86,12 @@ export function ManageSheet({
     setEditingItem(item);
     setName(item.name);
     setIcon(item.icon ?? '');
+    if ('type' in item) {
+      setCategoryType(item.type);
+      setMonthlyBudgetInput(item.monthlyBudget ? new Intl.NumberFormat('id-ID').format(item.monthlyBudget) : '');
+    } else {
+      setMonthlyBudgetInput('');
+    }
     setFormError(null);
   };
 
@@ -93,12 +100,14 @@ export function ManageSheet({
     setIsCreating(true);
     setName('');
     setIcon('');
+    setMonthlyBudgetInput('');
     setFormError(null);
   };
 
   const handleCancelForm = () => {
     setEditingItem(null);
     setIsCreating(false);
+    setMonthlyBudgetInput('');
     setFormError(null);
   };
 
@@ -174,18 +183,23 @@ export function ManageSheet({
         return;
       }
 
+      const rawBudget = monthlyBudgetInput.replace(/\D/g, '');
+      const parsedBudget = rawBudget ? parseInt(rawBudget, 10) : undefined;
+
       setSaving(true);
       try {
         if (editingItem) {
           await updateCategory(uid, editingItem.id, {
             name: trimmedName,
             icon: icon.trim() || undefined,
+            monthlyBudget: parsedBudget ?? null,
           });
         } else {
           await createCategory(uid, {
             name: trimmedName,
             icon: icon.trim() || undefined,
             type: categoryType,
+            monthlyBudget: parsedBudget,
           });
         }
         handleCancelForm();
@@ -379,6 +393,34 @@ export function ManageSheet({
                 </div>
               )}
 
+              {/* If category is expense: monthly budget target */}
+              {activeTab === 'categories' &&
+                ((isCreating && categoryType === 'expense') ||
+                  (editingItem && 'type' in editingItem && editingItem.type === 'expense')) && (
+                  <div className="form-group">
+                    <label className="form-label">Target Anggaran Bulanan (Opsional)</label>
+                    <div className="input-group">
+                      <span className="input-prefix">Rp</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="form-input"
+                        placeholder="0 (Tanpa batas)"
+                        value={monthlyBudgetInput}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setMonthlyBudgetInput(
+                            raw ? new Intl.NumberFormat('id-ID').format(parseInt(raw, 10)) : ''
+                          );
+                        }}
+                      />
+                    </div>
+                    <span className="form-help-text" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                      Batas pengeluaran per bulan untuk kalkulasi kuota belanja harian aman.
+                    </span>
+                  </div>
+                )}
+
               {/* Read-only indicators when editing */}
               {editingItem && 'balance' in editingItem && (
                 <div className="manage-readonly-row">
@@ -490,6 +532,9 @@ export function ManageSheet({
                           <span className="manage-item-name">{cat.name}</span>
                           <span className="manage-item-sub">
                             {cat.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}
+                            {cat.monthlyBudget && cat.monthlyBudget > 0 && (
+                              <span className="category-budget-pill"> • 🎯 {formatIdr(cat.monthlyBudget)}/bln</span>
+                            )}
                           </span>
                         </div>
                       </button>

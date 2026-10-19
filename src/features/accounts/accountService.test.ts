@@ -35,6 +35,14 @@ const categoryInput = {
   isArchived: false,
 };
 
+const sanitizedCat = sanitizeCategoryUpdate(categoryInput);
+assert(sanitizedCat.name === 'Kategori Khusus', 'name must be trimmed');
+assert(sanitizedCat.icon === '🏷️', 'icon must be kept');
+assert(sanitizedCat.isArchived === false, 'isArchived must be kept');
+assert(!('type' in sanitizedCat), 'type must be stripped');
+assert(!('id' in sanitizedCat), 'id must be stripped');
+assert(!('createdAt' in sanitizedCat), 'createdAt must be stripped');
+
 // Category monthlyBudget whitelist test
 const categoryWithBudget = {
   name: 'Makan & Minum',

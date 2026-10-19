@@ -4301,5 +4301,12 @@ dialog::backdrop,
   color: var(--text-primary);
 }
 
+.category-budget-pill {
+  color: var(--accent-primary);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+
 
 
