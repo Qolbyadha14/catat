@@ -138,20 +138,21 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark mode (Midnight Obsidian Pro) */
+/* Dark mode (Midnight Deep Navy) */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Surfaces (Midnight Obsidian Pro) */
-  --surface-base: #09090b;             /* Pure Obsidian Black */
-  --surface-card: #131418;             /* Refined Charcoal Onyx */
-  --surface-secondary: #1b1c24;        /* Elevated Subtle Fill */
-  --border-subtle: rgba(255, 255, 255, 0.07); /* Delicate 7% White Border */
-  --border: rgba(255, 255, 255, 0.11);        /* Crisp 11% White Border */
+  /* Surfaces (Midnight Deep Navy) */
+  --surface-base: #0b0f19;             /* Deep Navy Space */
+  --surface-card: #131926;             /* Navy-Tinted Charcoal Card */
+  --surface-secondary: #1c2438;        /* Elevated Navy Fill */
+  --surface-hover: #243049;            /* Hover Surface */
+  --border-subtle: rgba(255, 255, 255, 0.08); /* Delicate 8% Border */
+  --border: rgba(99, 102, 241, 0.16);         /* Hairline Indigo Border */
 
   /* Text & Foreground */
-  --text-primary: #f4f4f5;             /* Soft Crisp White (no glare) */
-  --text-muted: #9ca3af;               /* Neutral Silver Zinc (WCAG AA > 7:1) */
+  --text-primary: #f8fafc;             /* Crisp Slate White */
+  --text-muted: #94a3b8;               /* Muted Silver Slate (WCAG AA > 6.7:1) */
   --text-inverse: #ffffff;             /* Crisp White for Filled Buttons */
 
   /* Accents */
@@ -173,21 +174,21 @@
   --info-light: rgba(56, 189, 248, 0.14);
   --info-fg: #7dd3fc;
 
-  /* Hero Card Tokens (Dark Titanium Card) */
-  --hero-bg: linear-gradient(145deg, #181926 0%, #12131c 50%, #0d0e14 100%);
-  --hero-text-muted: #9ca3af;
+  /* Hero Card Tokens (Deep Navy Titanium Card) */
+  --hero-bg: linear-gradient(145deg, #161e31 0%, #101524 50%, #0b0f19 100%);
+  --hero-text-muted: #94a3b8;
   --hero-income: #34d399;
   --hero-expense: #fb7185;
 
   /* Third-party button branding (Dark Mode) */
-  --google-btn-bg: #181820;
-  --google-btn-fg: #f4f4f5;
+  --google-btn-bg: #1c2438;
+  --google-btn-fg: #f8fafc;
 
   /* Legacy Aliases */
   --background: var(--surface-base);
   --surface: var(--surface-card);
-  --surface-secondary: #1b1c24;
-  --border: rgba(255, 255, 255, 0.11);
+  --surface-secondary: #1c2438;
+  --border: rgba(99, 102, 241, 0.16);
   --foreground: var(--text-primary);
   --muted-foreground: var(--text-muted);
   --card: var(--surface-card);
@@ -202,25 +203,26 @@
   --offline-fg: #fca5a5;
   --offline-border: #7f1d1d;
 
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.7);
-  --shadow-lg: 0 12px 24px -3px rgba(0, 0, 0, 0.8);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 24px -3px rgba(0, 0, 0, 0.7);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
 
-    /* Surfaces (Midnight Obsidian Pro) */
-    --surface-base: #09090b;             /* Pure Obsidian Black */
-    --surface-card: #131418;             /* Refined Charcoal Onyx */
-    --surface-secondary: #1b1c24;        /* Elevated Subtle Fill */
-    --border-subtle: rgba(255, 255, 255, 0.07); /* Delicate 7% White Border */
-    --border: rgba(255, 255, 255, 0.11);        /* Crisp 11% White Border */
+    /* Surfaces (Midnight Deep Navy) */
+    --surface-base: #0b0f19;             /* Deep Navy Space */
+    --surface-card: #131926;             /* Navy-Tinted Charcoal Card */
+    --surface-secondary: #1c2438;        /* Elevated Navy Fill */
+    --surface-hover: #243049;            /* Hover Surface */
+    --border-subtle: rgba(255, 255, 255, 0.08); /* Delicate 8% Border */
+    --border: rgba(99, 102, 241, 0.16);         /* Hairline Indigo Border */
 
     /* Text & Foreground */
-    --text-primary: #f4f4f5;             /* Soft Crisp White (no glare) */
-    --text-muted: #9ca3af;               /* Neutral Silver Zinc (WCAG AA > 7:1) */
+    --text-primary: #f8fafc;             /* Crisp Slate White */
+    --text-muted: #94a3b8;               /* Muted Silver Slate (WCAG AA > 6.7:1) */
     --text-inverse: #ffffff;             /* Crisp White for Filled Buttons */
 
     /* Accents */
@@ -242,26 +244,27 @@
     --info-light: rgba(56, 189, 248, 0.14);
     --info-fg: #7dd3fc;
 
-    /* Hero Card Tokens (Dark Titanium Card) */
-    --hero-bg: linear-gradient(145deg, #181926 0%, #12131c 50%, #0d0e14 100%);
-    --hero-text-muted: #9ca3af;
+    /* Hero Card Tokens (Deep Navy Titanium Card) */
+    --hero-bg: linear-gradient(145deg, #161e31 0%, #101524 50%, #0b0f19 100%);
+    --hero-text-muted: #94a3b8;
     --hero-income: #34d399;
     --hero-expense: #fb7185;
 
     /* Third-party button branding (Dark Mode) */
-    --google-btn-bg: #181820;
-    --google-btn-fg: #f4f4f5;
+    --google-btn-bg: #1c2438;
+    --google-btn-fg: #f8fafc;
 
     /* Legacy Aliases */
     --background: var(--surface-base);
     --surface: var(--surface-card);
-    --surface-secondary: #1b1c24;
-    --border: rgba(255, 255, 255, 0.11);
+    --surface-secondary: #1c2438;
+    --border: rgba(99, 102, 241, 0.16);
     --foreground: var(--text-primary);
     --muted-foreground: var(--text-muted);
     --card: var(--surface-card);
     --accent: var(--accent-primary);
     --primary: var(--accent-primary);
+    --primary-foreground: #ffffff;
     --destructive: var(--error);
 
     --avatar-bg: #312e81;
@@ -270,8 +273,9 @@
     --offline-fg: #fca5a5;
     --offline-border: #7f1d1d;
 
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.6);
-    --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.7);
-    --shadow-lg: 0 12px 24px -3px rgba(0, 0, 0, 0.8);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 12px 24px -3px rgba(0, 0, 0, 0.7);
   }
 }
+
