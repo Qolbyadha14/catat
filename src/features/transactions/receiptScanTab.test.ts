@@ -141,5 +141,54 @@ import { extractImageFileFromClipboard } from './ReceiptScanTab';
   assert(extractImageFileFromClipboard(null) === null, 'returns null for null clipboardData');
 }
 
+// 5. Multi-File Batch Validation & Quota Checks Gate
+import { validateBatchFiles, checkBatchQuota } from './ReceiptScanTab';
+
+{
+  // Test empty file list
+  const emptyRes = validateBatchFiles([]);
+  assert(emptyRes.valid === false, 'empty batch rejected');
+
+  // Test over limit (> 10 files)
+  const elevenFiles = Array.from({ length: 11 }, (_, i) =>
+    new File([new Uint8Array(100)], `receipt_${i}.jpg`, { type: 'image/jpeg' })
+  );
+  const overLimitRes = validateBatchFiles(elevenFiles);
+  assert(overLimitRes.valid === false, 'over 10 files batch rejected');
+  assert(overLimitRes.error?.includes('10') === true, 'error mentions 10 files limit');
+
+  // Test valid batch of 3 files
+  const threeValidFiles = Array.from({ length: 3 }, (_, i) =>
+    new File([new Uint8Array(100)], `receipt_${i}.png`, { type: 'image/png' })
+  );
+  const validBatchRes = validateBatchFiles(threeValidFiles);
+  assert(validBatchRes.valid === true, 'valid batch passes');
+
+  // Test batch with one invalid file
+  const mixedFiles = [
+    new File([new Uint8Array(100)], 'valid.jpg', { type: 'image/jpeg' }),
+    new File([new Uint8Array(100)], 'document.pdf', { type: 'application/pdf' }),
+  ];
+  const mixedRes = validateBatchFiles(mixedFiles);
+  assert(mixedRes.valid === false, 'mixed batch with invalid file rejected');
+
+  // Quota check: Combine mode (always 1 quota)
+  const combineAllowed = checkBatchQuota(10, 3, 'combine');
+  assert(combineAllowed.allowed === true, 'combine mode allowed when remaining >= 1');
+  const combineExact = checkBatchQuota(1, 2, 'combine');
+  assert(combineExact.allowed === true, 'combine mode allowed with remaining 1');
+  const combineZero = checkBatchQuota(0, 2, 'combine');
+  assert(combineZero.allowed === false, 'combine mode rejected with remaining 0');
+
+  // Quota check: Bulk mode (needs N quotas)
+  const bulkAllowed = checkBatchQuota(5, 3, 'bulk');
+  assert(bulkAllowed.allowed === true, 'bulk mode allowed when remaining >= file count');
+  const bulkExact = checkBatchQuota(3, 3, 'bulk');
+  assert(bulkExact.allowed === true, 'bulk mode allowed with exact remaining');
+  const bulkInsufficient = checkBatchQuota(2, 5, 'bulk');
+  assert(bulkInsufficient.allowed === false, 'bulk mode rejected when remaining < count');
+  assert(bulkInsufficient.error?.includes('2') === true, 'error mentions remaining quota');
+}
+
 console.log('ReceiptScanTab unit & validation gate tests pass');
 

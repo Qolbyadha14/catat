@@ -2687,4 +2687,126 @@ dialog::backdrop,
   cursor: pointer;
 }
 
+/* Staged Multi-File OCR Selection Card */
+.ocr-staged-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
+.ocr-staged-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ocr-staged-header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ocr-staged-thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.ocr-staged-thumb-item {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.ocr-staged-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ocr-staged-thumb-num {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: var(--surface-overlay);
+  color: var(--primary-foreground);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: var(--radius-xs);
+}
+
+.ocr-mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ocr-mode-btn {
+  text-align: left;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ocr-mode-btn:hover {
+  background: var(--card);
+  border-color: var(--muted-foreground);
+}
+
+.ocr-mode-btn.active {
+  background: var(--primary-subtle);
+  border-color: var(--primary);
+}
+
+.ocr-mode-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.ocr-mode-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--badge-bg);
+  color: var(--primary);
+  border: 1px solid var(--border);
+}
+
+.ocr-mode-desc {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.ocr-staged-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ocr-staged-actions button {
+  flex: 1;
+}

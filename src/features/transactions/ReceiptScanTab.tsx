@@ -11,12 +11,53 @@ import {
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { Category, Account } from '../../lib/schemas';
 
+export const MAX_BATCH_FILES = 10;
+
 export interface ReceiptScanTabProps {
   uid: string;
   categories?: Category[];
   accounts?: Account[];
   onScanSuccess: (result: OcrReceiptResult, previewUrl: string | null) => void;
+  onBatchComplete?: (results: Array<{ result: OcrReceiptResult; previewUrl: string }>) => void;
   onCancelToManual: () => void;
+}
+
+export function validateBatchFiles(files: File[]): { valid: boolean; error?: string } {
+  if (!files || files.length === 0) {
+    return { valid: false, error: 'Pilih minimal 1 file gambar struk.' };
+  }
+  if (files.length > MAX_BATCH_FILES) {
+    return {
+      valid: false,
+      error: `Maksimal ${MAX_BATCH_FILES} struk sekaligus per upload (Anda memilih ${files.length} file).`,
+    };
+  }
+  for (const file of files) {
+    const res = validateReceiptFile(file);
+    if (!res.valid) {
+      return {
+        valid: false,
+        error: `File "${file.name}": ${res.error ?? 'tidak valid.'}`,
+      };
+    }
+  }
+  return { valid: true };
+}
+
+export function checkBatchQuota(
+  remaining: number,
+  fileCount: number,
+  mode: 'combine' | 'bulk'
+): { allowed: boolean; error?: string } {
+  const needed = mode === 'combine' ? 1 : fileCount;
+  if (remaining < needed) {
+    const error =
+      mode === 'combine'
+        ? 'Batas kuota harian tercapai. Silakan input transaksi manual.'
+        : `Sisa kuota harian (${remaining}) tidak mencukupi untuk memindai ${fileCount} struk sekaligus.`;
+    return { allowed: false, error };
+  }
+  return { allowed: true };
 }
 
 export function extractImageFileFromClipboard(clipboardData: DataTransfer | null): File | null {
@@ -41,11 +82,23 @@ export function extractImageFileFromClipboard(clipboardData: DataTransfer | null
   return null;
 }
 
+function cleanErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : 'Gagal membaca struk. Coba unggah ulang.';
+  let clean = raw.replace(/^AI:\s*/i, '').replace(/\(AI\/[^)]+\)$/i, '').trim();
+  if (clean.includes('timeout')) {
+    clean = 'Waktu pemrosesan struk habis (timeout). Silakan coba lagi.';
+  } else if (clean.includes('fetch-error') || clean.includes('Failed to fetch')) {
+    clean = 'Gagal terhubung ke server OCR. Periksa koneksi internet Anda.';
+  }
+  return clean;
+}
+
 export function ReceiptScanTab({
   uid,
   categories,
   accounts,
   onScanSuccess,
+  onBatchComplete,
   onCancelToManual,
 }: ReceiptScanTabProps) {
   const [hasConsent, setHasConsent] = useState(() => hasAcceptedDisclosure(uid));
@@ -55,6 +108,11 @@ export function ReceiptScanTab({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Staged files for 2+ multi-file selection
+  const [stagedFiles, setStagedFiles] = useState<File[] | null>(null);
+  const [stagedThumbnails, setStagedThumbnails] = useState<string[]>([]);
+  const [scanMode, setScanMode] = useState<'combine' | 'bulk'>('combine');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +136,19 @@ export function ReceiptScanTab({
     };
   }, [previewUrl]);
 
+  // Object URLs for staged thumbnails
+  useEffect(() => {
+    if (!stagedFiles || stagedFiles.length === 0) {
+      setStagedThumbnails([]);
+      return;
+    }
+    const urls = stagedFiles.map((f) => URL.createObjectURL(f));
+    setStagedThumbnails(urls);
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [stagedFiles]);
+
   // Global paste handler for clipboard screenshot
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -85,7 +156,7 @@ export function ReceiptScanTab({
       const file = extractImageFileFromClipboard(e.clipboardData);
       if (file) {
         e.preventDefault();
-        handleProcessFile(file);
+        handleFilesSelected([file]);
       }
     };
 
@@ -93,30 +164,54 @@ export function ReceiptScanTab({
     return () => {
       window.removeEventListener('paste', handlePaste);
     };
-  }, [isProcessing, hasConsent]);
+  }, [isProcessing, hasConsent, stagedFiles]);
 
   const handleConsent = () => {
     acceptDisclosure(uid);
     setHasConsent(true);
   };
 
-  const handleProcessFile = async (file: File) => {
+  const handleFilesSelected = (incoming: File[]) => {
+    setError(null);
+    let targetFiles: File[];
+
+    if (stagedFiles && stagedFiles.length > 0) {
+      // Append to current staging
+      targetFiles = [...stagedFiles, ...incoming];
+    } else {
+      targetFiles = incoming;
+    }
+
+    const validation = validateBatchFiles(targetFiles);
+    if (!validation.valid) {
+      setError(validation.error ?? 'File struk tidak valid.');
+      return;
+    }
+
+    if (targetFiles.length === 1 && (!stagedFiles || stagedFiles.length === 0)) {
+      // Direct single file scan
+      handleProcessSingleFile(targetFiles[0]);
+    } else {
+      // Multi-file staging
+      setStagedFiles(targetFiles);
+      setScanMode(targetFiles.length === 2 ? 'combine' : 'bulk');
+    }
+  };
+
+  const handleProcessSingleFile = async (file: File) => {
     setError(null);
 
-    // 1. Quota check
     if (!canScan(uid)) {
       setError('Batas kuota harian tercapai (maksimal 20 scan per hari). Silakan input transaksi manual.');
       return;
     }
 
-    // 2. Client File Validation
     const validation = validateReceiptFile(file);
     if (!validation.valid) {
       setError(validation.error ?? 'File struk tidak valid.');
       return;
     }
 
-    // 3. Preview URL
     const localUrl = URL.createObjectURL(file);
     setPreviewUrl(localUrl);
     setIsProcessing(true);
@@ -127,9 +222,7 @@ export function ReceiptScanTab({
 
     let msgTimer: ReturnType<typeof setTimeout> | null = null;
     try {
-      // 4. Client resize: 1200px and 0.8 quality for fast mobile uploads and instant AI tokenization
       const resized = await resizeImage(file, 1200, 0.8);
-
       if (controller.signal.aborted) return;
 
       setStatusMessage('AI Gemini sedang membaca struk belanja...');
@@ -139,7 +232,6 @@ export function ReceiptScanTab({
         }
       }, 3000);
 
-      // 5. Invoke AI with categories & accounts context
       const categoryContext = categories?.map((c) => ({
         id: c.id,
         name: c.name,
@@ -158,24 +250,13 @@ export function ReceiptScanTab({
         accounts: accountContext,
       });
 
-      // Update remaining quota state
       setRemaining(getRemainingScans(uid));
-
-      // 6. Zero auto-save: handoff to parent form with previewUrl
       onScanSuccess(result, localUrl);
     } catch (err: unknown) {
       if (controller.signal.aborted) {
         setError('Pemindaian struk dibatalkan.');
       } else {
-        const raw = err instanceof Error ? err.message : 'Gagal membaca struk. Coba unggah ulang.';
-        // Strip technical prefixes if any
-        let clean = raw.replace(/^AI:\s*/i, '').replace(/\(AI\/[^)]+\)$/i, '').trim();
-        if (clean.includes('timeout')) {
-          clean = 'Waktu pemrosesan struk habis (timeout). Silakan coba lagi.';
-        } else if (clean.includes('fetch-error') || clean.includes('Failed to fetch')) {
-          clean = 'Gagal terhubung ke server OCR. Periksa koneksi internet Anda.';
-        }
-        setError(clean);
+        setError(cleanErrorMessage(err));
       }
     } finally {
       if (msgTimer) clearTimeout(msgTimer);
@@ -185,10 +266,177 @@ export function ReceiptScanTab({
     }
   };
 
+  const handleProcessCombinedFiles = async (files: File[]) => {
+    setError(null);
+    if (!canScan(uid)) {
+      setError('Batas kuota harian tercapai. Silakan input transaksi manual.');
+      return;
+    }
+
+    const mainPreview = URL.createObjectURL(files[0]);
+    setPreviewUrl(mainPreview);
+    setIsProcessing(true);
+    setStatusMessage(`Mengoptimalkan ${files.length} gambar struk...`);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    let msgTimer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const resizedList = await Promise.all(
+        files.map((f) => resizeImage(f, 1200, 0.8))
+      );
+      if (controller.signal.aborted) return;
+
+      setStatusMessage(`AI Gemini menganalisis ${files.length} foto struk tergabung...`);
+      msgTimer = setTimeout(() => {
+        if (!controller.signal.aborted) {
+          setStatusMessage('Menyatukan rincian struk & total akhir...');
+        }
+      }, 3000);
+
+      const categoryContext = categories?.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+      }));
+      const accountContext = accounts?.map((a) => ({
+        id: a.id,
+        name: a.name,
+        kind: a.kind,
+      }));
+
+      const result = await scanReceiptWithGemini(
+        resizedList.map((r) => r.blob),
+        uid,
+        {
+          signal: controller.signal,
+          timeoutMs: 60000,
+          categories: categoryContext,
+          accounts: accountContext,
+        }
+      );
+
+      setRemaining(getRemainingScans(uid));
+      setStagedFiles(null);
+      onScanSuccess(result, mainPreview);
+    } catch (err: unknown) {
+      if (controller.signal.aborted) {
+        setError('Pemindaian struk dibatalkan.');
+      } else {
+        setError(cleanErrorMessage(err));
+      }
+    } finally {
+      if (msgTimer) clearTimeout(msgTimer);
+      setIsProcessing(false);
+      setStatusMessage('');
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleProcessBulkFiles = async (files: File[]) => {
+    setError(null);
+    const quota = checkBatchQuota(remaining, files.length, 'bulk');
+    if (!quota.allowed) {
+      setError(quota.error ?? 'Kuota tidak mencukupi.');
+      return;
+    }
+
+    setIsProcessing(true);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const results: Array<{ result: OcrReceiptResult; previewUrl: string }> = [];
+    const categoryContext = categories?.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+    }));
+    const accountContext = accounts?.map((a) => ({
+        id: a.id,
+        name: a.name,
+        kind: a.kind,
+    }));
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        if (controller.signal.aborted) break;
+        const file = files[i];
+        const preview = URL.createObjectURL(file);
+        setPreviewUrl(preview);
+        setStatusMessage(`Mengekstrak struk ${i + 1} dari ${files.length}...`);
+
+        try {
+          const resized = await resizeImage(file, 1200, 0.8);
+          if (controller.signal.aborted) break;
+
+          const result = await scanReceiptWithGemini(
+            resized.blob,
+            uid,
+            {
+              signal: controller.signal,
+              timeoutMs: 60000,
+              categories: categoryContext,
+              accounts: accountContext,
+            }
+          );
+          results.push({ result, previewUrl: preview });
+        } catch (itemErr: unknown) {
+          const fallbackResult: OcrReceiptResult = {
+            amount: 0,
+            confidence: 'low',
+            rawText: itemErr instanceof Error ? itemErr.message : 'Gagal membaca struk',
+            warnings: ['Foto struk tidak terbaca jelas oleh AI'],
+          };
+          results.push({ result: fallbackResult, previewUrl: preview });
+        }
+
+        setRemaining(getRemainingScans(uid));
+      }
+
+      if (controller.signal.aborted) return;
+
+      setStagedFiles(null);
+      if (results.length > 0) {
+        if (onBatchComplete) {
+          onBatchComplete(results);
+        } else {
+          onScanSuccess(results[0].result, results[0].previewUrl);
+        }
+      }
+    } catch (err: unknown) {
+      if (controller.signal.aborted) {
+        setError('Pemindaian struk dibatalkan.');
+      } else {
+        setError(cleanErrorMessage(err));
+      }
+    } finally {
+      setIsProcessing(false);
+      setStatusMessage('');
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleStartScanStaged = async () => {
+    if (!stagedFiles || stagedFiles.length === 0) return;
+
+    const quota = checkBatchQuota(remaining, stagedFiles.length, scanMode);
+    if (!quota.allowed) {
+      setError(quota.error ?? 'Kuota tidak mencukupi.');
+      return;
+    }
+
+    if (scanMode === 'combine') {
+      await handleProcessCombinedFiles(stagedFiles);
+    } else {
+      await handleProcessBulkFiles(stagedFiles);
+    }
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleProcessFile(file);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      handleFilesSelected(files);
     }
     e.target.value = '';
   };
@@ -210,7 +458,7 @@ export function ReceiptScanTab({
           if (imageType) {
             const blob = await item.getType(imageType);
             const file = new File([blob], 'clipboard.png', { type: imageType });
-            handleProcessFile(file);
+            handleFilesSelected([file]);
             return;
           }
         }
@@ -236,9 +484,9 @@ export function ReceiptScanTab({
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      handleProcessFile(file);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length > 0) {
+      handleFilesSelected(files);
     }
   };
 
@@ -254,7 +502,7 @@ export function ReceiptScanTab({
         <ul className="ocr-disclosure-points">
           <li>🔒 Foto diproses untuk ekstraksi data dan tidak disimpan permanen.</li>
           <li>⚡ Hasil scan hanya mengisi form draft — <strong>tidak langsung disimpan</strong> tanpa persetujuan Anda.</li>
-          <li>📊 Kuota gratis 20 scan per hari.</li>
+          <li>📊 Kuota gratis 20 scan per hari (struk panjang 2 foto dihitung 1 kuota).</li>
         </ul>
         <button type="button" className="btn-hero" onClick={handleConsent}>
           Saya Mengerti & Lanjutkan
@@ -288,6 +536,29 @@ export function ReceiptScanTab({
         </div>
       )}
 
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="ocr-hidden-input"
+        onChange={handleFileChange}
+        disabled={remaining <= 0}
+        aria-label="Ambil foto struk dari kamera"
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/*"
+        multiple
+        className="ocr-hidden-input"
+        onChange={handleFileChange}
+        disabled={remaining <= 0}
+        aria-label="Pilih file gambar struk dari galeri"
+      />
+
       {/* Processing State: Skeleton + Preview */}
       {isProcessing ? (
         <div className="ocr-processing-card">
@@ -316,6 +587,95 @@ export function ReceiptScanTab({
             Batal Scan
           </button>
         </div>
+      ) : stagedFiles && stagedFiles.length > 1 ? (
+        /* Staged Multi-File Selection & Mode Switcher */
+        <div className="ocr-staged-card">
+          <div className="ocr-staged-header">
+            <h4>{stagedFiles.length} Foto Struk Terpilih</h4>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {stagedFiles.length < MAX_BATCH_FILES && (
+                <button
+                  type="button"
+                  className="btn-link-action"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  + Tambah Foto
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-link-action"
+                style={{ color: 'var(--muted-foreground)' }}
+                onClick={() => setStagedFiles(null)}
+              >
+                Ganti
+              </button>
+            </div>
+          </div>
+
+          {/* Thumbnail preview row */}
+          <div className="ocr-staged-thumbs">
+            {stagedThumbnails.map((url, idx) => (
+              <div key={idx} className="ocr-staged-thumb-item">
+                <img src={url} alt={`Struk ${idx + 1}`} />
+                <span className="ocr-staged-thumb-num">#{idx + 1}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="ocr-mode-selector">
+            <button
+              type="button"
+              className={`ocr-mode-btn ${scanMode === 'combine' ? 'active' : ''}`}
+              onClick={() => setScanMode('combine')}
+            >
+              <div className="ocr-mode-title">
+                <span>🧩 Gabungkan jadi 1 Transaksi</span>
+                <span className="ocr-mode-badge">1 Kuota</span>
+              </div>
+              <div className="ocr-mode-desc">
+                Cocok untuk struk panjang TikTok Shop / Shopee yang terpotong 2 screenshot (atas & bawah).
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`ocr-mode-btn ${scanMode === 'bulk' ? 'active' : ''}`}
+              onClick={() => setScanMode('bulk')}
+            >
+              <div className="ocr-mode-title">
+                <span>📦 Pisahkan ({stagedFiles.length} Transaksi)</span>
+                <span className="ocr-mode-badge">{stagedFiles.length} Kuota</span>
+              </div>
+              <div className="ocr-mode-desc">
+                Cocok untuk banyak struk belanja berbeda yang ingin diinput sekaligus.
+              </div>
+            </button>
+          </div>
+
+          <div className="ocr-staged-actions">
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => setStagedFiles(null)}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              className="btn-hero"
+              onClick={handleStartScanStaged}
+              disabled={
+                scanMode === 'combine'
+                  ? remaining < 1
+                  : remaining < stagedFiles.length
+              }
+            >
+              Mulai Scan ({scanMode === 'combine' ? '1 Kuota' : `${stagedFiles.length} Kuota`})
+            </button>
+          </div>
+        </div>
       ) : (
         /* Idle Upload Area */
         <div
@@ -334,27 +694,6 @@ export function ReceiptScanTab({
           <p className="ocr-dropzone-subtitle">
             Foto bon kasir, struk belanja, atau tiket pembayaran Anda.
           </p>
-
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="ocr-hidden-input"
-            onChange={handleFileChange}
-            disabled={remaining <= 0}
-            aria-label="Ambil foto struk dari kamera"
-          />
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/*"
-            className="ocr-hidden-input"
-            onChange={handleFileChange}
-            disabled={remaining <= 0}
-            aria-label="Pilih file gambar struk dari galeri"
-          />
 
           <div className="ocr-action-buttons">
             <button
@@ -385,7 +724,7 @@ export function ReceiptScanTab({
           </div>
 
           <span className="ocr-dropzone-hint">
-            Format JPG, PNG, atau WebP (maks. 20MB) • Bisa paste langsung (Cmd+V / Ctrl+V)
+            JPG, PNG, atau WebP (maks. 20MB) • Bisa pilih hingga 10 struk atau gabung screenshot panjang
           </span>
 
           {remaining <= 0 && (
