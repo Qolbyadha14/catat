@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { transactionItemSchema, type TransactionItem } from '../schemas';
 
 export const ocrReceiptSchema = z.object({
   amount: z.number().int().positive(),
@@ -10,6 +11,8 @@ export const ocrReceiptSchema = z.object({
   platform: z.enum(['shopeefood', 'gofood', 'spaylater', 'tiktok', 'bank_jago', 'qris', 'other']).optional().default('other'),
   paymentMethod: z.string().trim().max(50).nullable().optional().default(null),
   suggestedType: z.enum(['expense', 'transfer']).optional().default('expense'),
+  transactionNumber: z.string().trim().max(100).nullable().optional().default(null),
+  items: z.array(transactionItemSchema).optional().default([]),
 });
 
 export type OcrReceiptRaw = z.infer<typeof ocrReceiptSchema>;
@@ -24,6 +27,9 @@ export interface OcrReceiptResult {
   platform: 'shopeefood' | 'gofood' | 'spaylater' | 'tiktok' | 'bank_jago' | 'qris' | 'other';
   paymentMethod: string | null;
   suggestedType: 'expense' | 'transfer';
+  transactionNumber: string | null;
+  referenceKey: string | null;
+  items: TransactionItem[];
 }
 
 function toLocalDateString(d: Date): string {
@@ -49,6 +55,10 @@ export function parseOcrReceipt(input: unknown, referenceDate: Date = new Date()
     }
   }
 
+  const rawTxNum = parsed.transactionNumber ? parsed.transactionNumber.trim() : null;
+  const platform = parsed.platform ?? 'other';
+  const referenceKey = rawTxNum ? `${platform}#${rawTxNum}` : null;
+
   return {
     amount: parsed.amount,
     date: finalDate,
@@ -56,8 +66,11 @@ export function parseOcrReceipt(input: unknown, referenceDate: Date = new Date()
     confidence: parsed.confidence,
     categoryId: parsed.categoryId ?? null,
     accountId: parsed.accountId ?? null,
-    platform: parsed.platform ?? 'other',
+    platform,
     paymentMethod: parsed.paymentMethod ? parsed.paymentMethod.trim() : null,
     suggestedType: parsed.suggestedType ?? 'expense',
+    transactionNumber: rawTxNum,
+    referenceKey,
+    items: parsed.items ?? [],
   };
 }

@@ -139,7 +139,9 @@ Ekstrak informasi transaksi berikut secara akurat:
 4. platform: Salah satu dari "shopeefood", "gofood", "spaylater", "tiktok", "bank_jago", "qris", atau "other".
 5. paymentMethod: Metode pembayaran riil yang tertera (contoh: "Shopee Paylater", "GoPay", "Saldo Jago", "QRIS BCA").
 6. suggestedType: "transfer" jika struk adalah pelunasan tagihan paylater/kartu kredit atau kirim uang antar bank; "expense" jika pembelian barang/makanan/jasa.
-7. confidence: "high" jika angka total dan informasi terbaca jelas, "low" jika pudar/buram/meragukan.`;
+7. confidence: "high" jika angka total dan informasi terbaca jelas, "low" jika pudar/buram/meragukan.
+8. transactionNumber: Nomor pesanan / nomor transaksi / ID referensi struk (misal nomor pesanan TikTok Shop '578129381293812', Shopee '231019ABCD123', atau ref bank/QRIS), atau null jika tidak ada.
+9. items: Daftar barang/makanan/produk yang dibeli jika ada pada struk, dalam format array [{ name, qty, price, subtotal }]. Jika struk transfer/kirim uang atau tidak ada rincian item, isi array kosong [].`;
 
   if (categories && categories.length > 0) {
     prompt += `\n\nPilihlah categoryId yang PALING TEPAT dari daftar kategori pengguna berikut:\n` +
@@ -217,6 +219,25 @@ export function getGeminiModel(
             type: SchemaType.STRING,
             enum: ['expense', 'transfer'],
             description: 'Saran jenis transaksi (expense untuk belanja, transfer untuk bayar tagihan/kirim uang)',
+          },
+          transactionNumber: {
+            type: SchemaType.STRING,
+            description: 'Nomor pesanan / nomor referensi transaksi struk',
+            nullable: true,
+          },
+          items: {
+            type: SchemaType.ARRAY,
+            description: 'Daftar rincian barang/produk yang dibeli',
+            items: {
+              type: SchemaType.OBJECT,
+              properties: {
+                name: { type: SchemaType.STRING, description: 'Nama barang' },
+                qty: { type: SchemaType.NUMBER, description: 'Jumlah kuantitas barang' },
+                price: { type: SchemaType.INTEGER, description: 'Harga satuan barang' },
+                subtotal: { type: SchemaType.INTEGER, description: 'Total harga barang' },
+              },
+              required: ['name'],
+            },
           },
         },
         required: ['amount', 'confidence'],

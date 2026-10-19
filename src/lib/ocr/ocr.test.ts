@@ -73,6 +73,20 @@ function throws(fn: () => void) {
 
   // Reject invalid confidence
   throws(() => ocrReceiptSchema.parse({ amount: 10000, date: '2026-10-17', merchant: null, confidence: 'medium' }));
+
+  // Test transactionNumber, referenceKey, and items
+  const itemReceipt = parseOcrReceipt({
+    amount: 45000,
+    date: '2026-10-19',
+    merchant: 'TikTok Shop',
+    confidence: 'high' as const,
+    platform: 'tiktok' as const,
+    transactionNumber: '578129381293812',
+    items: [{ name: 'Kemeja Flannel', qty: 1, price: 45000, subtotal: 45000 }],
+  }, refDate);
+  assert(itemReceipt.transactionNumber === '578129381293812', 'extracts transactionNumber');
+  assert(itemReceipt.referenceKey === 'tiktok#578129381293812', 'computes referenceKey');
+  assert(itemReceipt.items.length === 1 && itemReceipt.items[0].name === 'Kemeja Flannel', 'extracts items');
 }
 
 // 2. OCR Image Processor - Dimension Calculation
