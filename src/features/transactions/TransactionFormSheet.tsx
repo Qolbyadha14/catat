@@ -1,8 +1,9 @@
 import { useState, useId, type FormEvent } from 'react';
 import type { Account, Category, Transaction } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
-import { createTransaction, updateTransaction } from './transactionService';
+import { createTransaction, updateTransaction, createBatchTransactions } from './transactionService';
 import { ReceiptScanTab } from './ReceiptScanTab';
+import { BatchReviewQueue, type BatchReviewItem } from './BatchReviewQueue';
 import { CategoryChipGrid } from './CategoryChipGrid';
 import { AccountPillSelector } from './AccountPillSelector';
 import { OcrReviewCard, formatReviewNote } from './OcrReviewCard';
@@ -38,6 +39,7 @@ export function TransactionFormSheet({
     result: OcrReceiptResult;
     previewUrl: string | null;
   } | null>(null);
+  const [batchQueue, setBatchQueue] = useState<BatchReviewItem[] | null>(null);
   const [recommendedCategoryId, setRecommendedCategoryId] = useState<string | null>(null);
   const [ocrFeedback, setOcrFeedback] = useState<{
     confidence: 'high' | 'low';
@@ -202,7 +204,7 @@ export function TransactionFormSheet({
     if (mathError) setMathError(null);
   };
 
-  const handleOcrSuccess = (res: OcrReceiptResult, previewUrl: string | null) => {
+  const resolveCategoryAndAccount = (res: OcrReceiptResult) => {
     // 1. Resolve category
     let matchedCatId = res.categoryId;
     if (matchedCatId && !categories.some((c) => c.id === matchedCatId)) {
@@ -215,6 +217,10 @@ export function TransactionFormSheet({
         );
         if (foodCat) matchedCatId = foodCat.id;
       }
+    }
+    if (!matchedCatId) {
+      const defaultCat = categories.find((c) => !c.isArchived && c.type === 'expense');
+      matchedCatId = defaultCat?.id ?? '';
     }
 
     // 2. Resolve account
@@ -231,6 +237,25 @@ export function TransactionFormSheet({
         if (jagoAcc) matchedAccId = jagoAcc.id;
       }
     }
+    if (!matchedAccId && res.paymentMethod) {
+      const pm = res.paymentMethod.toLowerCase();
+      const found = accounts.find(
+        (a) =>
+          !a.isArchived &&
+          (a.name.toLowerCase().includes(pm) || pm.includes(a.name.toLowerCase()))
+      );
+      if (found) matchedAccId = found.id;
+    }
+    if (!matchedAccId) {
+      const defaultAcc = accounts.find((a) => !a.isArchived);
+      matchedAccId = defaultAcc?.id ?? accounts[0]?.id ?? '';
+    }
+
+    return { matchedCatId, matchedAccId };
+  };
+
+  const handleOcrSuccess = (res: OcrReceiptResult, previewUrl: string | null) => {
+    const { matchedCatId, matchedAccId } = resolveCategoryAndAccount(res);
 
     // 3. Format note with platform and paymentMethod
     const formattedNote = formatReviewNote(res.merchant, res.paymentMethod, res.platform);
@@ -263,6 +288,73 @@ export function TransactionFormSheet({
       },
       previewUrl,
     });
+  };
+
+  const handleBatchComplete = (results: Array<{ result: OcrReceiptResult; previewUrl: string }>) => {
+    const queueItems: BatchReviewItem[] = results.map((item, index) => {
+      const { matchedCatId, matchedAccId } = resolveCategoryAndAccount(item.result);
+      const rounded = Math.round(item.result.amount || 0);
+      return {
+        id: `batch_${Date.now()}_${index}`,
+        previewUrl: item.previewUrl,
+        result: item.result,
+        nominal: rounded,
+        nominalInput: rounded > 0 ? new Intl.NumberFormat('id-ID').format(rounded) : '0',
+        categoryId: matchedCatId,
+        accountId: matchedAccId,
+        merchant: item.result.merchant ?? '',
+        date: item.result.date ?? new Date().toISOString().slice(0, 10),
+        isExcluded: false,
+      };
+    });
+
+    setBatchQueue(queueItems);
+  };
+
+  const handleUpdateBatchItem = (id: string, updates: Partial<BatchReviewItem>) => {
+    setBatchQueue((prev) =>
+      prev ? prev.map((item) => (item.id === id ? { ...item, ...updates } : item)) : null
+    );
+  };
+
+  const handleRemoveBatchItem = (id: string) => {
+    setBatchQueue((prev) => (prev ? prev.filter((item) => item.id !== id) : null));
+  };
+
+  const handleSaveBatch = async () => {
+    if (!batchQueue || batchQueue.length === 0) return;
+    const active = batchQueue.filter((it) => !it.isExcluded && it.nominal > 0);
+    if (active.length === 0) {
+      setError('Tidak ada transaksi valid yang dipilih untuk disimpan.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const payloads = active.map((item) => {
+        const epoch = new Date(item.date).getTime() || Date.now();
+        const noteText = item.merchant.trim() || 'Struk Belanja';
+        return {
+          type: 'expense' as const,
+          amount: item.nominal,
+          accountId: item.accountId,
+          categoryId: item.categoryId,
+          date: epoch,
+          note: noteText,
+        };
+      });
+
+      await createBatchTransactions(uid, payloads);
+      setBatchQueue(null);
+      onSuccess?.();
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menyimpan transaksi batch.';
+      setError(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleQuickSave = async () => {
@@ -401,80 +493,131 @@ export function TransactionFormSheet({
   };
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
+    <div
+      className="sheet-backdrop"
+      onClick={() => {
+        if (batchQueue) setBatchQueue(null);
+        onClose();
+      }}
+    >
       <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle-bar">
           <div className="sheet-handle" />
         </div>
 
         <div className="sheet-header">
-          <h3>{initialTx ? 'Ubah Transaksi' : duplicateData ? 'Duplikat Transaksi' : 'Catat Transaksi'}</h3>
-          <button type="button" className="btn-close-sheet" onClick={onClose} aria-label="Tutup" title="Tutup modal">
+          <h3>
+            {batchQueue && batchQueue.length > 0
+              ? `Review Struk (${batchQueue.length} Transaksi)`
+              : initialTx
+              ? 'Ubah Transaksi'
+              : duplicateData
+              ? 'Duplikat Transaksi'
+              : 'Catat Transaksi'}
+          </h3>
+          <button
+            type="button"
+            className="btn-close-sheet"
+            onClick={() => {
+              if (batchQueue) setBatchQueue(null);
+              onClose();
+            }}
+            aria-label="Tutup"
+            title="Tutup modal"
+          >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="sheet-scroll-body">
-          {/* Ocr Review Card if present */}
-          {ocrReview && (
-            <OcrReviewCard
-              result={ocrReview.result}
-              previewUrl={ocrReview.previewUrl}
-              categoryName={categories.find((c) => c.id === currentCategoryId)?.name}
-              categoryIcon={categories.find((c) => c.id === currentCategoryId)?.icon}
-              accountName={accounts.find((a) => a.id === currentAccountId)?.name}
-              onQuickSave={handleQuickSave}
-              onEditDetails={() => {
-                setOcrReview(null);
-                setActiveTab('manual');
-              }}
-              onDiscard={() => setOcrReview(null)}
-              isSaving={saving}
-            />
-          )}
-
-          {/* Tabs */}
-          {!ocrReview && (
-            <div className="tabs-segmented">
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
-                onClick={() => setActiveTab('manual')}
-              >
-                Manual
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'text' ? 'active' : ''}`}
-                onClick={() => setActiveTab('text')}
-                title="Input Asisten Teks"
-              >
-                Ketik
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
-                onClick={() => setActiveTab('ocr')}
-                title="Scan Struk OCR"
-              >
-                Scan
-              </button>
-            </div>
-          )}
-
-          {!ocrReview && activeTab === 'ocr' ? (
-            <ReceiptScanTab
-              uid={uid}
+        {batchQueue && batchQueue.length > 0 ? (
+          <div className="sheet-scroll-body">
+            {error && (
+              <div className="form-error-banner" role="alert">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  className="manage-toast-close"
+                  onClick={() => setError(null)}
+                  aria-label="Tutup pesan error"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <BatchReviewQueue
+              items={batchQueue}
               categories={categories}
               accounts={accounts}
-              onScanSuccess={handleOcrSuccess}
-              onCancelToManual={() => setActiveTab('manual')}
+              onUpdateItem={handleUpdateBatchItem}
+              onRemoveItem={handleRemoveBatchItem}
+              onSaveAll={handleSaveBatch}
+              onCancel={() => setBatchQueue(null)}
+              isSaving={saving}
             />
-          ) : !ocrReview && activeTab === 'text' ? (
-            <div className="offline-banner" style={{ background: 'var(--surface)', color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
-              Mode asisten Ketik sedang disiapkan. Gunakan input manual atau scan struk.
-            </div>
-          ) : !ocrReview ? (
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="sheet-scroll-body">
+            {/* Ocr Review Card if present */}
+            {ocrReview && (
+              <OcrReviewCard
+                result={ocrReview.result}
+                previewUrl={ocrReview.previewUrl}
+                categoryName={categories.find((c) => c.id === currentCategoryId)?.name}
+                categoryIcon={categories.find((c) => c.id === currentCategoryId)?.icon}
+                accountName={accounts.find((a) => a.id === currentAccountId)?.name}
+                onQuickSave={handleQuickSave}
+                onEditDetails={() => {
+                  setOcrReview(null);
+                  setActiveTab('manual');
+                }}
+                onDiscard={() => setOcrReview(null)}
+                isSaving={saving}
+              />
+            )}
+
+            {/* Tabs */}
+            {!ocrReview && (
+              <div className="tabs-segmented">
+                <button
+                  type="button"
+                  className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('manual')}
+                >
+                  Manual
+                </button>
+                <button
+                  type="button"
+                  className={`tab-btn ${activeTab === 'text' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('text')}
+                  title="Input Asisten Teks"
+                >
+                  Ketik
+                </button>
+                <button
+                  type="button"
+                  className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('ocr')}
+                  title="Scan Struk OCR"
+                >
+                  Scan
+                </button>
+              </div>
+            )}
+
+            {!ocrReview && activeTab === 'ocr' ? (
+              <ReceiptScanTab
+                uid={uid}
+                categories={categories}
+                accounts={accounts}
+                onScanSuccess={handleOcrSuccess}
+                onBatchComplete={handleBatchComplete}
+                onCancelToManual={() => setActiveTab('manual')}
+              />
+            ) : !ocrReview && activeTab === 'text' ? (
+              <div className="offline-banner" style={{ background: 'var(--surface)', color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
+                Mode asisten Ketik sedang disiapkan. Gunakan input manual atau scan struk.
+              </div>
+            ) : !ocrReview ? (
             <>
               {ocrFeedback && (
                 <div
@@ -673,6 +816,7 @@ export function TransactionFormSheet({
             </>
           ) : null}
         </form>
+        )}
       </div>
     </div>
   );

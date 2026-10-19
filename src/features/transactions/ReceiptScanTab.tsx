@@ -190,7 +190,10 @@ export function ReceiptScanTab({
 
     if (targetFiles.length === 1 && (!stagedFiles || stagedFiles.length === 0)) {
       // Direct single file scan
-      handleProcessSingleFile(targetFiles[0]);
+      const singleFile = targetFiles[0];
+      if (singleFile) {
+        handleProcessSingleFile(singleFile);
+      }
     } else {
       // Multi-file staging
       setStagedFiles(targetFiles);
@@ -273,7 +276,8 @@ export function ReceiptScanTab({
       return;
     }
 
-    const mainPreview = URL.createObjectURL(files[0]);
+    const firstFile = files[0];
+    const mainPreview = firstFile ? URL.createObjectURL(firstFile) : null;
     setPreviewUrl(mainPreview);
     setIsProcessing(true);
     setStatusMessage(`Mengoptimalkan ${files.length} gambar struk...`);
@@ -348,20 +352,22 @@ export function ReceiptScanTab({
 
     const results: Array<{ result: OcrReceiptResult; previewUrl: string }> = [];
     const categoryContext = categories?.map((c) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
+      id: c.id,
+      name: c.name,
+      type: c.type,
     }));
     const accountContext = accounts?.map((a) => ({
-        id: a.id,
-        name: a.name,
-        kind: a.kind,
+      id: a.id,
+      name: a.name,
+      kind: a.kind,
     }));
 
     try {
       for (let i = 0; i < files.length; i++) {
         if (controller.signal.aborted) break;
         const file = files[i];
+        if (!file) continue;
+
         const preview = URL.createObjectURL(file);
         setPreviewUrl(preview);
         setStatusMessage(`Mengekstrak struk ${i + 1} dari ${files.length}...`);
@@ -381,12 +387,17 @@ export function ReceiptScanTab({
             }
           );
           results.push({ result, previewUrl: preview });
-        } catch (itemErr: unknown) {
+        } catch {
           const fallbackResult: OcrReceiptResult = {
             amount: 0,
+            date: new Date().toISOString().slice(0, 10),
+            merchant: null,
             confidence: 'low',
-            rawText: itemErr instanceof Error ? itemErr.message : 'Gagal membaca struk',
-            warnings: ['Foto struk tidak terbaca jelas oleh AI'],
+            categoryId: null,
+            accountId: null,
+            platform: 'other',
+            paymentMethod: null,
+            suggestedType: 'expense',
           };
           results.push({ result: fallbackResult, previewUrl: preview });
         }
@@ -401,7 +412,10 @@ export function ReceiptScanTab({
         if (onBatchComplete) {
           onBatchComplete(results);
         } else {
-          onScanSuccess(results[0].result, results[0].previewUrl);
+          const first = results[0];
+          if (first) {
+            onScanSuccess(first.result, first.previewUrl);
+          }
         }
       }
     } catch (err: unknown) {
