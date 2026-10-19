@@ -71,31 +71,43 @@ export const creatorSchema = z.object({
 
 export type TransactionCreator = z.infer<typeof creatorSchema>;
 
-// Extend baseTx with createdBy and referenceKey (e.g. "tiktok#578129381293812")
+export const transactionItemSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  qty: z.number().positive().optional().default(1),
+  price: z.number().int().nonnegative().optional(),
+  subtotal: z.number().int().nonnegative().optional(),
+});
+
+export type TransactionItem = z.infer<typeof transactionItemSchema>;
+
+// Extend baseTx with createdBy, referenceKey, and itemized products (items)
 const baseTx = z.object({
   id: z.string().min(1),
   amount: z.number().int().positive(),
   date: z.number().int(),
   note: z.string().trim().max(140).optional().default(''),
   referenceKey: z.string().trim().max(120).nullable().optional(), // e.g. "tiktok#578129381293812"
+  items: z.array(transactionItemSchema).optional().default([]), // Itemized products / line items
   createdBy: creatorSchema.optional(), // Optional for backward compatibility
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
 ```
 
-### 2.4 OCR Schema Extension (`transactionNumber` & `referenceKey`)
+### 2.4 OCR Schema Extension (`transactionNumber`, `referenceKey` & `items`)
 In `src/lib/ocr/schema.ts`:
 ```typescript
 export const ocrReceiptSchema = z.object({
   // ... existing fields
   transactionNumber: z.string().trim().max(100).nullable().optional().default(null),
+  items: z.array(transactionItemSchema).optional().default([]),
 });
 
 export interface OcrReceiptResult {
   // ... existing fields
   transactionNumber: string | null;
   referenceKey: string | null; // Formatted as `${platform}#${transactionNumber}`
+  items: TransactionItem[];
 }
 ```
 
@@ -167,6 +179,26 @@ In the Dashboard transaction history item:
 3. **Display in Transaction History & Details:**
    - In transaction detail or note:
      A subtle mono chip `🔖 tiktok#578129381293812` is displayed, allowing family members to cross-check orders directly in their shopping apps.
+
+### 3.5 Itemized Products (Daftar Barang Belanja)
+1. **Multimodal OCR Extraction:**
+   - Gemini AI extracts the purchased product line items from the receipt into structured items:
+     - `name`: Nama barang/makanan (misal: "Susu UHT Full Cream 1L")
+     - `qty`: Jumlah unit (misal: `2`)
+     - `price`: Harga satuan jika tertera (misal: `18500`)
+     - `subtotal`: Total harga barang (misal: `37000`)
+   - Jika struk transfer, QRIS non-item, atau tidak tertera rincian produk, `items` tetap berupa array kosong `[]`.
+
+2. **UI Presentation in OcrReviewCard:**
+   - Terdapat kartu rincian yang rapi:
+     **🛒 Rincian Barang (3 item)** (collapsible / dapat dibuka-tutup agar tampilan tetap bersih):
+     - `2x Susu UHT Full Cream (Rp37.000)`
+     - `1x Roti Tawar Gandum (Rp15.000)`
+     - `3x Kopi Botol (Rp27.000)`
+
+3. **UI Presentation in TransactionFormSheet & Dashboard:**
+   - Di Form Sheet: Daftar produk ditampilkan di bagian "Rincian Barang" yang bisa disesuaikan/diedit bila diperlukan.
+   - Di Riwayat Transaksi: Anggota keluarga bisa membuka detail transaksi untuk melihat secara rinci apa saja barang belanjaan yang dibeli oleh pasangannya/keluarganya.
 
 ---
 
