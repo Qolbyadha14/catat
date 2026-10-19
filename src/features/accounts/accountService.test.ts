@@ -58,5 +58,20 @@ const categoryWithInvalidBudget = {
 const sanitizedInvalid = sanitizeCategoryUpdate(categoryWithInvalidBudget);
 assert(!('monthlyBudget' in sanitizedInvalid), 'negative monthlyBudget must be stripped');
 
+// Account dueDay whitelist test
+const accountWithDueDay = {
+  name: 'SPayLater',
+  dueDay: 25,
+};
+const sanitizedDue = sanitizeAccountUpdate(accountWithDueDay);
+assert(sanitizedDue.dueDay === 25, 'valid dueDay must be preserved');
+
+const accountWithInvalidDueDay = {
+  name: 'SPayLater',
+  dueDay: 35, // invalid > 31
+};
+const sanitizedInvalidDue = sanitizeAccountUpdate(accountWithInvalidDueDay);
+assert(!('dueDay' in sanitizedInvalidDue), 'dueDay > 31 must be stripped');
+
 console.log('Account and Category whitelist sanitizer asserts pass');
 

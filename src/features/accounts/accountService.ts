@@ -5,6 +5,7 @@ import type { Account } from '../../lib/schemas';
 export interface UpdateAccountInput {
   name?: string;
   icon?: string;
+  dueDay?: number;
   isArchived?: boolean;
 }
 
@@ -13,6 +14,7 @@ export interface CreateAccountInput {
   kind?: 'asset' | 'liability';
   balance?: number;
   icon?: string;
+  dueDay?: number;
 }
 
 export function sanitizeAccountUpdate(input: Record<string, unknown>): UpdateAccountInput {
@@ -24,6 +26,9 @@ export function sanitizeAccountUpdate(input: Record<string, unknown>): UpdateAcc
   }
   if (typeof input.icon === 'string') {
     sanitized.icon = input.icon;
+  }
+  if (typeof input.dueDay === 'number' && Number.isInteger(input.dueDay) && input.dueDay >= 1 && input.dueDay <= 31) {
+    sanitized.dueDay = input.dueDay;
   }
   if (typeof input.isArchived === 'boolean') {
     sanitized.isArchived = input.isArchived;
@@ -56,6 +61,7 @@ export async function createAccount(
     kind: input.kind || 'asset',
     balance: input.balance || 0,
     icon: input.icon?.trim() || undefined,
+    dueDay: typeof input.dueDay === 'number' && input.dueDay >= 1 && input.dueDay <= 31 ? input.dueDay : undefined,
     isArchived: false,
     createdAt: now,
   };
