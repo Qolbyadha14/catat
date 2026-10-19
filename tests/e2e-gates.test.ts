@@ -65,11 +65,11 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     const accountsSnap = await getDocs(collection(db, 'users', testUid, 'accounts'));
     const categoriesSnap = await getDocs(collection(db, 'users', testUid, 'categories'));
 
-    expect(accountsSnap.size).toBe(2);
-    expect(categoriesSnap.size).toBe(8);
+    expect(accountsSnap.size).toBe(4);
+    expect(categoriesSnap.size).toBe(14);
 
     const accountIds = accountsSnap.docs.map((d) => d.id).sort();
-    expect(accountIds).toEqual(['acc_bank', 'acc_cash']);
+    expect(accountIds).toEqual(['acc_bank', 'acc_cash', 'acc_ewallet', 'acc_paylater']);
   });
 
   it('Gate 1: Saldo createTransaction (expense, income, transfer & hero card total)', async () => {
@@ -455,8 +455,8 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     const allAccounts: Account[] = allAccountsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Account));
     const activeAccounts = allAccounts.filter((a) => !a.isArchived);
 
-    // Form picker only gets 1 account ('acc_cash'), archived 'acc_bank' dropped
-    expect(activeAccounts.length).toBe(1);
+    // Form picker gets active accounts ('acc_cash', 'acc_ewallet', 'acc_paylater'), archived 'acc_bank' dropped
+    expect(activeAccounts.length).toBe(3);
     expect(activeAccounts.some((a) => a.id === 'acc_bank')).toBe(false);
 
     // 7. History label resolution: Even though 'acc_bank' is archived, full map resolves name

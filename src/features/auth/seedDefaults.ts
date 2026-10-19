@@ -6,19 +6,29 @@ interface SeedAccount extends Account {}
 interface SeedCategory extends Category {}
 
 const DEFAULT_ACCOUNTS: Omit<SeedAccount, 'createdAt'>[] = [
-  { id: 'acc_cash', name: 'Tunai', kind: 'asset', balance: 0, isArchived: false },
-  { id: 'acc_bank', name: 'Rekening Utama', kind: 'asset', balance: 0, isArchived: false },
+  { id: 'acc_cash', name: 'Tunai', kind: 'asset', balance: 0, icon: '💵', isArchived: false },
+  { id: 'acc_bank', name: 'Rekening Utama', kind: 'asset', balance: 0, icon: '🏦', isArchived: false },
+  { id: 'acc_ewallet', name: 'Dompet Digital', kind: 'asset', balance: 0, icon: '📱', isArchived: false },
+  { id: 'acc_paylater', name: 'SPayLater', kind: 'liability', balance: 0, icon: '💳', isArchived: false },
 ];
 
 const DEFAULT_CATEGORIES: Omit<SeedCategory, 'createdAt'>[] = [
+  // Pengeluaran
+  { id: 'cat_groceries', name: 'Sembako & Dapur', type: 'expense', icon: '🥦', isArchived: false },
   { id: 'cat_food', name: 'Makan & Minum', type: 'expense', icon: '🍔', isArchived: false },
   { id: 'cat_transport', name: 'Transportasi', type: 'expense', icon: '🚗', isArchived: false },
-  { id: 'cat_shopping', name: 'Belanja', type: 'expense', icon: '🛍️', isArchived: false },
+  { id: 'cat_shopping', name: 'Belanja & Olshop', type: 'expense', icon: '🛍️', isArchived: false },
   { id: 'cat_bills', name: 'Tagihan & Utilitas', type: 'expense', icon: '💡', isArchived: false },
-  { id: 'cat_entertainment', name: 'Hiburan', type: 'expense', icon: '🎬', isArchived: false },
+  { id: 'cat_education', name: 'Pendidikan & Anak', type: 'expense', icon: '📚', isArchived: false },
   { id: 'cat_health', name: 'Kesehatan', type: 'expense', icon: '💊', isArchived: false },
-  { id: 'cat_salary', name: 'Gaji', type: 'income', icon: '💰', isArchived: false },
-  { id: 'cat_other_income', name: 'Pendapatan Lain', type: 'income', icon: '📈', isArchived: false },
+  { id: 'cat_entertainment', name: 'Hiburan', type: 'expense', icon: '🎬', isArchived: false },
+  { id: 'cat_charity', name: 'Donasi & Sedekah', type: 'expense', icon: '🤲', isArchived: false },
+  { id: 'cat_installment', name: 'Cicilan & Hutang', type: 'expense', icon: '💳', isArchived: false },
+  // Pemasukan
+  { id: 'cat_salary', name: 'Gaji Utama', type: 'income', icon: '💰', isArchived: false },
+  { id: 'cat_business', name: 'Usaha & Jualan', type: 'income', icon: '💼', isArchived: false },
+  { id: 'cat_bonus', name: 'Bonus & THR', type: 'income', icon: '🎁', isArchived: false },
+  { id: 'cat_other_income', name: 'Pemasukan Lain', type: 'income', icon: '📈', isArchived: false },
 ];
 
 export async function ensureUserDefaults(uid: string): Promise<void> {
