@@ -71,16 +71,32 @@ export const creatorSchema = z.object({
 
 export type TransactionCreator = z.infer<typeof creatorSchema>;
 
-// Extend baseTx
+// Extend baseTx with createdBy and referenceKey (e.g. "tiktok#578129381293812")
 const baseTx = z.object({
   id: z.string().min(1),
   amount: z.number().int().positive(),
   date: z.number().int(),
   note: z.string().trim().max(140).optional().default(''),
+  referenceKey: z.string().trim().max(120).nullable().optional(), // e.g. "tiktok#578129381293812"
   createdBy: creatorSchema.optional(), // Optional for backward compatibility
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
+```
+
+### 2.4 OCR Schema Extension (`transactionNumber` & `referenceKey`)
+In `src/lib/ocr/schema.ts`:
+```typescript
+export const ocrReceiptSchema = z.object({
+  // ... existing fields
+  transactionNumber: z.string().trim().max(100).nullable().optional().default(null),
+});
+
+export interface OcrReceiptResult {
+  // ... existing fields
+  transactionNumber: string | null;
+  referenceKey: string | null; // Formatted as `${platform}#${transactionNumber}`
+}
 ```
 
 ---
@@ -128,6 +144,29 @@ In the Dashboard transaction history item:
     - Displays `👤 Anda` or user's name for clarity.
   - If `tx.createdBy` is absent (legacy data):
     - Renders `📅 19 Okt 2026` cleanly without placeholder slop.
+
+### 3.4 Transaction Reference Key & Anti-Duplicate Detection
+1. **OCR Extraction (`transactionNumber`):**
+   - The multimodal Gemini prompt is updated to extract order / transaction / reference IDs:
+     - TikTok Shop: nomor pesanan (e.g. `578129381293812`)
+     - Shopee / ShopeeFood: nomor pesanan (e.g. `231019ABCD123`)
+     - GoFood / GoJek: order id
+     - Bank Transfer / QRIS: nomor referensi transaksi
+   - Formatted automatically into a canonical `referenceKey`:
+     `const referenceKey = result.transactionNumber ? `${result.platform}#${result.transactionNumber}` : null;` (e.g. `tiktok#578129381293812`).
+
+2. **Deduplication Check (Anti-Double Record):**
+   - When reviewing scanned receipts (in `OcrReviewCard` or `BatchReviewQueue`):
+   - The system checks if any existing transaction in the active ledger already has this `referenceKey`.
+   - If found:
+     - Displays a clear, helpful warning in the review card:
+       ⚠️ **Struk ini sudah pernah dicatat sebelumnya pada [Tanggal] oleh [Nama Anggota]!**
+     - User can inspect the duplicate and either cancel or choose to proceed if it is intentionally separate.
+   - Prevents spouses or family members from accidentally double-scanning the same receipt or order.
+
+3. **Display in Transaction History & Details:**
+   - In transaction detail or note:
+     A subtle mono chip `🔖 tiktok#578129381293812` is displayed, allowing family members to cross-check orders directly in their shopping apps.
 
 ---
 
