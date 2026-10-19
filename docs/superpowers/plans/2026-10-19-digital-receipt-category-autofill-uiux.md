@@ -28,7 +28,7 @@
 - Consumes: `Category` (`{ id, name, type }`), `Account` (`{ id, name, kind }`) from `src/lib/schemas.ts`.
 - Produces: `OcrReceiptResult` updated with `categoryId`, `accountId`, `platform`, `paymentMethod`, `suggestedType`.
 
-- [ ] **Step 1: Write the failing test for extended schema & prompt generator**
+- [x] **Step 1: Write the failing test for extended schema & prompt generator**
 
 Update `src/lib/ocr/geminiService.test.ts` with assertions for `parseOcrReceipt` with new fields and `buildOcrPrompt` context builder:
 
@@ -69,12 +69,12 @@ import { buildOcrSystemInstruction } from './geminiService';
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/lib/ocr/geminiService.test.ts`
 Expected: FAIL with missing exports or schema validation errors.
 
-- [ ] **Step 3: Implement extended schema in `src/lib/ocr/schema.ts` and `src/lib/ocr/geminiService.ts`**
+- [x] **Step 3: Implement extended schema in `src/lib/ocr/schema.ts` and `src/lib/ocr/geminiService.ts`**
 
 In `src/lib/ocr/schema.ts`:
 ```typescript
@@ -98,12 +98,12 @@ export type OcrReceiptResult = z.infer<typeof ocrReceiptSchema> & {
 
 In `src/lib/ocr/geminiService.ts`, implement `buildOcrSystemInstruction(categories, accounts)` and pass it into `getGeminiModel` / generation prompt.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/lib/ocr/geminiService.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/lib/ocr/schema.ts src/lib/ocr/geminiService.ts src/lib/ocr/geminiService.test.ts
@@ -123,7 +123,7 @@ git commit -m "feat(ocr): add context-aware category and account schema extracti
 - Consumes: `categories: Category[]`, `selectedId: string`, `onSelect: (id: string) => void`, `recommendedId?: string | null`, `type: 'expense' | 'income'`.
 - Produces: Visual grid of category chips with icons, active state, and AI recommendation badge.
 
-- [ ] **Step 1: Write the failing unit test for `CategoryChipGrid` logic**
+- [x] **Step 1: Write the failing unit test for `CategoryChipGrid` logic**
 
 Create `src/features/transactions/CategoryChipGrid.test.ts`:
 ```typescript
@@ -151,22 +151,22 @@ assert(rec?.id === 'c1', 'resolves recommended category');
 console.log('CategoryChipGrid logic tests pass');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/features/transactions/CategoryChipGrid.test.ts`
 Expected: FAIL with missing module.
 
-- [ ] **Step 3: Implement `CategoryChipGrid.tsx` and styling**
+- [x] **Step 3: Implement `CategoryChipGrid.tsx` and styling**
 
 Create `src/features/transactions/CategoryChipGrid.tsx` exporting `filterCategoriesByType`, `getRecommendedCategory`, and the `CategoryChipGrid` React component.
 Add responsive styles in `src/styles/components.css` for `.category-chip-grid`, `.category-chip`, `.category-chip.active`, and `.category-chip.recommended-ai`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/features/transactions/CategoryChipGrid.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/features/transactions/CategoryChipGrid.tsx src/features/transactions/CategoryChipGrid.test.ts src/styles/components.css
@@ -186,7 +186,7 @@ git commit -m "feat(ui): create CategoryChipGrid with AI recommendation badge"
 - Consumes: `accounts: Account[]`, `selectedId: string`, `onSelect: (id: string) => void`, `label: string`, `excludeId?: string`.
 - Produces: Horizontal/flex pill selector showing account icon, name, formatted balance, and kind badge (`Kas` vs `PayLater`).
 
-- [ ] **Step 1: Write the failing unit test for `AccountPillSelector` logic**
+- [x] **Step 1: Write the failing unit test for `AccountPillSelector` logic**
 
 Create `src/features/transactions/AccountPillSelector.test.ts`:
 ```typescript
@@ -214,22 +214,22 @@ assert(getAccountKindBadge('liability').label === 'PayLater', 'liability badge i
 console.log('AccountPillSelector logic tests pass');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/features/transactions/AccountPillSelector.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `AccountPillSelector.tsx` and styling**
+- [x] **Step 3: Implement `AccountPillSelector.tsx` and styling**
 
 Create `src/features/transactions/AccountPillSelector.tsx` with clean pill cards, active ring, balance display, and accessible keyboard navigation.
 Add styling in `src/styles/components.css`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/features/transactions/AccountPillSelector.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/features/transactions/AccountPillSelector.tsx src/features/transactions/AccountPillSelector.test.ts src/styles/components.css
@@ -255,7 +255,7 @@ git commit -m "feat(ui): create AccountPillSelector with balance and asset/liabi
   - `onEditDetails: () => void`
 - Produces: Post-scan review card with thumbnail, platform tag, detected amount, category & account chips, and "Simpan Langsung" (1-tap) / "Sesuaikan Detail" actions.
 
-- [ ] **Step 1: Write the failing unit test for `OcrReviewCard` data formatting**
+- [x] **Step 1: Write the failing unit test for `OcrReviewCard` data formatting**
 
 Create `src/features/transactions/OcrReviewCard.test.ts`:
 ```typescript
@@ -276,22 +276,22 @@ assert(note.includes('ShopeeFood'), 'includes platform');
 console.log('OcrReviewCard logic tests pass');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/features/transactions/OcrReviewCard.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `OcrReviewCard.tsx` and styling**
+- [x] **Step 3: Implement `OcrReviewCard.tsx` and styling**
 
 Create `src/features/transactions/OcrReviewCard.tsx`.
 Add styles in `src/styles/components.css` for `.ocr-review-card`, `.ocr-thumbnail`, `.ocr-summary-grid`, and `.ocr-review-actions`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/features/transactions/OcrReviewCard.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/features/transactions/OcrReviewCard.tsx src/features/transactions/OcrReviewCard.test.ts src/styles/components.css
@@ -310,7 +310,7 @@ git commit -m "feat(ui): create OcrReviewCard for fast 1-tap post-scan confirmat
 - Consumes: `categories: Category[]`, `accounts: Account[]` passed from parent.
 - Produces: Global paste handler (`Cmd+V` / `Ctrl+V`), image thumbnail extraction, and passing categories/accounts to `scanReceiptWithGemini`.
 
-- [ ] **Step 1: Update `receiptScanTab.test.ts` with clipboard image detection tests**
+- [x] **Step 1: Update `receiptScanTab.test.ts` with clipboard image detection tests**
 
 Add test in `receiptScanTab.test.ts`:
 ```typescript
@@ -327,24 +327,24 @@ const textFile = new File(['text'], 'notes.txt', { type: 'text/plain' });
 assert(extractImageFileFromClipboardData([textFile]) === null, 'ignores non-image clipboard files');
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/features/transactions/receiptScanTab.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement clipboard paste and context passing in `ReceiptScanTab.tsx`**
+- [x] **Step 3: Implement clipboard paste and context passing in `ReceiptScanTab.tsx`**
 
 1. Export `extractImageFileFromClipboardData`.
 2. Add `window.addEventListener('paste', handleGlobalPaste)` during active tab.
 3. Accept `categories` and `accounts` in `ReceiptScanTabProps` and pass to `scanReceiptWithGemini(resized.blob, uid, { categories, accounts, ... })`.
 4. Include `previewUrl` in scan result callback so `OcrReviewCard` can display receipt thumbnail.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/features/transactions/receiptScanTab.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/features/transactions/ReceiptScanTab.tsx src/features/transactions/receiptScanTab.test.ts
@@ -365,30 +365,30 @@ git commit -m "feat(ocr): add clipboard paste support and context passing to Rec
 - Handles "Sesuaikan Detail" (pre-populating fields and opening manual form).
 - Adds quick amount helper buttons (`+10rb`, `+50rb`, `+100rb`).
 
-- [ ] **Step 1: Write integration tests for quick save & autofill pre-population**
+- [x] **Step 1: Write integration tests for quick save & autofill pre-population**
 
 Add tests validating:
 1. `onScanSuccess` populates `categoryId`, `accountId`, `type`, `amount`, `date`, `note`.
 2. Quick save execution directly triggers `createTransaction` without manual tab entry.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement wiring in `TransactionFormSheet.tsx`**
+- [x] **Step 3: Implement wiring in `TransactionFormSheet.tsx`**
 
 1. Replace `<select id="categoryId">` with `<CategoryChipGrid>`.
 2. Replace `<select id="accountId">` and `<select id="toAccountId">` with `<AccountPillSelector>`.
 3. Add quick add buttons under amount input (`+10k`, `+50k`, `+100k`).
 4. Display `OcrReviewCard` when scan succeeds, offering "Simpan Langsung" and "Sesuaikan Detail".
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/`
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/features/transactions/TransactionFormSheet.tsx src/styles/components.css
@@ -404,22 +404,22 @@ git commit -m "feat(ui): wire OcrReviewCard, CategoryChipGrid, and AccountPillSe
 - Run: `npm run test:ocr-live`
 - Run: `npm run test:e2e`
 
-- [ ] **Step 1: Run all unit tests**
+- [x] **Step 1: Run all unit tests**
 
 Run: `bun test src/`
 Expected: 22+ test files pass with 0 failures.
 
-- [ ] **Step 2: Run live OCR test**
+- [x] **Step 2: Run live OCR test**
 
 Run: `npm run test:ocr-live`
 Expected: Real receipt sample scans in < 4 seconds with category and account inferred.
 
-- [ ] **Step 3: Run Playwright E2E suite**
+- [x] **Step 3: Run Playwright E2E suite**
 
 Run: `npm run test:e2e`
 Expected: All 13 existing browser tests pass cleanly.
 
-- [ ] **Step 4: Commit any final regression adjustments**
+- [x] **Step 4: Commit any final regression adjustments**
 
 ```bash
 git add .
