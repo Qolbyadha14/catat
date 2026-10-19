@@ -15,7 +15,7 @@ import { ManageSheet } from '../manage/ManageSheet';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
 import { calculateNetCashflow } from '../../lib/cashflow';
-import { useTheme, type ThemeMode } from '../../lib/theme';
+import { useTheme } from '../../lib/theme';
 import {
   filterTransactions,
   countActiveFilters,
@@ -28,6 +28,7 @@ import {
 } from '../../lib/transactionDuplicate';
 import { FamilyLedgerSheet } from '../family/FamilyLedgerSheet';
 import { JoinLedgerDialog } from '../family/JoinLedgerDialog';
+import { ProfileMenuPopover } from './ProfileMenuPopover';
 import {
   getUserActiveLedgerId,
   setUserActiveLedgerId,
@@ -78,6 +79,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isManageOpen, setIsManageOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [duplicateData, setDuplicateData] = useState<DuplicateFormValues | null>(null);
   const [transferPrefill, setTransferPrefill] = useState<InitialTransferData | null>(null);
@@ -314,33 +316,15 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           </button>
           <button
             type="button"
-            className="btn-header-gear"
-            onClick={() => setIsManageOpen(true)}
-            title="Kelola Akun & Kategori"
-            aria-label="Kelola Akun & Kategori"
+            className="btn-header-avatar"
+            onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+            title="Menu Profil & Pengaturan"
+            aria-label="Menu Profil & Pengaturan"
+            aria-expanded={isProfileMenuOpen}
           >
-            ⚙️
-          </button>
-          <div className="theme-toggle-wrap" title="Pilih tema">
-            <span className="theme-toggle-icon" aria-hidden="true">
-              {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🌓'}
-            </span>
-            <select
-              className="theme-select"
-              aria-label="Pilih tema"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as ThemeMode)}
-            >
-              <option value="system">Tema: Ikuti sistem</option>
-              <option value="light">Tema: Terang</option>
-              <option value="dark">Tema: Gelap</option>
-            </select>
-          </div>
-          <div className="user-avatar" title={user.email ?? ''}>
-            {user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'U'}
-          </div>
-          <button type="button" className="btn-signout" onClick={onSignOut}>
-            Keluar
+            <div className="user-avatar" title={user.email ?? ''}>
+              {user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'U'}
+            </div>
           </button>
         </div>
       </header>
@@ -711,6 +695,20 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         onClose={() => setIsManageOpen(false)}
         accounts={accounts}
         categories={categories}
+      />
+
+      {/* Profile & Settings Popover Menu */}
+      <ProfileMenuPopover
+        user={user}
+        isOpen={isProfileMenuOpen}
+        onClose={() => setIsProfileMenuOpen(false)}
+        onOpenManage={() => {
+          setIsProfileMenuOpen(false);
+          setIsManageOpen(true);
+        }}
+        onSignOut={onSignOut}
+        theme={theme}
+        onThemeChange={setTheme}
       />
 
       {/* Native Delete Confirmation Dialog */}

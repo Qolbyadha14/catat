@@ -16,6 +16,30 @@ interface ManageSheetProps {
 
 type TabType = 'accounts' | 'categories';
 
+const ACCOUNT_PRESETS: Array<{ name: string; icon: string; kind: 'asset' | 'liability' }> = [
+  { name: 'BCA', icon: '🏦', kind: 'asset' },
+  { name: 'Mandiri', icon: '🏦', kind: 'asset' },
+  { name: 'BRI', icon: '🏦', kind: 'asset' },
+  { name: 'Bank Jago', icon: '🏦', kind: 'asset' },
+  { name: 'GoPay', icon: '📱', kind: 'asset' },
+  { name: 'ShopeePay', icon: '📱', kind: 'asset' },
+  { name: 'OVO', icon: '📱', kind: 'asset' },
+  { name: 'DANA', icon: '📱', kind: 'asset' },
+  { name: 'SPayLater', icon: '💳', kind: 'liability' },
+  { name: 'GoPay Later', icon: '💳', kind: 'liability' },
+  { name: 'Kredivo', icon: '💳', kind: 'liability' },
+];
+
+const CATEGORY_PRESETS: Array<{ name: string; icon: string; type: 'expense' | 'income' }> = [
+  { name: 'Sembako & Dapur', icon: '🥦', type: 'expense' },
+  { name: 'Pendidikan & Anak', icon: '📚', type: 'expense' },
+  { name: 'Donasi & Sedekah', icon: '🤲', type: 'expense' },
+  { name: 'Cicilan & Hutang', icon: '💳', type: 'expense' },
+  { name: 'Usaha & Jualan', icon: '💼', type: 'income' },
+  { name: 'Bonus & THR', icon: '🎁', type: 'income' },
+  { name: 'Investasi & Bunga', icon: '📈', type: 'income' },
+];
+
 export function ManageSheet({
   uid,
   isOpen,
@@ -243,6 +267,45 @@ export function ManageSheet({
                   ? `Edit ${activeTab === 'accounts' ? 'Akun' : 'Kategori'}`
                   : `Tambah ${activeTab === 'accounts' ? 'Akun' : 'Kategori'}`}
               </div>
+
+              {isCreating && (
+                <div className="manage-preset-group">
+                  <div className="manage-preset-title">⚡ Rekomendasi Cepat (1-Klik Isi):</div>
+                  <div className="manage-preset-scroller">
+                    {activeTab === 'accounts'
+                      ? ACCOUNT_PRESETS.map((p) => (
+                          <button
+                            key={p.name}
+                            type="button"
+                            className="manage-preset-chip"
+                            onClick={() => {
+                              setName(p.name);
+                              setIcon(p.icon);
+                              setKind(p.kind);
+                            }}
+                          >
+                            <span>{p.icon}</span>
+                            <span>{p.name}</span>
+                          </button>
+                        ))
+                      : CATEGORY_PRESETS.map((p) => (
+                          <button
+                            key={p.name}
+                            type="button"
+                            className="manage-preset-chip"
+                            onClick={() => {
+                              setName(p.name);
+                              setIcon(p.icon);
+                              setCategoryType(p.type);
+                            }}
+                          >
+                            <span>{p.icon}</span>
+                            <span>{p.name}</span>
+                          </button>
+                        ))}
+                  </div>
+                </div>
+              )}
 
               {formError && (
                 <div className="form-error-banner" role="alert">
