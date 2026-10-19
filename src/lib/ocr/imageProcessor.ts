@@ -23,6 +23,22 @@ export function calculateDimensions(
       height: Math.round(height * scale),
     };
   }
+
+  // Scrolling screenshot defense (height > 2.2 * width)
+  // Prevent aggressive horizontal shrinkage that degrades small text in receipts
+  if (height > 2.2 * width) {
+    const maxScrollingHeight = 2400;
+    const scale = Math.min(1, maxScrollingHeight / height);
+    const scaledWidth = Math.round(width * scale);
+    const minLegibleWidth = Math.min(width, 540);
+    const finalWidth = Math.max(scaledWidth, minLegibleWidth);
+    const finalHeight = Math.round(height * (finalWidth / width));
+    return {
+      width: finalWidth,
+      height: Math.min(2400, finalHeight),
+    };
+  }
+
   const scale = maxEdge / height;
   return {
     width: Math.round(width * scale),

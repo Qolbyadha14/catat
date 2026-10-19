@@ -85,6 +85,10 @@ function throws(fn: () => void) {
 
   const d3 = calculateDimensions(2000, 4000, 1600);
   assert(d3.width === 800 && d3.height === 1600, 'scale down portrait');
+
+  const dTall = calculateDimensions(1080, 4800, 1600);
+  assert(dTall.height <= 2400, 'tall screenshot height reasonable');
+  assert(dTall.width >= 540, 'tall screenshot preserves legible width');
 }
 
 // 3. OCR Rate Limiter & Disclosure
