@@ -9,7 +9,11 @@ const DEFAULT_ACCOUNTS: Omit<SeedAccount, 'createdAt'>[] = [
   { id: 'acc_cash', name: 'Tunai', kind: 'asset', balance: 0, icon: '💵', isArchived: false },
   { id: 'acc_bank', name: 'Rekening Utama', kind: 'asset', balance: 0, icon: '🏦', isArchived: false },
   { id: 'acc_ewallet', name: 'Dompet Digital', kind: 'asset', balance: 0, icon: '📱', isArchived: false },
-  { id: 'acc_paylater', name: 'SPayLater', kind: 'liability', balance: 0, icon: '💳', isArchived: false },
+  { id: 'acc_cimb_cc', name: 'CIMB Niaga CC', kind: 'liability', balance: 0, icon: '💳', isArchived: false },
+  { id: 'acc_cimb_kta', name: 'CIMB Niaga KTA', kind: 'liability', balance: 0, icon: '📑', isArchived: false },
+  { id: 'acc_tiktok_paylater', name: 'TikTok PayLater', kind: 'liability', balance: 0, icon: '🎵', isArchived: false },
+  { id: 'acc_paylater', name: 'Shopee PayLater', kind: 'liability', balance: 0, icon: '🛍️', isArchived: false },
+  { id: 'acc_bca_cc', name: 'BCA CC', kind: 'liability', balance: 0, icon: '💳', isArchived: false },
 ];
 
 const DEFAULT_CATEGORIES: Omit<SeedCategory, 'createdAt'>[] = [
@@ -35,52 +39,54 @@ export async function ensureUserDefaults(uid: string): Promise<void> {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
 
-  if (userSnap.exists()) {
-    return;
-  }
-
   const now = Date.now();
   const batch = writeBatch(db);
 
-  // Marker doc
-  batch.set(userRef, {
-    uid,
-    createdAt: now,
-    seeded: true,
-  });
+  if (!userSnap.exists()) {
+    // Marker doc
+    batch.set(userRef, {
+      uid,
+      createdAt: now,
+      seeded: true,
+    });
 
-  // Default accounts
-  for (const acc of DEFAULT_ACCOUNTS) {
-    const accRef = doc(db, 'users', uid, 'accounts', acc.id);
-    batch.set(accRef, { ...acc, createdAt: now });
+    // Default categories for new users
+    for (const cat of DEFAULT_CATEGORIES) {
+      const catRef = doc(db, 'users', uid, 'categories', cat.id);
+      batch.set(catRef, { ...cat, createdAt: now });
+    }
   }
 
-  // Default categories
-  for (const cat of DEFAULT_CATEGORIES) {
-    const catRef = doc(db, 'users', uid, 'categories', cat.id);
-    batch.set(catRef, { ...cat, createdAt: now });
+  // Ensure all default accounts exist (idempotent for new and existing users)
+  for (const acc of DEFAULT_ACCOUNTS) {
+    const accRef = doc(db, 'users', uid, 'accounts', acc.id);
+    const accSnap = await getDoc(accRef);
+    if (!accSnap.exists()) {
+      batch.set(accRef, { ...acc, createdAt: now });
+    }
   }
 
   await batch.commit();
 }
 
 export async function ensureLedgerDefaults(ledgerId: string): Promise<void> {
-  const accSnap = await getDoc(doc(db, 'ledgers', ledgerId, 'accounts', 'acc_cash'));
-  if (accSnap.exists()) {
-    return;
-  }
-
+  const accCashSnap = await getDoc(doc(db, 'ledgers', ledgerId, 'accounts', 'acc_cash'));
   const now = Date.now();
   const batch = writeBatch(db);
 
-  for (const acc of DEFAULT_ACCOUNTS) {
-    const accRef = doc(db, 'ledgers', ledgerId, 'accounts', acc.id);
-    batch.set(accRef, { ...acc, createdAt: now });
+  if (!accCashSnap.exists()) {
+    for (const cat of DEFAULT_CATEGORIES) {
+      const catRef = doc(db, 'ledgers', ledgerId, 'categories', cat.id);
+      batch.set(catRef, { ...cat, createdAt: now });
+    }
   }
 
-  for (const cat of DEFAULT_CATEGORIES) {
-    const catRef = doc(db, 'ledgers', ledgerId, 'categories', cat.id);
-    batch.set(catRef, { ...cat, createdAt: now });
+  for (const acc of DEFAULT_ACCOUNTS) {
+    const accRef = doc(db, 'ledgers', ledgerId, 'accounts', acc.id);
+    const aSnap = await getDoc(accRef);
+    if (!aSnap.exists()) {
+      batch.set(accRef, { ...acc, createdAt: now });
+    }
   }
 
   await batch.commit();
