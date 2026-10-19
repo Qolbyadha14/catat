@@ -4830,6 +4830,23 @@ dialog::backdrop,
   color: var(--accent-primary);
 }
 
+/* Balance and Debt Adjustment */
+.manage-adjust-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: opacity 0.15s ease;
+}
+
+.manage-adjust-btn:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
 
 
 

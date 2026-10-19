@@ -2,7 +2,7 @@ import { useState, useMemo, type FormEvent } from 'react';
 import type { Account, Category } from '../../lib/schemas';
 import { canArchiveAccount } from '../../lib/canArchiveAccount';
 import { isNameUnique } from '../../lib/manageValidation';
-import { updateAccount, createAccount } from '../accounts/accountService';
+import { updateAccount, createAccount, adjustAccountBalance } from '../accounts/accountService';
 import { updateCategory, createCategory } from '../categories/categoryService';
 import { formatIdr } from '../../lib/formatters';
 
@@ -60,6 +60,8 @@ export function ManageSheet({
   const [categoryType, setCategoryType] = useState<'expense' | 'income'>('expense');
   const [monthlyBudgetInput, setMonthlyBudgetInput] = useState('');
   const [dueDayInput, setDueDayInput] = useState('');
+  const [initialBalanceInput, setInitialBalanceInput] = useState('');
+  const [isAdjustingBalance, setIsAdjustingBalance] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -91,9 +93,13 @@ export function ManageSheet({
       setCategoryType(item.type);
       setMonthlyBudgetInput(item.monthlyBudget ? new Intl.NumberFormat('id-ID').format(item.monthlyBudget) : '');
       setDueDayInput('');
+      setInitialBalanceInput('');
+      setIsAdjustingBalance(false);
     } else {
       setMonthlyBudgetInput('');
       setDueDayInput(item.dueDay ? String(item.dueDay) : '');
+      setInitialBalanceInput(item.balance !== 0 ? new Intl.NumberFormat('id-ID').format(Math.abs(item.balance)) : '');
+      setIsAdjustingBalance(false);
     }
     setFormError(null);
   };
@@ -105,6 +111,8 @@ export function ManageSheet({
     setIcon('');
     setMonthlyBudgetInput('');
     setDueDayInput('');
+    setInitialBalanceInput('');
+    setIsAdjustingBalance(false);
     setFormError(null);
   };
 
@@ -113,6 +121,8 @@ export function ManageSheet({
     setIsCreating(false);
     setMonthlyBudgetInput('');
     setDueDayInput('');
+    setInitialBalanceInput('');
+    setIsAdjustingBalance(false);
     setFormError(null);
   };
 
@@ -172,13 +182,24 @@ export function ManageSheet({
             icon: icon.trim() || undefined,
             dueDay: validDueDay,
           });
+
+          if ('balance' in editingItem && isAdjustingBalance) {
+            const rawBal = initialBalanceInput.replace(/\D/g, '');
+            const parsedNum = rawBal ? parseInt(rawBal, 10) : 0;
+            const newBal = editingItem.kind === 'liability' ? -Math.abs(parsedNum) : Math.abs(parsedNum);
+            await adjustAccountBalance(uid, editingItem.id, newBal);
+          }
         } else {
+          const rawBal = initialBalanceInput.replace(/\D/g, '');
+          const parsedNum = rawBal ? parseInt(rawBal, 10) : 0;
+          const initialBal = kind === 'liability' ? -Math.abs(parsedNum) : Math.abs(parsedNum);
+
           await createAccount(uid, {
             name: trimmedName,
             icon: icon.trim() || undefined,
             kind,
             dueDay: validDueDay ?? undefined,
-            balance: 0,
+            balance: initialBal,
           });
         }
         handleCancelForm();
@@ -409,6 +430,88 @@ export function ManageSheet({
                   </div>
                 )}
 
+              {/* If creating account: initial balance or starting debt */}
+              {isCreating && activeTab === 'accounts' && (
+                <div className="form-group">
+                  <label className="form-label">
+                    {kind === 'liability' ? 'Sisa Hutang Saat Ini (Opsional)' : 'Saldo Awal (Opsional)'}
+                  </label>
+                  <div className="input-group">
+                    <span className="input-prefix">Rp</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="form-input"
+                      placeholder="0"
+                      value={initialBalanceInput}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        setInitialBalanceInput(
+                          raw ? new Intl.NumberFormat('id-ID').format(parseInt(raw, 10)) : ''
+                        );
+                      }}
+                    />
+                  </div>
+                  <span className="form-help-text" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                    {kind === 'liability'
+                      ? 'Hutang berjalan yang belum dilunasi. Otomatis tercatat sebagai tagihan aktif tanpa mengotori laporan pengeluaran bulanan.'
+                      : 'Saldo kas atau rekening saat ini.'}
+                  </span>
+                </div>
+              )}
+
+              {/* Read-only / Balance correction when editing */}
+              {editingItem && 'balance' in editingItem && (
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span className="form-label" style={{ marginBottom: 0 }}>
+                      {editingItem.kind === 'liability' ? 'Sisa Hutang / Tagihan' : 'Saldo Akun'}
+                    </span>
+                    <button
+                      type="button"
+                      className="manage-adjust-btn"
+                      onClick={() => setIsAdjustingBalance(!isAdjustingBalance)}
+                    >
+                      {isAdjustingBalance ? 'Batal Koreksi' : '✏️ Koreksi Nilai'}
+                    </button>
+                  </div>
+                  {!isAdjustingBalance ? (
+                    <div className="manage-readonly-row">
+                      <span className="manage-readonly-label">
+                        {editingItem.kind === 'liability' ? 'Tagihan Saat Ini:' : 'Saldo Saat Ini:'}
+                      </span>
+                      <span className="manage-readonly-val">
+                        {editingItem.kind === 'liability' && editingItem.balance < 0
+                          ? `Tagihan: ${formatIdr(Math.abs(editingItem.balance))}`
+                          : formatIdr(editingItem.balance)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="input-group">
+                        <span className="input-prefix">Rp</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className="form-input"
+                          placeholder="0"
+                          value={initialBalanceInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '');
+                            setInitialBalanceInput(
+                              raw ? new Intl.NumberFormat('id-ID').format(parseInt(raw, 10)) : ''
+                            );
+                          }}
+                        />
+                      </div>
+                      <span className="form-help-text" style={{ fontSize: '11px', color: 'var(--warning-fg)', marginTop: 4, display: 'block' }}>
+                        ⚠️ Koreksi saldo mengubah nilai langsung tanpa membuat catatan transaksi baru di arus kas.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* If creating category: choose type */}
               {isCreating && activeTab === 'categories' && (
                 <div className="form-group">
@@ -451,14 +554,6 @@ export function ManageSheet({
                     </span>
                   </div>
                 )}
-
-              {/* Read-only indicators when editing */}
-              {editingItem && 'balance' in editingItem && (
-                <div className="manage-readonly-row">
-                  <span className="manage-readonly-label">Saldo:</span>
-                  <span className="manage-readonly-val">{formatIdr(editingItem.balance)}</span>
-                </div>
-              )}
 
               <div className="manage-form-actions">
                 <button
