@@ -4100,4 +4100,206 @@ dialog::backdrop,
   transform: translateY(-1px);
 }
 
+/* Text Assistant (Natural Language AI Input) */
+.text-assistant-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0 20px;
+}
+
+.text-assistant-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.text-assistant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--info-light);
+  color: var(--info-fg);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.text-assistant-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.text-assistant-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+}
+
+.text-assistant-card:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.text-assistant-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  padding: 0;
+}
+
+.text-assistant-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.text-assistant-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.text-assistant-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast) ease, color var(--transition-fast) ease;
+}
+
+.text-assistant-clear-btn:hover {
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+}
+
+.text-assistant-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%);
+  color: var(--text-inverse);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px -2px var(--accent-glow);
+  transition: transform var(--transition-fast) ease, opacity var(--transition-fast) ease;
+}
+
+.text-assistant-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.text-assistant-submit-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.text-assistant-error {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--error-light);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--error-fg);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.text-assistant-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.text-assistant-suggestions-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.text-assistant-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.text-assistant-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  min-height: 38px;
+  transition: all var(--transition-fast) ease;
+}
+
+.text-assistant-chip:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.text-assistant-chip:active {
+  transform: scale(0.98);
+}
+
+.text-assistant-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.text-assistant-cancel-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast) ease;
+}
+
+.text-assistant-cancel-btn:hover {
+  color: var(--text-primary);
+}
+
+
 

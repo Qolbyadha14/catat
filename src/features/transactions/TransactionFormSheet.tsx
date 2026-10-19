@@ -3,6 +3,8 @@ import type { Account, Category, Transaction, TransactionItem, Creator } from '.
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction, createBatchTransactions } from './transactionService';
 import { ReceiptScanTab } from './ReceiptScanTab';
+import { TextAssistantTab } from './TextAssistantTab';
+import type { ParsedTransactionResult } from '../../lib/nlp/textAssistantService';
 import { BatchReviewQueue, type BatchReviewItem } from './BatchReviewQueue';
 import { CategoryChipGrid } from './CategoryChipGrid';
 import { AccountPillSelector } from './AccountPillSelector';
@@ -342,6 +344,40 @@ export function TransactionFormSheet({
       },
       previewUrl,
     });
+  };
+
+  const handleTextAssistantParsed = (res: ParsedTransactionResult) => {
+    const rounded = Math.round(res.amount);
+    setRawAmount(String(rounded));
+    setAmountInput(new Intl.NumberFormat('id-ID').format(rounded));
+    setMathError(null);
+    if (res.date) setDateStr(res.date);
+    if (res.description) setNote(res.description);
+    if (res.type) setType(res.type);
+    if (res.categoryId) {
+      setCategoryId(res.categoryId);
+      setRecommendedCategoryId(res.categoryId);
+    }
+    if (res.accountId) setAccountId(res.accountId);
+    if (res.toAccountId) setToAccountId(res.toAccountId);
+    if (res.items && res.items.length > 0) {
+      setItems(
+        res.items.map((it) => ({
+          name: it.name,
+          qty: it.qty ?? 1,
+          price: it.price,
+          subtotal: it.subtotal,
+        }))
+      );
+    }
+
+    setOcrFeedback({
+      confidence: res.confidence,
+      merchant: res.description,
+    });
+
+    // Switch to manual form view so user can review and edit/save
+    setActiveTab('manual');
   };
 
   const handleBatchComplete = (results: Array<{ result: OcrReceiptResult; previewUrl: string }>) => {
@@ -700,9 +736,12 @@ export function TransactionFormSheet({
                 onCancelToManual={() => setActiveTab('manual')}
               />
             ) : !ocrReview && activeTab === 'text' ? (
-              <div className="offline-banner" style={{ background: 'var(--surface)', color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
-                Mode asisten Ketik sedang disiapkan. Gunakan input manual atau scan struk.
-              </div>
+              <TextAssistantTab
+                categories={categories}
+                accounts={accounts}
+                onParsed={handleTextAssistantParsed}
+                onCancelToManual={() => setActiveTab('manual')}
+              />
             ) : !ocrReview ? (
             <>
               {ocrFeedback && (
