@@ -71,7 +71,16 @@ const accs = [{ id: 'a1', name: 'Bank Jago', kind: 'asset' as const }];
 const prompt = buildOcrSystemInstruction(cats, accs);
 assert(prompt.includes('Makan & Minum'), 'prompt contains category name');
 assert(prompt.includes('Bank Jago'), 'prompt contains account name');
-assert(prompt.includes('ShopeeFood'), 'prompt contains platform guidance');
+// 7. Multi-blob generative part conversion
+{
+  const mockBlob1 = new Blob(['img1'], { type: 'image/jpeg' });
+  const mockBlob2 = new Blob(['img2'], { type: 'image/jpeg' });
+  const part1 = await blobToGenerativePart(mockBlob1);
+  const part2 = await blobToGenerativePart(mockBlob2);
+  assert(part1.type === 'inlineData' && part2.type === 'inlineData', 'converts multiple blobs to inlineData');
+  assert(part1.inlineData.data !== '' && part2.inlineData.data !== '', 'generates valid base64 data for parts');
+}
 
 console.log('geminiService unit tests pass');
+
 

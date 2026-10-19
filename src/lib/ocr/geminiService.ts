@@ -226,7 +226,7 @@ export function getGeminiModel(
 }
 
 export async function scanReceiptWithGemini(
-  blob: Blob,
+  blobOrBlobs: Blob | Blob[],
   uid: string,
   options: ScanOptions = {}
 ): Promise<OcrReceiptResult> {
@@ -235,9 +235,14 @@ export async function scanReceiptWithGemini(
   // 1. Pre-check quota BEFORE invoking AI (do not increment yet)
   await checkScanQuota(uid);
 
-  // 2. Prepare part & model
-  const imagePart = await blobToGenerativePart(blob);
+  // 2. Prepare parts & model
+  const blobs = Array.isArray(blobOrBlobs) ? blobOrBlobs : [blobOrBlobs];
+  const imageParts = await Promise.all(blobs.map((b) => blobToGenerativePart(b)));
   const model = getGeminiModel(modelName, categories, accounts);
+
+  const promptText = blobs.length > 1
+    ? 'Berikut adalah gambar struk transaksi yang terdiri dari beberapa tangkapan layar berurutan dari 1 transaksi yang sama (misal tangkapan layar atas berisi nama produk/merchant, dan tangkapan layar bawah berisi rincian pembayaran serta total akhir). Satukan informasi ini dan ekstrak sesuai JSON schema.'
+    : 'Ekstrak informasi struk transaksi ini sesuai JSON schema.';
 
   // 3. Request with timeout
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -262,16 +267,16 @@ export async function scanReceiptWithGemini(
     let res;
     try {
       res = await model.generateContent([
-        imagePart,
-        'Ekstrak informasi struk transaksi ini sesuai JSON schema.',
+        ...imageParts,
+        promptText,
       ]);
     } catch (err: unknown) {
       if (modelName === DEFAULT_OCR_MODEL && !signal?.aborted) {
         // Fallback to gemini-3.5-flash if lite encounters an issue
         const fallbackModel = getGeminiModel(FALLBACK_OCR_MODEL);
         res = await fallbackModel.generateContent([
-          imagePart,
-          'Ekstrak informasi struk transaksi ini sesuai JSON schema.',
+          ...imageParts,
+          promptText,
         ]);
       } else {
         throw err;
