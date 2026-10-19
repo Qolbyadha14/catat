@@ -12,6 +12,8 @@ import { TransactionHistoryHeader } from '../transactions/TransactionHistoryHead
 import { CategoryBreakdown } from './CategoryBreakdown';
 import { MonthNavigator } from './MonthNavigator';
 import { ManageSheet } from '../manage/ManageSheet';
+import { UpcomingBillsCard } from './UpcomingBillsCard';
+import type { UpcomingBill } from '../../lib/bills';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
 import { calculateNetCashflow } from '../../lib/cashflow';
@@ -206,6 +208,13 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     setIsSheetOpen(true);
   };
 
+  const handlePayUpcomingBill = (bill: UpcomingBill) => {
+    const targetAccount = accounts.find((a) => a.id === bill.accountId);
+    if (targetAccount) {
+      handlePayBill(targetAccount);
+    }
+  };
+
   // Month summary & navigation state
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
     const d = new Date();
@@ -379,6 +388,9 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           endOfMonth={endOfMonth}
           monthLabel={monthLabel}
         />
+
+        {/* Upcoming Bills Reminder Card */}
+        <UpcomingBillsCard accounts={accounts} onPayBill={handlePayUpcomingBill} />
 
         {/* Accounts Section */}
         <section className="accounts-dashboard-section">
