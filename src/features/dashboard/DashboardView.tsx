@@ -283,13 +283,13 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         <div className="user-profile-menu">
           <button
             type="button"
-            className="btn-header-family"
+            className={`btn-header-family ${activeLedger ? 'active' : ''}`}
             onClick={() => setIsFamilySheetOpen(true)}
             title={activeLedger ? `Buku Kas: ${activeLedger.name}` : 'Buku Kas Keluarga'}
             aria-label="Buku Kas Keluarga"
           >
-            <span>👥</span>
-            <span>{activeLedger ? activeLedger.name : 'Keluarga'}</span>
+            <span className="btn-family-icon">👥</span>
+            <span className="btn-family-label">{activeLedger ? activeLedger.name : 'Keluarga'}</span>
             {activeLedger && <span className="family-badge-dot" title="Mode Kas Bersama Aktif" />}
           </button>
           <button

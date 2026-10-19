@@ -34,7 +34,6 @@ export function FamilyLedgerSheet({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -54,19 +53,24 @@ export function FamilyLedgerSheet({
 
   return (
     <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="sheet-content family-ledger-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="bottom-sheet family-ledger-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle-bar">
+          <div className="sheet-handle" />
+        </div>
+
         <div className="sheet-header">
-          <div className="sheet-header-title-wrap">
-            <h2 className="sheet-title">👥 Buku Kas Keluarga</h2>
-            <span className="sheet-subtitle">
+          <div>
+            <h3>👥 Buku Kas Keluarga</h3>
+            <p className="sheet-subtitle">
               {activeLedger ? activeLedger.name : 'Kelola keuangan bersama keluarga'}
-            </span>
+            </p>
           </div>
           <button
             type="button"
-            className="btn-sheet-close"
+            className="btn-close-sheet"
             onClick={onClose}
             aria-label="Tutup"
+            title="Tutup modal"
           >
             ✕
           </button>
@@ -172,7 +176,7 @@ export function FamilyLedgerSheet({
             /* No Ledger Active State */
             <div className="family-empty-state">
               <div className="family-empty-icon">🏡</div>
-              <h3>Mulai Buku Kas Keluarga</h3>
+              <h4>Mulai Buku Kas Keluarga</h4>
               <p>
                 Catat belanja dan anggaran bulanan bersama pasangan atau keluarga dengan saldo,
                 kategori, dan riwayat yang tersinkron otomatis.

@@ -136,6 +136,26 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 10px 14px;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .user-profile-menu {
+    gap: 6px;
+  }
+
+  .btn-signout {
+    padding: 0 8px;
+    font-size: 12px;
+  }
 }
 
 .user-avatar {
@@ -1059,7 +1079,9 @@ dialog::backdrop,
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -3100,21 +3122,42 @@ dialog::backdrop,
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface-secondary);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
   color: var(--foreground);
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
+  padding: 0 12px;
+  border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  height: 44px;
   min-height: 44px;
   transition: all var(--transition-fast) ease;
+  white-space: nowrap;
 }
 
 .btn-header-family:hover {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: var(--accent-primary);
+  background: var(--surface-secondary);
+  border-color: var(--accent);
+}
+
+.btn-header-family.active {
+  border-color: var(--accent);
+  background: var(--surface-secondary);
+}
+
+.btn-family-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.btn-family-label {
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .family-badge-dot {
@@ -3122,18 +3165,41 @@ dialog::backdrop,
   height: 8px;
   border-radius: 50%;
   background: var(--success);
+  flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .btn-header-family {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .btn-family-label {
+    display: none;
+  }
 }
 
 /* Family Ledger Sheet Details */
 .family-ledger-sheet {
-  max-width: 500px;
+  max-width: 480px;
+  background: var(--card);
+}
+
+.sheet-subtitle {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+  font-weight: 400;
 }
 
 .family-sheet-body {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 16px;
+  padding: 16px 20px 24px;
 }
 
 /* Invite Code Card */
@@ -3407,7 +3473,8 @@ dialog::backdrop,
   line-height: 1;
 }
 
-.family-empty-state h3 {
+.family-empty-state h3,
+.family-empty-state h4 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
