@@ -68,3 +68,13 @@ export async function createAccount(
   await setDoc(newRef, acc);
   return acc;
 }
+
+export async function adjustAccountBalance(
+  uid: string,
+  accountId: string,
+  newBalance: number
+): Promise<void> {
+  const intBalance = Math.round(newBalance);
+  const ref = doc(db, 'users', uid, 'accounts', accountId);
+  await updateDoc(ref, { balance: intBalance });
+}
