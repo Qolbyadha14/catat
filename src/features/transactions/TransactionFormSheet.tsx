@@ -12,6 +12,13 @@ import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
 import { findDuplicateReceipt } from '../../lib/ledgerService';
 
+export interface InitialTransferData {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  note?: string;
+}
+
 interface TransactionFormSheetProps {
   uid: string;
   isOpen: boolean;
@@ -21,6 +28,7 @@ interface TransactionFormSheetProps {
   initialTx?: Transaction | null;
   duplicateData?: DuplicateFormValues | null;
   initialDraft?: TransactionDraft;
+  initialTransfer?: InitialTransferData | null;
   onSuccess?: () => void;
   createdBy?: Creator;
   ledgerId?: string;
@@ -36,13 +44,14 @@ export function TransactionFormSheet({
   initialTx,
   duplicateData,
   initialDraft,
+  initialTransfer,
   onSuccess,
   createdBy,
   ledgerId,
   existingTransactions = [],
 }: TransactionFormSheetProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>(() => {
-    if (initialTx || duplicateData || initialDraft) return 'manual';
+    if (initialTx || duplicateData || initialDraft || initialTransfer) return 'manual';
     return 'ocr';
   });
   const [ocrReview, setOcrReview] = useState<{
@@ -67,15 +76,19 @@ export function TransactionFormSheet({
     return null;
   });
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>(
-    initialTx?.type ?? duplicateData?.type ?? (initialDraft?.values.type as 'expense' | 'income' | 'transfer') ?? 'expense'
+    initialTransfer
+      ? 'transfer'
+      : (initialTx?.type ?? duplicateData?.type ?? (initialDraft?.values.type as 'expense' | 'income' | 'transfer') ?? 'expense')
   );
   const [rawAmount, setRawAmount] = useState<string>(() => {
+    if (initialTransfer) return String(initialTransfer.amount);
     if (initialTx) return String(initialTx.amount);
     if (duplicateData) return String(duplicateData.amount);
     if (initialDraft?.values.amount) return String(initialDraft.values.amount);
     return '';
   });
   const [amountInput, setAmountInput] = useState<string>(() => {
+    if (initialTransfer) return new Intl.NumberFormat('id-ID').format(initialTransfer.amount);
     if (initialTx) return new Intl.NumberFormat('id-ID').format(initialTx.amount);
     if (duplicateData) return new Intl.NumberFormat('id-ID').format(duplicateData.amount);
     if (initialDraft?.values.amount) {
@@ -86,6 +99,9 @@ export function TransactionFormSheet({
   });
   const [mathError, setMathError] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string>(() => {
+    if (initialTransfer) {
+      return initialTransfer.fromAccountId;
+    }
     if (initialTx) {
       return initialTx.type === 'transfer'
         ? initialTx.fromAccountId
@@ -100,6 +116,9 @@ export function TransactionFormSheet({
     return accounts[0]?.id ?? '';
   });
   const [toAccountId, setToAccountId] = useState<string>(() => {
+    if (initialTransfer) {
+      return initialTransfer.toAccountId;
+    }
     if (initialTx && initialTx.type === 'transfer') {
       return initialTx.toAccountId;
     }
@@ -136,7 +155,7 @@ export function TransactionFormSheet({
     return new Date().toISOString().slice(0, 10);
   });
   const [note, setNote] = useState<string>(
-    initialTx?.note ?? duplicateData?.note ?? (typeof initialDraft?.values.note === 'string' ? initialDraft.values.note : '')
+    initialTransfer?.note ?? initialTx?.note ?? duplicateData?.note ?? (typeof initialDraft?.values.note === 'string' ? initialDraft.values.note : '')
   );
 
   const [saving, setSaving] = useState(false);
