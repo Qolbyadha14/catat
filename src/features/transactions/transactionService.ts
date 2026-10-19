@@ -7,6 +7,8 @@ import { db } from '../../lib/firebase';
 import {
   transactionSchema,
   type Transaction,
+  type TransactionCreator,
+  type TransactionItem,
 } from '../../lib/schemas';
 
 export type CreateTransactionInput =
@@ -17,6 +19,9 @@ export type CreateTransactionInput =
       categoryId: string;
       date: number;
       note?: string;
+      referenceKey?: string | null;
+      items?: TransactionItem[];
+      createdBy?: TransactionCreator;
     }
   | {
       type: 'expense';
@@ -25,6 +30,9 @@ export type CreateTransactionInput =
       categoryId: string;
       date: number;
       note?: string;
+      referenceKey?: string | null;
+      items?: TransactionItem[];
+      createdBy?: TransactionCreator;
     }
   | {
       type: 'transfer';
@@ -33,16 +41,31 @@ export type CreateTransactionInput =
       toAccountId: string;
       date: number;
       note?: string;
+      referenceKey?: string | null;
+      items?: TransactionItem[];
+      createdBy?: TransactionCreator;
     };
+
+function getAccountsPath(uid: string, ledgerId?: string): string[] {
+  return ledgerId ? ['ledgers', ledgerId, 'accounts'] : ['users', uid, 'accounts'];
+}
+
+function getTransactionsPath(uid: string, ledgerId?: string): string[] {
+  return ledgerId ? ['ledgers', ledgerId, 'transactions'] : ['users', uid, 'transactions'];
+}
 
 export async function createTransaction(
   uid: string,
-  input: CreateTransactionInput
+  input: CreateTransactionInput,
+  ledgerId?: string
 ): Promise<Transaction> {
+  const accPath = getAccountsPath(uid, ledgerId);
+  const txPath = getTransactionsPath(uid, ledgerId);
+
   return runTransaction(db, async (txn) => {
     if (input.type === 'transfer') {
-      const fromRef = doc(db, 'users', uid, 'accounts', input.fromAccountId);
-      const toRef = doc(db, 'users', uid, 'accounts', input.toAccountId);
+      const fromRef = doc(db, accPath[0]!, accPath[1]!, accPath[2]!, input.fromAccountId);
+      const toRef = doc(db, accPath[0]!, accPath[1]!, accPath[2]!, input.toAccountId);
       const [fromSnap, toSnap] = await Promise.all([txn.get(fromRef), txn.get(toRef)]);
 
       if (!fromSnap.exists() || !toSnap.exists()) {
@@ -55,7 +78,7 @@ export async function createTransaction(
       txn.update(fromRef, { balance: fromBal - input.amount });
       txn.update(toRef, { balance: toBal + input.amount });
     } else {
-      const accRef = doc(db, 'users', uid, 'accounts', input.accountId);
+      const accRef = doc(db, accPath[0]!, accPath[1]!, accPath[2]!, input.accountId);
       const accSnap = await txn.get(accRef);
 
       if (!accSnap.exists()) {
@@ -68,7 +91,7 @@ export async function createTransaction(
       txn.update(accRef, { balance: currentBal + delta });
     }
 
-    const txCol = collection(db, 'users', uid, 'transactions');
+    const txCol = collection(db, txPath[0]!, txPath[1]!, txPath[2]!);
     const txRef = doc(txCol);
     const now = Date.now();
 
@@ -86,10 +109,14 @@ export async function createTransaction(
 
 export async function deleteTransaction(
   uid: string,
-  txId: string
+  txId: string,
+  ledgerId?: string
 ): Promise<void> {
+  const accPath = getAccountsPath(uid, ledgerId);
+  const txPath = getTransactionsPath(uid, ledgerId);
+
   return runTransaction(db, async (txn) => {
-    const txRef = doc(db, 'users', uid, 'transactions', txId);
+    const txRef = doc(db, txPath[0]!, txPath[1]!, txPath[2]!, txId);
     const txSnap = await txn.get(txRef);
 
     if (!txSnap.exists()) {
@@ -99,8 +126,8 @@ export async function deleteTransaction(
     const tx = transactionSchema.parse(txSnap.data());
 
     if (tx.type === 'transfer') {
-      const fromRef = doc(db, 'users', uid, 'accounts', tx.fromAccountId);
-      const toRef = doc(db, 'users', uid, 'accounts', tx.toAccountId);
+      const fromRef = doc(db, accPath[0]!, accPath[1]!, accPath[2]!, tx.fromAccountId);
+      const toRef = doc(db, accPath[0]!, accPath[1]!, accPath[2]!, tx.toAccountId);
       const [fromSnap, toSnap] = await Promise.all([txn.get(fromRef), txn.get(toRef)]);
 
       if (fromSnap.exists() && toSnap.exists()) {
@@ -110,7 +137,7 @@ export async function deleteTransaction(
         txn.update(toRef, { balance: toBal - tx.amount });
       }
     } else {
-      const accRef = doc(db, 'users', uid, 'accounts', tx.accountId);
+      const accRef = doc(db, accPath[0]!, accPath[1]!, accPath[2]!, tx.accountId);
       const accSnap = await txn.get(accRef);
 
       if (accSnap.exists()) {
@@ -127,10 +154,14 @@ export async function deleteTransaction(
 export async function updateTransaction(
   uid: string,
   txId: string,
-  input: CreateTransactionInput
+  input: CreateTransactionInput,
+  ledgerId?: string
 ): Promise<Transaction> {
+  const accPath = getAccountsPath(uid, ledgerId);
+  const txPath = getTransactionsPath(uid, ledgerId);
+
   return runTransaction(db, async (txn) => {
-    const txRef = doc(db, 'users', uid, 'transactions', txId);
+    const txRef = doc(db, txPath[0]!, txPath[1]!, txPath[2]!, txId);
     const txSnap = await txn.get(txRef);
 
     if (!txSnap.exists()) {
@@ -165,7 +196,9 @@ export async function updateTransaction(
 
     // 3. Read all affected accounts (reads MUST precede writes in Firestore transaction)
     const affectedAccountIds = Array.from(deltas.keys());
-    const accountRefs = affectedAccountIds.map((id) => doc(db, 'users', uid, 'accounts', id));
+    const accountRefs = affectedAccountIds.map((id) =>
+      doc(db, accPath[0]!, accPath[1]!, accPath[2]!, id)
+    );
     const accountSnaps = await Promise.all(accountRefs.map((ref) => txn.get(ref)));
 
     accountSnaps.forEach((snap, idx) => {
@@ -219,9 +252,12 @@ export function calculateBatchBalanceDeltas(
  */
 export async function createBatchTransactions(
   uid: string,
-  items: CreateTransactionInput[]
+  items: CreateTransactionInput[],
+  ledgerId?: string
 ): Promise<Transaction[]> {
   if (items.length === 0) return [];
+  const accPath = getAccountsPath(uid, ledgerId);
+  const txPath = getTransactionsPath(uid, ledgerId);
 
   return runTransaction(db, async (txn) => {
     // 1. Calculate net balance deltas across all accounts
@@ -229,7 +265,9 @@ export async function createBatchTransactions(
     const accountIds = Object.keys(deltas);
 
     // 2. Read all involved accounts (all reads MUST precede writes in Firestore)
-    const accountRefs = accountIds.map((accId) => doc(db, 'users', uid, 'accounts', accId));
+    const accountRefs = accountIds.map((accId) =>
+      doc(db, accPath[0]!, accPath[1]!, accPath[2]!, accId)
+    );
     const accountSnaps = await Promise.all(accountRefs.map((ref) => txn.get(ref)));
 
     // 3. Update account balances
@@ -250,7 +288,7 @@ export async function createBatchTransactions(
     const created: Transaction[] = [];
 
     for (const item of items) {
-      const txRef = doc(collection(db, 'users', uid, 'transactions'));
+      const txRef = doc(collection(db, txPath[0]!, txPath[1]!, txPath[2]!));
       const validated = transactionSchema.parse({
         ...item,
         id: txRef.id,
