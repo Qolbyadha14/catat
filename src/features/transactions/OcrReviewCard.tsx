@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { formatIdr } from '../../lib/formatters';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
+import type { Transaction } from '../../lib/schemas';
 
 export interface OcrReviewCardProps {
   result: OcrReceiptResult;
@@ -7,6 +9,7 @@ export interface OcrReviewCardProps {
   categoryName?: string;
   categoryIcon?: string;
   accountName?: string;
+  duplicateMatch?: Transaction | null;
   onQuickSave: () => void;
   onEditDetails: () => void;
   onDiscard: () => void;
@@ -67,18 +70,38 @@ export function OcrReviewCard({
   categoryName,
   categoryIcon = '📁',
   accountName,
+  duplicateMatch,
   onQuickSave,
   onEditDetails,
   onDiscard,
   isSaving = false,
 }: OcrReviewCardProps) {
+  const [showItems, setShowItems] = useState(false);
   const platformLabel = formatPlatformBadge(result.platform);
 
   return (
     <div className="ocr-review-card" role="region" aria-label="Review Hasil Scan Struk">
+      {duplicateMatch && (
+        <div className="ocr-duplicate-warning" role="alert">
+          <span className="ocr-dup-icon">⚠️</span>
+          <div className="ocr-dup-text">
+            <strong>Struk ini kemungkinan sudah pernah dicatat!</strong>
+            <small>
+              {duplicateMatch.createdBy?.name ? `Oleh ${duplicateMatch.createdBy.name} • ` : ''}
+              Nominal: {formatIdr(duplicateMatch.amount)}
+            </small>
+          </div>
+        </div>
+      )}
+
       <div className="ocr-review-header">
         <div className="ocr-review-header-left">
           <span className="ocr-platform-badge">{platformLabel}</span>
+          {result.referenceKey && (
+            <span className="ocr-ref-badge" title="ID Transaksi Struk">
+              🔖 {result.referenceKey}
+            </span>
+          )}
           <span className={`ocr-confidence-tag ${result.confidence}`}>
             {result.confidence === 'high' ? '✓ Akurat' : '⚠️ Periksa'}
           </span>
@@ -134,6 +157,36 @@ export function OcrReviewCard({
           )}
         </div>
       </div>
+
+      {result.items && result.items.length > 0 && (
+        <div className="ocr-items-card">
+          <button
+            type="button"
+            className="ocr-items-toggle-btn"
+            onClick={() => setShowItems((prev) => !prev)}
+            aria-expanded={showItems}
+          >
+            <span>🛒 Rincian Barang ({result.items.length} item)</span>
+            <span className="ocr-toggle-arrow">{showItems ? '▲ Tutup' : '▼ Lihat'}</span>
+          </button>
+
+          {showItems && (
+            <div className="ocr-items-list">
+              {result.items.map((item, idx) => (
+                <div key={idx} className="ocr-item-row">
+                  <span className="ocr-item-title">
+                    {item.qty && item.qty > 1 ? `${item.qty}x ` : ''}
+                    {item.name}
+                  </span>
+                  <span className="ocr-item-val">
+                    {item.subtotal ? formatIdr(item.subtotal) : item.price ? formatIdr(item.price) : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="ocr-review-actions">
         <button

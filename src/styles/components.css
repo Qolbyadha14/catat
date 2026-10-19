@@ -2527,6 +2527,121 @@ dialog::backdrop,
   transform: scale(0.98);
 }
 
+/* OCR Duplicate Warning Banner */
+.ocr-duplicate-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--warning-light);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-lg);
+  color: var(--warning-fg);
+}
+
+.ocr-dup-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ocr-dup-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ocr-dup-text strong {
+  font-weight: 600;
+  color: var(--warning-fg);
+}
+
+.ocr-dup-text small {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+/* OCR Reference Key Badge */
+.ocr-ref-badge {
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--surface-secondary);
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  padding: 2px 7px;
+  border-radius: var(--radius-md);
+  letter-spacing: 0.2px;
+}
+
+/* OCR Items Card & Accordion */
+.ocr-items-card {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.ocr-items-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+  min-height: 38px;
+  transition: background-color var(--transition-fast) ease;
+}
+
+.ocr-items-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.ocr-toggle-arrow {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.ocr-items-list {
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.ocr-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--foreground);
+  line-height: 1.4;
+}
+
+.ocr-item-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+}
+
+.ocr-item-val {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  color: var(--foreground);
+}
+
 /* Quick Amount Chips */
 .quick-amount-chips {
   display: flex;
