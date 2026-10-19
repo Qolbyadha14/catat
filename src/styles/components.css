@@ -2167,3 +2167,95 @@ dialog::backdrop,
   border-radius: var(--radius-md);
 }
 
+/* Account Pill Selector */
+.account-pill-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.account-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  min-height: 52px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.account-pill:hover {
+  border-color: var(--primary);
+  background: var(--card);
+}
+
+.account-pill.active {
+  background: var(--primary-glow, rgba(99, 102, 241, 0.12));
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.account-pill-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.account-pill-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.account-pill-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-pill-kind-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.account-pill-badge-asset {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.account-pill-badge-liability {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.account-pill-balance {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.account-pill.active .account-pill-balance {
+  color: var(--foreground);
+}
+
+.account-empty-state {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  text-align: center;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+}
+
