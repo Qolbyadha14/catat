@@ -23,12 +23,12 @@ function assert(condition: boolean, msg: string) {
   const res1 = validateReceiptFile(validFile);
   assert(res1.valid === true, 'valid JPG file passes');
 
-  // File > 5MB
-  const largeBlob = new Uint8Array(6 * 1024 * 1024);
+  // File > 20MB
+  const largeBlob = new Uint8Array(21 * 1024 * 1024);
   const oversizedFile = new File([largeBlob], 'receipt.jpg', { type: 'image/jpeg' });
   const res2 = validateReceiptFile(oversizedFile);
   assert(res2.valid === false, 'oversized file rejected');
-  assert(res2.error?.includes('5MB') === true, 'error mentions 5MB limit');
+  assert(res2.error?.includes('20MB') === true, 'error mentions 20MB limit');
 
   // HEIC iPhone format rejection
   const heicFile = new File([new Uint8Array(1000)], 'struk.heic', { type: 'image/heic' });

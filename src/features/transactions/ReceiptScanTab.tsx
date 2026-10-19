@@ -77,6 +77,7 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    let msgTimer: ReturnType<typeof setTimeout> | null = null;
     try {
       // 4. Client resize
       const resized = await resizeImage(file, 1600, 0.85);
@@ -84,11 +85,16 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
       if (controller.signal.aborted) return;
 
       setStatusMessage('AI Gemini sedang membaca struk belanja...');
+      msgTimer = setTimeout(() => {
+        if (!controller.signal.aborted) {
+          setStatusMessage('Menganalisis nominal total & merchant struk...');
+        }
+      }, 7000);
 
       // 5. Invoke AI
       const result = await scanReceiptWithGemini(resized.blob, uid, {
         signal: controller.signal,
-        timeoutMs: 15000,
+        timeoutMs: 45000,
       });
 
       // Update remaining quota state
@@ -104,13 +110,14 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
         // Strip technical prefixes if any
         let clean = raw.replace(/^AI:\s*/i, '').replace(/\(AI\/[^)]+\)$/i, '').trim();
         if (clean.includes('timeout')) {
-          clean = 'Waktu pemrosesan struk habis (timeout). Silakan coba lagi.';
+          clean = 'Waktu pemrosesan struk habis (timeout 45 detik). Silakan coba lagi.';
         } else if (clean.includes('fetch-error') || clean.includes('Failed to fetch')) {
           clean = 'Gagal terhubung ke server OCR. Periksa koneksi internet Anda.';
         }
         setError(clean);
       }
     } finally {
+      if (msgTimer) clearTimeout(msgTimer);
       setIsProcessing(false);
       setStatusMessage('');
       abortControllerRef.current = null;
@@ -286,7 +293,7 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
           </div>
 
           <span className="ocr-dropzone-hint">
-            Format JPG, PNG, atau WebP (maks. 5MB)
+            Format JPG, PNG, atau WebP (maks. 20MB)
           </span>
 
           {remaining <= 0 && (

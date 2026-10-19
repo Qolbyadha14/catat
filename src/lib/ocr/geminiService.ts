@@ -152,7 +152,7 @@ export async function scanReceiptWithGemini(
   uid: string,
   options: ScanOptions = {}
 ): Promise<OcrReceiptResult> {
-  const { timeoutMs = 15000, signal, modelName = DEFAULT_OCR_MODEL } = options;
+  const { timeoutMs = 45000, signal, modelName = DEFAULT_OCR_MODEL } = options;
 
   // 1. Pre-check quota BEFORE invoking AI (do not increment yet)
   await checkScanQuota(uid);
@@ -161,11 +161,11 @@ export async function scanReceiptWithGemini(
   const imagePart = await blobToGenerativePart(blob);
   const model = getGeminiModel(modelName);
 
-  // 3. Request with 15s timeout
+  // 3. Request with 45s timeout
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error('Waktu pemrosesan struk habis (timeout 15 detik). Silakan coba lagi.'));
+      reject(new Error('Waktu pemrosesan struk habis (timeout 45 detik). Silakan coba lagi.'));
     }, timeoutMs);
 
     if (signal) {

@@ -27,14 +27,14 @@ function assert(condition: boolean, msg: string) {
   assert(res.error?.includes('HEIC') === true, 'Error should mention HEIC');
 }
 
-// 3. Reject Oversized (>5MB)
+// 3. Reject Oversized (>20MB)
 {
-  // Mock file size > 5MB
+  // Mock file size > 20MB
   const bigBlob = new Uint8Array(MAX_FILE_SIZE_BYTES + 1024);
   const bigFile = new File([bigBlob], 'huge.jpg', { type: 'image/jpeg' });
   const res = validateReceiptFile(bigFile);
   assert(res.valid === false, 'Oversized file should be rejected');
-  assert(res.error?.includes('5MB') === true, 'Error should mention 5MB');
+  assert(res.error?.includes('20MB') === true, 'Error should mention 20MB');
 }
 
 // 4. Reject Non-image
