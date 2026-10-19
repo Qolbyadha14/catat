@@ -2476,3 +2476,215 @@ dialog::backdrop,
   border-color: var(--primary);
 }
 
+/* Batch Review Queue */
+.batch-review-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.batch-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.batch-review-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.batch-review-sub {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 2px 0 0 0;
+}
+
+.batch-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.batch-review-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.batch-review-card:hover {
+  border-color: var(--primary);
+}
+
+.batch-review-card.excluded {
+  opacity: 0.45;
+  background: var(--surface);
+}
+
+.batch-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.batch-card-idx {
+  color: var(--muted-foreground);
+}
+
+.batch-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.btn-batch-remove {
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: color var(--transition-fast);
+}
+
+.btn-batch-remove:hover {
+  color: var(--error);
+}
+
+.batch-card-body {
+  display: flex;
+  gap: 10px;
+}
+
+.batch-card-thumbnail {
+  width: 56px;
+  height: 68px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.batch-card-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.batch-card-inputs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.batch-input-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.batch-input-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.batch-input-col.flex-1 {
+  flex: 1;
+  min-width: 100px;
+}
+
+.batch-input-col.flex-2 {
+  flex: 2;
+  min-width: 140px;
+}
+
+.batch-mini-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.batch-field {
+  min-height: 36px;
+  height: 36px;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.batch-review-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-save-batch {
+  min-height: 44px;
+  padding: 10px 18px;
+  font-weight: 600;
+}
+
+.modal-preview-dialog {
+  background: var(--card);
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-xl);
+}
+
+.preview-full-img {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
+.btn-close-preview {
+  width: 100%;
+  min-height: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
