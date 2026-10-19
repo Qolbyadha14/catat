@@ -855,63 +855,63 @@ export function ReceiptScanTab({
         </div>
       ) : (
         /* Idle Upload Area */
-        <div
-          className={`ocr-dropzone ${isDragging ? 'dragging' : ''} ${remaining <= 0 ? 'disabled' : ''}`}
-          onClick={(e) => {
-            if (remaining > 0 && (e.target as HTMLElement).tagName !== 'BUTTON') {
-              fileInputRef.current?.click();
-            }
-          }}
-          onDragOver={remaining > 0 ? handleDragOver : undefined}
-          onDragLeave={remaining > 0 ? handleDragLeave : undefined}
-          onDrop={remaining > 0 ? handleDrop : undefined}
-        >
-          <div className="ocr-dropzone-icon">🧾</div>
-          <h4 className="ocr-dropzone-title">Upload Foto Struk Belanja</h4>
-          <p className="ocr-dropzone-subtitle">
-            Foto bon kasir, struk belanja, atau tiket pembayaran Anda.
-          </p>
-
+        <div className="ocr-upload-section">
+          {/* Action buttons outside drop area */}
           <div className="ocr-action-buttons">
             <button
               type="button"
-              className="btn-solid ocr-btn-camera"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStartCamera('environment');
-              }}
+              className="ocr-action-btn ocr-btn-camera"
+              onClick={() => handleStartCamera('environment')}
               disabled={remaining <= 0}
             >
-              📷 Ambil Foto Kamera
+              <span className="ocr-action-btn-icon">📷</span>
+              <span className="ocr-action-btn-label">Ambil Foto</span>
             </button>
             <button
               type="button"
-              className="btn-outline ocr-btn-gallery"
-              onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}
+              className="ocr-action-btn ocr-btn-gallery"
+              onClick={() => fileInputRef.current?.click()}
               disabled={remaining <= 0}
             >
-              🖼️ Pilih Galeri
+              <span className="ocr-action-btn-icon">🖼️</span>
+              <span className="ocr-action-btn-label">Pilih Galeri</span>
             </button>
             <button
               type="button"
-              className="btn-outline ocr-btn-paste"
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePasteClipboard(e);
-              }}
+              className="ocr-action-btn ocr-btn-paste"
+              onClick={handlePasteClipboard}
               disabled={remaining <= 0}
               title="Paste screenshot dari clipboard"
             >
-              📋 Paste
+              <span className="ocr-action-btn-icon">📋</span>
+              <span className="ocr-action-btn-label">Paste</span>
             </button>
           </div>
 
-          <span className="ocr-dropzone-hint">
-            JPG, PNG, atau WebP (maks. 20MB) • Bisa pilih hingga 10 struk atau gabung screenshot panjang
-          </span>
+          {/* Clean Drop Area */}
+          <div
+            className={`ocr-dropzone ${isDragging ? 'dragging' : ''} ${remaining <= 0 ? 'disabled' : ''}`}
+            onClick={() => {
+              if (remaining > 0) {
+                fileInputRef.current?.click();
+              }
+            }}
+            onDragOver={remaining > 0 ? handleDragOver : undefined}
+            onDragLeave={remaining > 0 ? handleDragLeave : undefined}
+            onDrop={remaining > 0 ? handleDrop : undefined}
+            role="button"
+            tabIndex={0}
+            aria-label="Klik atau seret struk ke sini"
+          >
+            <div className="ocr-dropzone-icon">🧾</div>
+            <div className="ocr-dropzone-text-group">
+              <span className="ocr-dropzone-title">Seret & lepas foto struk ke sini</span>
+              <span className="ocr-dropzone-subtitle">atau klik untuk telusuri file dari perangkat</span>
+            </div>
+            <span className="ocr-dropzone-hint">
+              JPG, PNG, atau WebP (maks. 20MB) • Bisa pilih banyak struk sekaligus atau struk panjang
+            </span>
+          </div>
 
           {remaining <= 0 && (
             <div className="ocr-limit-warning">

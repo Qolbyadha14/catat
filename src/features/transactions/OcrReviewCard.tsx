@@ -110,7 +110,6 @@ export function OcrReviewCard({
               <div className="ocr-result-chip category" title="Kategori terdeteksi">
                 <span>{categoryIcon}</span>
                 <span>{categoryName}</span>
-                <span className="ocr-chip-ai-tag">✨ AI</span>
               </div>
             )}
             {accountName && (
@@ -143,7 +142,7 @@ export function OcrReviewCard({
           onClick={onQuickSave}
           disabled={isSaving}
         >
-          {isSaving ? 'Menyimpan...' : '⚡ Simpan Langsung'}
+          {isSaving ? 'Menyimpan Transaksi...' : 'Simpan Transaksi'}
         </button>
         <button
           type="button"
@@ -151,7 +150,7 @@ export function OcrReviewCard({
           onClick={onEditDetails}
           disabled={isSaving}
         >
-          ✏️ Sesuaikan Detail
+          Sesuaikan Detail
         </button>
       </div>
     </div>

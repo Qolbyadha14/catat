@@ -1866,10 +1866,74 @@ dialog::backdrop,
   border-color: var(--warning);
 }
 
+.ocr-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.ocr-action-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.ocr-action-btn {
+  min-height: 56px;
+  padding: 10px 8px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.ocr-action-btn:hover:not(:disabled) {
+  background: var(--surface-secondary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.ocr-action-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.ocr-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ocr-action-btn.ocr-btn-camera {
+  background: var(--surface-secondary);
+  border-color: var(--accent-primary);
+}
+
+.ocr-action-btn-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.ocr-action-btn-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: -0.2px;
+}
+
 .ocr-dropzone {
   border: 2px dashed var(--border);
   border-radius: var(--radius-xl);
-  padding: 28px 16px;
+  padding: 24px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1877,6 +1941,12 @@ dialog::backdrop,
   background: var(--surface);
   cursor: pointer;
   transition: all var(--transition-fast) ease;
+  gap: 8px;
+}
+
+.ocr-dropzone:hover:not(.disabled) {
+  border-color: var(--accent-primary);
+  background: var(--surface-secondary);
 }
 
 .ocr-dropzone.dragging {
@@ -1894,23 +1964,33 @@ dialog::backdrop,
 }
 
 .ocr-dropzone-icon {
-  font-size: 40px;
-  margin-bottom: 8px;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.ocr-dropzone-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .ocr-dropzone-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--foreground);
   margin: 0;
 }
 
 .ocr-dropzone-subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted-foreground);
-  margin: 4px 0 16px;
-  max-width: 280px;
-  line-height: 1.4;
+  margin: 0;
+}
+
+.ocr-dropzone-hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
 }
 
 .ocr-hidden-input {
@@ -1925,26 +2005,6 @@ dialog::backdrop,
   border: 0;
   opacity: 0;
   pointer-events: none;
-}
-
-.ocr-action-buttons {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  max-width: 320px;
-}
-
-.ocr-btn-camera,
-.ocr-btn-gallery {
-  flex: 1;
-  min-height: 44px;
-  font-size: 13px;
-}
-
-.ocr-dropzone-hint {
-  font-size: 11px;
-  color: var(--muted-foreground);
-  margin-top: 14px;
 }
 
 .ocr-limit-warning {
@@ -2274,11 +2334,11 @@ dialog::backdrop,
 /* OCR Review Card */
 .ocr-review-card {
   background: var(--card);
-  border: 1.5px solid var(--primary);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2298,11 +2358,12 @@ dialog::backdrop,
 
 .ocr-platform-badge {
   font-size: 11px;
-  font-weight: 700;
-  background: var(--primary);
-  color: var(--text-inverse);
+  font-weight: 600;
+  background: var(--surface-secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
   padding: 3px 8px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -2375,7 +2436,7 @@ dialog::backdrop,
 }
 
 .ocr-review-amount {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--foreground);
   letter-spacing: -0.5px;
@@ -2392,19 +2453,13 @@ dialog::backdrop,
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: var(--surface);
+  background: var(--surface-secondary);
   border: 1px solid var(--border);
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--foreground);
-}
-
-.ocr-chip-ai-tag {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--primary);
 }
 
 .ocr-review-merchant {
@@ -2421,9 +2476,9 @@ dialog::backdrop,
 
 .btn-ocr-quick-save {
   flex: 1.2;
-  min-height: 44px;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  min-height: 48px;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
   border: none;
   border-radius: var(--radius-lg);
   font-size: 14px;
@@ -2433,16 +2488,22 @@ dialog::backdrop,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: opacity var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  transition: all var(--transition-fast) ease;
 }
 
 .btn-ocr-quick-save:hover {
-  opacity: 0.9;
+  background: var(--accent-primary-hover);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+}
+
+.btn-ocr-quick-save:active {
+  transform: scale(0.98);
 }
 
 .btn-ocr-edit-details {
   flex: 1;
-  min-height: 44px;
+  min-height: 48px;
   background: var(--surface);
   color: var(--foreground);
   border: 1px solid var(--border);
@@ -2454,11 +2515,16 @@ dialog::backdrop,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast) ease;
 }
 
 .btn-ocr-edit-details:hover {
-  background: var(--card);
+  background: var(--surface-secondary);
+  border-color: var(--accent-primary);
+}
+
+.btn-ocr-edit-details:active {
+  transform: scale(0.98);
 }
 
 /* Quick Amount Chips */

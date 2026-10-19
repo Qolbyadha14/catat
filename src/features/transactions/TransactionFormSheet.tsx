@@ -34,7 +34,10 @@ export function TransactionFormSheet({
   initialDraft,
   onSuccess,
 }: TransactionFormSheetProps) {
-  const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>('manual');
+  const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>(() => {
+    if (initialTx || duplicateData || initialDraft) return 'manual';
+    return 'ocr';
+  });
   const [ocrReview, setOcrReview] = useState<{
     result: OcrReceiptResult;
     previewUrl: string | null;
@@ -580,6 +583,14 @@ export function TransactionFormSheet({
               <div className="tabs-segmented">
                 <button
                   type="button"
+                  className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('ocr')}
+                  title="Scan Struk OCR"
+                >
+                  Scan Struk
+                </button>
+                <button
+                  type="button"
                   className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
                   onClick={() => setActiveTab('manual')}
                 >
@@ -592,14 +603,6 @@ export function TransactionFormSheet({
                   title="Input Asisten Teks"
                 >
                   Ketik
-                </button>
-                <button
-                  type="button"
-                  className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('ocr')}
-                  title="Scan Struk OCR"
-                >
-                  Scan
                 </button>
               </div>
             )}

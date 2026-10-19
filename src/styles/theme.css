@@ -64,6 +64,7 @@
   --card: var(--surface-card);
   --accent: var(--accent-primary);
   --primary: var(--accent-primary);
+  --primary-foreground: #ffffff;
   --destructive: var(--error);
 
   /* Semantic: Amber */
@@ -179,6 +180,7 @@
   --card: var(--surface-card);
   --accent: var(--accent-primary);
   --primary: var(--accent-primary);
+  --primary-foreground: #ffffff;
   --destructive: var(--error);
 
   --avatar-bg: #312e81;
