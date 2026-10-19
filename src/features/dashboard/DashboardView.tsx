@@ -13,6 +13,7 @@ import { CategoryBreakdown } from './CategoryBreakdown';
 import { MonthNavigator } from './MonthNavigator';
 import { ManageSheet } from '../manage/ManageSheet';
 import { UpcomingBillsCard } from './UpcomingBillsCard';
+import { DebtPlannerCard } from './DebtPlannerCard';
 import { WeeklyCashflowChart } from './WeeklyCashflowChart';
 import type { UpcomingBill } from '../../lib/bills';
 import { formatIdr, formatDate } from '../../lib/formatters';
@@ -216,6 +217,28 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     }
   };
 
+  const handlePayDebt = (targetAccountId: string, suggestedAmount: number) => {
+    const targetAccount = accounts.find((a) => a.id === targetAccountId);
+    if (!targetAccount) return;
+    const primaryAsset =
+      accountSummary.assetAccounts.find((a) => a.balance >= suggestedAmount) ||
+      accountSummary.assetAccounts.find((a) => a.balance > 0) ||
+      accountSummary.assetAccounts[0];
+    if (!primaryAsset) {
+      alert('Tidak ada akun kas/bank untuk membayar cicilan. Tambahkan akun kas/bank terlebih dahulu.');
+      return;
+    }
+    setEditingTx(null);
+    setDuplicateData(null);
+    setTransferPrefill({
+      fromAccountId: primaryAsset.id,
+      toAccountId: targetAccount.id,
+      amount: suggestedAmount,
+      note: `Cicilan ${targetAccount.name}`,
+    });
+    setIsSheetOpen(true);
+  };
+
   // Month summary & navigation state
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
     const d = new Date();
@@ -400,6 +423,9 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
         {/* Upcoming Bills Reminder Card */}
         <UpcomingBillsCard accounts={accounts} onPayBill={handlePayUpcomingBill} />
+
+        {/* Debt Snowball & Avalanche Strategy Card */}
+        <DebtPlannerCard accounts={accounts} onPayDebt={handlePayDebt} />
 
         {/* Accounts Section */}
         <section className="accounts-dashboard-section">
