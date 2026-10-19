@@ -11,7 +11,8 @@ export interface ScanOptions {
 }
 
 export const OCR_DAILY_LIMIT = 20;
-export const DEFAULT_OCR_MODEL = 'gemini-3.8-flash';
+export const DEFAULT_OCR_MODEL = 'gemini-3.5-flash-lite';
+export const FALLBACK_OCR_MODEL = 'gemini-3.5-flash';
 
 export async function blobToGenerativePart(
   blob: Blob
@@ -152,7 +153,7 @@ export async function scanReceiptWithGemini(
   uid: string,
   options: ScanOptions = {}
 ): Promise<OcrReceiptResult> {
-  const { timeoutMs = 45000, signal, modelName = DEFAULT_OCR_MODEL } = options;
+  const { timeoutMs = 60000, signal, modelName = DEFAULT_OCR_MODEL } = options;
 
   // 1. Pre-check quota BEFORE invoking AI (do not increment yet)
   await checkScanQuota(uid);
@@ -161,11 +162,11 @@ export async function scanReceiptWithGemini(
   const imagePart = await blobToGenerativePart(blob);
   const model = getGeminiModel(modelName);
 
-  // 3. Request with 45s timeout
+  // 3. Request with timeout
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error('Waktu pemrosesan struk habis (timeout 45 detik). Silakan coba lagi.'));
+      reject(new Error('Waktu pemrosesan struk habis (timeout). Silakan coba lagi.'));
     }, timeoutMs);
 
     if (signal) {
@@ -181,10 +182,25 @@ export async function scanReceiptWithGemini(
   });
 
   const generatePromise = (async () => {
-    const res = await model.generateContent([
-      imagePart,
-      'Ekstrak informasi struk transaksi ini sesuai JSON schema.',
-    ]);
+    let res;
+    try {
+      res = await model.generateContent([
+        imagePart,
+        'Ekstrak informasi struk transaksi ini sesuai JSON schema.',
+      ]);
+    } catch (err: unknown) {
+      if (modelName === DEFAULT_OCR_MODEL && !signal?.aborted) {
+        // Fallback to gemini-3.5-flash if lite encounters an issue
+        const fallbackModel = getGeminiModel(FALLBACK_OCR_MODEL);
+        res = await fallbackModel.generateContent([
+          imagePart,
+          'Ekstrak informasi struk transaksi ini sesuai JSON schema.',
+        ]);
+      } else {
+        throw err;
+      }
+    }
+
     const text = res.response.text();
     const cleaned = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
     const rawJson = JSON.parse(cleaned);

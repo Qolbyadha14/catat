@@ -79,8 +79,8 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
 
     let msgTimer: ReturnType<typeof setTimeout> | null = null;
     try {
-      // 4. Client resize
-      const resized = await resizeImage(file, 1600, 0.85);
+      // 4. Client resize: 1200px and 0.8 quality for fast mobile uploads and instant AI tokenization
+      const resized = await resizeImage(file, 1200, 0.8);
 
       if (controller.signal.aborted) return;
 
@@ -89,12 +89,12 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
         if (!controller.signal.aborted) {
           setStatusMessage('Menganalisis nominal total & merchant struk...');
         }
-      }, 7000);
+      }, 3000);
 
       // 5. Invoke AI
       const result = await scanReceiptWithGemini(resized.blob, uid, {
         signal: controller.signal,
-        timeoutMs: 45000,
+        timeoutMs: 60000,
       });
 
       // Update remaining quota state
@@ -110,7 +110,7 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
         // Strip technical prefixes if any
         let clean = raw.replace(/^AI:\s*/i, '').replace(/\(AI\/[^)]+\)$/i, '').trim();
         if (clean.includes('timeout')) {
-          clean = 'Waktu pemrosesan struk habis (timeout 45 detik). Silakan coba lagi.';
+          clean = 'Waktu pemrosesan struk habis (timeout). Silakan coba lagi.';
         } else if (clean.includes('fetch-error') || clean.includes('Failed to fetch')) {
           clean = 'Gagal terhubung ke server OCR. Periksa koneksi internet Anda.';
         }

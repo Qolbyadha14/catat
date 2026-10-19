@@ -25,9 +25,9 @@ assert(part.inlineData.mimeType === 'image/jpeg', 'part mimeType matches blob ty
 assert(typeof part.inlineData.data === 'string' && part.inlineData.data.length > 0, 'part data is non-empty base64');
 
 // 3. getGeminiModel test: default model
-assert(DEFAULT_OCR_MODEL === 'gemini-3.8-flash', 'Default model is gemini-3.8-flash');
+assert(DEFAULT_OCR_MODEL === 'gemini-3.5-flash-lite', 'Default model is gemini-3.5-flash-lite');
 const defaultModel = getGeminiModel();
-assert(defaultModel.model === 'models/gemini-3.8-flash', 'Default model resolves to models/gemini-3.8-flash');
+assert(defaultModel.model === 'models/gemini-3.5-flash-lite', 'Default model resolves to models/gemini-3.5-flash-lite');
 
 // 4. Custom model override test
 const customModel = getGeminiModel('gemini-1.5-flash');
