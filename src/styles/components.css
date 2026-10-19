@@ -4360,6 +4360,37 @@ dialog::backdrop,
   font-weight: 600;
 }
 
+/* Real-Time Budget Warning in Transaction Form */
+.budget-warning-pill {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--warning-light);
+  color: var(--warning-fg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.budget-warning-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.budget-warning-text {
+  flex: 1;
+}
+
+.budget-warning-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+
 
 
 

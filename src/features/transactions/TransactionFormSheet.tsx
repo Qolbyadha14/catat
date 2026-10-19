@@ -1,4 +1,4 @@
-import { useState, useId, useRef, type FormEvent } from 'react';
+import { useState, useId, useRef, useMemo, type FormEvent } from 'react';
 import type { Account, Category, Transaction, TransactionItem, Creator } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction, createBatchTransactions } from './transactionService';
@@ -14,6 +14,8 @@ import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
 import { findDuplicateReceipt } from '../../lib/ledgerService';
 import { formatLiveAmount, calculateNewCursorPosition } from '../../lib/currencyInputFormatter';
+import { formatIdr } from '../../lib/formatters';
+import { evaluateTransactionBudgetImpact } from '../../lib/budgeting';
 
 export interface InitialTransferData {
   fromAccountId: string;
@@ -186,6 +188,44 @@ export function TransactionFormSheet({
   const currentToAccountId = isToAccountValid
     ? toAccountId
     : (duplicateData ? '' : toAccountOptions[0]?.id || '');
+
+  const budgetWarning = useMemo(() => {
+    if (type !== 'expense' || !currentCategoryId) return null;
+    const cat = categories.find((c) => c.id === currentCategoryId);
+    if (!cat || !cat.monthlyBudget || cat.monthlyBudget <= 0) return null;
+
+    const d = new Date(dateStr || Date.now());
+    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+
+    let currentSpent = 0;
+    if (existingTransactions) {
+      for (const tx of existingTransactions) {
+        if (
+          tx.type === 'expense' &&
+          tx.categoryId === currentCategoryId &&
+          tx.date >= startOfMonth &&
+          tx.date < endOfMonth &&
+          tx.id !== initialTx?.id
+        ) {
+          currentSpent += tx.amount;
+        }
+      }
+    }
+
+    const numAmount = parseInt(rawAmount, 10) || 0;
+    const impact = evaluateTransactionBudgetImpact(cat.monthlyBudget, currentSpent, numAmount);
+
+    if (impact.willExceed) {
+      return {
+        catName: cat.name,
+        monthlyBudget: cat.monthlyBudget,
+        remaining: Math.max(0, cat.monthlyBudget - currentSpent),
+        overbudgetAmount: impact.overbudgetAmount,
+      };
+    }
+    return null;
+  }, [type, currentCategoryId, categories, dateStr, existingTransactions, initialTx, rawAmount]);
 
   const handleAmountChange = (val: string) => {
     const currentCursor = amountInputRef.current?.selectionStart ?? val.length;
@@ -902,6 +942,15 @@ export function TransactionFormSheet({
                       onSelect={setCategoryId}
                       recommendedId={recommendedCategoryId}
                     />
+                    {budgetWarning && (
+                      <div className="budget-warning-pill" role="status">
+                        <span className="budget-warning-icon">⚠️</span>
+                        <div className="budget-warning-text">
+                          Nominal ini melebihi sisa anggaran <strong>{budgetWarning.catName}</strong> sebesar{' '}
+                          <strong>{formatIdr(budgetWarning.overbudgetAmount)}</strong> (Sisa batas: {formatIdr(budgetWarning.remaining)}).
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
