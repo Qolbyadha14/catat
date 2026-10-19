@@ -2128,12 +2128,12 @@ dialog::backdrop,
 }
 
 .category-chip.recommended-ai {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 1px #8b5cf6;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 
 .category-chip.recommended-ai.active {
-  background: rgba(139, 92, 246, 0.15);
+  background: var(--primary-glow, rgba(99, 102, 241, 0.15));
 }
 
 .category-chip-icon {
@@ -2150,8 +2150,8 @@ dialog::backdrop,
 
 .category-chip-badge {
   font-size: 10px;
-  background: #8b5cf6;
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--text-inverse);
   padding: 2px 6px;
   border-radius: var(--radius-full);
   font-weight: 700;
@@ -2231,13 +2231,13 @@ dialog::backdrop,
 }
 
 .account-pill-badge-asset {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: var(--success-light);
+  color: var(--success-fg);
 }
 
 .account-pill-badge-liability {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  background: var(--warning-light);
+  color: var(--warning-fg);
 }
 
 .account-pill-balance {
@@ -2262,11 +2262,11 @@ dialog::backdrop,
 /* OCR Review Card */
 .ocr-review-card {
   background: var(--card);
-  border: 1.5px solid #8b5cf6;
+  border: 1.5px solid var(--primary);
   border-radius: var(--radius-xl);
   padding: 16px;
   margin-bottom: 16px;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.12);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2287,8 +2287,8 @@ dialog::backdrop,
 .ocr-platform-badge {
   font-size: 11px;
   font-weight: 700;
-  background: #8b5cf6;
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--text-inverse);
   padding: 3px 8px;
   border-radius: var(--radius-full);
   text-transform: uppercase;
@@ -2303,13 +2303,13 @@ dialog::backdrop,
 }
 
 .ocr-confidence-tag.high {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: var(--success-light);
+  color: var(--success-fg);
 }
 
 .ocr-confidence-tag.low {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  background: var(--warning-light);
+  color: var(--warning-fg);
 }
 
 .btn-ocr-discard {
@@ -2392,7 +2392,7 @@ dialog::backdrop,
 .ocr-chip-ai-tag {
   font-size: 9px;
   font-weight: 700;
-  color: #8b5cf6;
+  color: var(--primary);
 }
 
 .ocr-review-merchant {
