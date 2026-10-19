@@ -2449,3 +2449,28 @@ dialog::backdrop,
   background: var(--card);
 }
 
+/* Quick Amount Chips */
+.quick-amount-chips {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.quick-amount-chip {
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quick-amount-chip:hover {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--primary);
+}
+

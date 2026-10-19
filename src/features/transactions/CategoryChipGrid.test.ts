@@ -13,11 +13,11 @@ const mockCategories: Category[] = [
 
 // Test 1: filter active categories by transaction type
 const expenseCats = filterCategoriesByType(mockCategories, 'expense');
-assert(expenseCats.length === 1 && expenseCats[0].id === 'c1', 'filters out archived and non-matching types');
+assert(expenseCats.length === 1 && expenseCats[0]?.id === 'c1', 'filters out archived and non-matching types');
 
 // Test 2: filter income categories
 const incomeCats = filterCategoriesByType(mockCategories, 'income');
-assert(incomeCats.length === 1 && incomeCats[0].id === 'c2', 'filters active income categories');
+assert(incomeCats.length === 1 && incomeCats[0]?.id === 'c2', 'filters active income categories');
 
 // Test 3: AI recommendation resolver
 const rec = getRecommendedCategory(expenseCats, 'c1');

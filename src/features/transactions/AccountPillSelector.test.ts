@@ -13,7 +13,7 @@ const mockAccounts: Account[] = [
 
 // Test 1: filters out archived and excluded accounts
 const selectable = filterSelectableAccounts(mockAccounts, 'a1');
-assert(selectable.length === 1 && selectable[0].id === 'a2', 'excludes archived and excludeId');
+assert(selectable.length === 1 && selectable[0]?.id === 'a2', 'excludes archived and excludeId');
 
 // Test 2: all non-archived when no excludeId
 const allActive = filterSelectableAccounts(mockAccounts);

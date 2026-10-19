@@ -3,6 +3,10 @@ import type { Account, Category, Transaction } from '../../lib/schemas';
 import type { TransactionDraft } from './draft';
 import { createTransaction, updateTransaction } from './transactionService';
 import { ReceiptScanTab } from './ReceiptScanTab';
+import { CategoryChipGrid } from './CategoryChipGrid';
+import { AccountPillSelector } from './AccountPillSelector';
+import { OcrReviewCard, formatReviewNote } from './OcrReviewCard';
+import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
 
@@ -30,6 +34,11 @@ export function TransactionFormSheet({
   onSuccess,
 }: TransactionFormSheetProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>('manual');
+  const [ocrReview, setOcrReview] = useState<{
+    result: OcrReceiptResult;
+    previewUrl: string | null;
+  } | null>(null);
+  const [recommendedCategoryId, setRecommendedCategoryId] = useState<string | null>(null);
   const [ocrFeedback, setOcrFeedback] = useState<{
     confidence: 'high' | 'low';
     merchant: string | null;
@@ -184,6 +193,127 @@ export function TransactionFormSheet({
     }
   };
 
+  const handleAddAmount = (delta: number) => {
+    let current = parseInt(rawAmount, 10);
+    if (Number.isNaN(current) || current < 0) current = 0;
+    const next = current + delta;
+    setRawAmount(String(next));
+    setAmountInput(new Intl.NumberFormat('id-ID').format(next));
+    if (mathError) setMathError(null);
+  };
+
+  const handleOcrSuccess = (res: OcrReceiptResult, previewUrl: string | null) => {
+    // 1. Resolve category
+    let matchedCatId = res.categoryId;
+    if (matchedCatId && !categories.some((c) => c.id === matchedCatId)) {
+      matchedCatId = null;
+    }
+    if (!matchedCatId) {
+      if (res.platform === 'shopeefood' || res.platform === 'gofood') {
+        const foodCat = categories.find(
+          (c) => !c.isArchived && c.type === 'expense' && /makan|minum|food|kuliner/i.test(c.name)
+        );
+        if (foodCat) matchedCatId = foodCat.id;
+      }
+    }
+
+    // 2. Resolve account
+    let matchedAccId = res.accountId;
+    if (matchedAccId && !accounts.some((a) => a.id === matchedAccId)) {
+      matchedAccId = null;
+    }
+    if (!matchedAccId) {
+      if (res.platform === 'spaylater') {
+        const spayAcc = accounts.find((a) => !a.isArchived && /spay|shopee.*paylater|paylater/i.test(a.name));
+        if (spayAcc) matchedAccId = spayAcc.id;
+      } else if (res.platform === 'bank_jago') {
+        const jagoAcc = accounts.find((a) => !a.isArchived && /jago/i.test(a.name));
+        if (jagoAcc) matchedAccId = jagoAcc.id;
+      }
+    }
+
+    // 3. Format note with platform and paymentMethod
+    const formattedNote = formatReviewNote(res.merchant, res.paymentMethod, res.platform);
+
+    const rounded = Math.round(res.amount);
+    setRawAmount(String(rounded));
+    setAmountInput(new Intl.NumberFormat('id-ID').format(rounded));
+    setMathError(null);
+    if (res.date) setDateStr(res.date);
+    setNote(formattedNote);
+    setType(res.suggestedType || 'expense');
+    if (matchedCatId) {
+      setCategoryId(matchedCatId);
+      setRecommendedCategoryId(matchedCatId);
+    }
+    if (matchedAccId) {
+      setAccountId(matchedAccId);
+    }
+
+    setOcrFeedback({
+      confidence: res.confidence,
+      merchant: res.merchant,
+    });
+
+    setOcrReview({
+      result: {
+        ...res,
+        categoryId: matchedCatId,
+        accountId: matchedAccId,
+      },
+      previewUrl,
+    });
+  };
+
+  const handleQuickSave = async () => {
+    if (!ocrReview) return;
+    setError(null);
+    const finalAmount = parseInt(rawAmount, 10);
+    if (!finalAmount || finalAmount <= 0) {
+      setError('Masukkan nominal yang valid');
+      return;
+    }
+    if (!currentAccountId) {
+      setError('Pilih akun transaksi');
+      return;
+    }
+    if (type !== 'transfer' && !currentCategoryId) {
+      setError('Pilih kategori transaksi');
+      return;
+    }
+
+    const epochDate = new Date(dateStr).getTime() || Date.now();
+    try {
+      setSaving(true);
+      if (type === 'transfer') {
+        await createTransaction(uid, {
+          type: 'transfer',
+          amount: finalAmount,
+          fromAccountId: currentAccountId,
+          toAccountId: currentToAccountId,
+          date: epochDate,
+          note,
+        });
+      } else {
+        await createTransaction(uid, {
+          type,
+          amount: finalAmount,
+          accountId: currentAccountId,
+          categoryId: currentCategoryId,
+          date: epochDate,
+          note,
+        });
+      }
+      setOcrReview(null);
+      onSuccess?.();
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan transaksi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -285,61 +415,66 @@ export function TransactionFormSheet({
         </div>
 
         <form onSubmit={handleSubmit} className="sheet-scroll-body">
-          {/* Tabs */}
-          <div className="tabs-segmented">
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
-              onClick={() => setActiveTab('manual')}
-            >
-              Manual
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'text' ? 'active' : ''}`}
-              onClick={() => setActiveTab('text')}
-              title="Input Asisten Teks"
-            >
-              Ketik
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ocr')}
-              title="Scan Struk OCR"
-            >
-              Scan
-            </button>
-          </div>
-
-          {activeTab === 'ocr' ? (
-            <ReceiptScanTab
-              uid={uid}
-              onScanSuccess={(res) => {
-                const rounded = Math.round(res.amount);
-                setRawAmount(String(rounded));
-                setAmountInput(new Intl.NumberFormat('id-ID').format(rounded));
-                setMathError(null);
-                if (res.date) {
-                  setDateStr(res.date);
-                }
-                if (res.merchant) {
-                  setNote(res.merchant);
-                }
-                setType('expense');
-                setOcrFeedback({
-                  confidence: res.confidence,
-                  merchant: res.merchant,
-                });
+          {/* Ocr Review Card if present */}
+          {ocrReview && (
+            <OcrReviewCard
+              result={ocrReview.result}
+              previewUrl={ocrReview.previewUrl}
+              categoryName={categories.find((c) => c.id === currentCategoryId)?.name}
+              categoryIcon={categories.find((c) => c.id === currentCategoryId)?.icon}
+              accountName={accounts.find((a) => a.id === currentAccountId)?.name}
+              onQuickSave={handleQuickSave}
+              onEditDetails={() => {
+                setOcrReview(null);
                 setActiveTab('manual');
               }}
+              onDiscard={() => setOcrReview(null)}
+              isSaving={saving}
+            />
+          )}
+
+          {/* Tabs */}
+          {!ocrReview && (
+            <div className="tabs-segmented">
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'manual' ? 'active' : ''}`}
+                onClick={() => setActiveTab('manual')}
+              >
+                Manual
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'text' ? 'active' : ''}`}
+                onClick={() => setActiveTab('text')}
+                title="Input Asisten Teks"
+              >
+                Ketik
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
+                onClick={() => setActiveTab('ocr')}
+                title="Scan Struk OCR"
+              >
+                Scan
+              </button>
+            </div>
+          )}
+
+          {!ocrReview && activeTab === 'ocr' ? (
+            <ReceiptScanTab
+              uid={uid}
+              categories={categories}
+              accounts={accounts}
+              onScanSuccess={handleOcrSuccess}
               onCancelToManual={() => setActiveTab('manual')}
             />
-          ) : activeTab === 'text' ? (
+          ) : !ocrReview && activeTab === 'text' ? (
             <div className="offline-banner" style={{ background: 'var(--surface)', color: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
               Mode asisten Ketik sedang disiapkan. Gunakan input manual atau scan struk.
             </div>
-          ) : (
+          ) : !ocrReview ? (
             <>
               {ocrFeedback && (
                 <div
@@ -423,6 +558,29 @@ export function TransactionFormSheet({
                     required
                   />
                 </div>
+                <div className="quick-amount-chips">
+                  <button
+                    type="button"
+                    className="quick-amount-chip"
+                    onClick={() => handleAddAmount(10000)}
+                  >
+                    +10rb
+                  </button>
+                  <button
+                    type="button"
+                    className="quick-amount-chip"
+                    onClick={() => handleAddAmount(50000)}
+                  >
+                    +50rb
+                  </button>
+                  <button
+                    type="button"
+                    className="quick-amount-chip"
+                    onClick={() => handleAddAmount(100000)}
+                  >
+                    +100rb
+                  </button>
+                </div>
                 {mathError && (
                   <div className="input-helper-error" role="alert">
                     {mathError}
@@ -435,85 +593,46 @@ export function TransactionFormSheet({
                 <>
                   <div className="form-group">
                     <label className="form-label">Dari Akun</label>
-                    <select
-                      className="form-select"
-                      value={currentAccountId}
-                      onChange={(e) => setAccountId(e.target.value)}
-                    >
-                      {!currentAccountId && (
-                        <option value="" disabled>
-                          -- Pilih Akun Asal --
-                        </option>
-                      )}
-                      {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
+                    <AccountPillSelector
+                      accounts={accounts}
+                      selectedId={currentAccountId}
+                      onSelect={setAccountId}
+                      label="Dari Akun"
+                    />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Ke Akun Tujuan</label>
-                    <select
-                      className="form-select"
-                      value={currentToAccountId}
-                      onChange={(e) => setToAccountId(e.target.value)}
-                    >
-                      {!currentToAccountId && (
-                        <option value="" disabled>
-                          -- Pilih Akun Tujuan --
-                        </option>
-                      )}
-                      {toAccountOptions.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
+                    <AccountPillSelector
+                      accounts={accounts}
+                      selectedId={currentToAccountId}
+                      onSelect={setToAccountId}
+                      label="Ke Akun Tujuan"
+                      excludeId={currentAccountId}
+                    />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="form-group">
                     <label className="form-label">Akun</label>
-                    <select
-                      className="form-select"
-                      value={currentAccountId}
-                      onChange={(e) => setAccountId(e.target.value)}
-                    >
-                      {!currentAccountId && (
-                        <option value="" disabled>
-                          -- Pilih Akun --
-                        </option>
-                      )}
-                      {accounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
+                    <AccountPillSelector
+                      accounts={accounts}
+                      selectedId={currentAccountId}
+                      onSelect={setAccountId}
+                      label="Pilih Akun"
+                    />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Kategori</label>
-                    <select
-                      className="form-select"
-                      value={currentCategoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                    >
-                      {!currentCategoryId && (
-                        <option value="" disabled>
-                          -- Pilih Kategori --
-                        </option>
-                      )}
-                      {filteredCategories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.icon ? `${c.icon} ` : ''}
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <CategoryChipGrid
+                      categories={categories}
+                      type={type}
+                      selectedId={currentCategoryId}
+                      onSelect={setCategoryId}
+                      recommendedId={recommendedCategoryId}
+                    />
                   </div>
                 </>
               )}
@@ -552,7 +671,7 @@ export function TransactionFormSheet({
                 {saving ? 'Menyimpan...' : initialTx ? 'Simpan Perubahan' : 'Simpan Transaksi'}
               </button>
             </>
-          )}
+          ) : null}
         </form>
       </div>
     </div>

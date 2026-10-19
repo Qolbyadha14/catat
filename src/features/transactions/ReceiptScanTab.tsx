@@ -24,7 +24,7 @@ export function extractImageFileFromClipboard(clipboardData: DataTransfer | null
   if (clipboardData.items) {
     for (let i = 0; i < clipboardData.items.length; i++) {
       const item = clipboardData.items[i];
-      if (item.type.startsWith('image/')) {
+      if (item && item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) return file;
       }
@@ -33,7 +33,7 @@ export function extractImageFileFromClipboard(clipboardData: DataTransfer | null
   if (clipboardData.files) {
     for (let i = 0; i < clipboardData.files.length; i++) {
       const file = clipboardData.files[i];
-      if (file.type.startsWith('image/')) {
+      if (file && file.type.startsWith('image/')) {
         return file;
       }
     }
