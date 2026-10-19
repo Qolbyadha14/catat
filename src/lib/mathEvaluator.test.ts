@@ -104,4 +104,29 @@ function assert(condition: boolean, msg: string) {
   assert(res5.success === false && res5.error === 'Karakter tidak valid', 'Parentheses must be rejected cleanly');
 }
 
+// 8. Indonesian Currency Format (Thousand dots and k/rb suffixes)
+{
+  const res1 = evaluateMathExpression('116.000');
+  assert(res1.success === true && res1.value === 116000, `116.000 must evaluate to 116000, got: ${res1.success ? res1.value : res1.error}`);
+
+  const res2 = evaluateMathExpression('150.000');
+  assert(res2.success === true && res2.value === 150000, `150.000 must evaluate to 150000, got: ${res2.success ? res2.value : res2.error}`);
+
+  const res3 = evaluateMathExpression('1.500.000');
+  assert(res3.success === true && res3.value === 1500000, `1.500.000 must evaluate to 1500000, got: ${res3.success ? res3.value : res3.error}`);
+
+  const res4 = evaluateMathExpression('150k');
+  assert(res4.success === true && res4.value === 150000, `150k must evaluate to 150000, got: ${res4.success ? res4.value : res4.error}`);
+
+  const res5 = evaluateMathExpression('150rb');
+  assert(res5.success === true && res5.value === 150000, `150rb must evaluate to 150000, got: ${res5.success ? res5.value : res5.error}`);
+
+  const res6 = evaluateMathExpression('2.5k');
+  assert(res6.success === true && res6.value === 2500, `2.5k must evaluate to 2500, got: ${res6.success ? res6.value : res6.error}`);
+
+  const res7 = evaluateMathExpression('116.000 + 34.000');
+  assert(res7.success === true && res7.value === 150000, `116.000 + 34.000 must evaluate to 150000, got: ${res7.success ? res7.value : res7.error}`);
+}
+
 console.log('Math evaluator asserts pass');
+

@@ -131,7 +131,9 @@ export function buildOcrSystemInstruction(
 ): string {
   let prompt = `Kamu adalah asisten OCR cerdas untuk struk transaksi digital dan fisik di Indonesia.
 Ekstrak informasi transaksi berikut secara akurat:
-1. amount: Total pembayaran/tagihan bersih (integer positif rupiah, abaikan subtotal dan diskon).
+1. amount: Total pembayaran/tagihan akhir yang dibayar pengguna (integer rupiah positif utuh).
+   - UTAMAKAN "Total Pembayaran", "Total Tagihan", atau "Total Akhir" di bagian bawah struk, BUKAN harga barang satuan atau subtotal.
+   - PENTING: Titik (.) dalam mata uang Rupiah adalah pemisah ribuan, BUKAN desimal! Contoh: "116.000" berarti 116000 (seratus enam belas ribu rupiah), JANGAN PERNAH mengembalikan 116! Begitu juga "150.000" adalah 150000.
 2. date: Tanggal transaksi format YYYY-MM-DD. Jika tidak ada tahun, gunakan tahun ini. Null jika tidak tertera.
 3. merchant: Nama resto/toko/penerima transfer/tujuan tagihan (bersihkan dari nomor rekening atau ID transaksi panjang).
 4. platform: Salah satu dari "shopeefood", "gofood", "spaylater", "tiktok", "bank_jago", "qris", atau "other".
@@ -174,7 +176,7 @@ export function getGeminiModel(
         properties: {
           amount: {
             type: SchemaType.INTEGER,
-            description: 'Nominal total belanja rupiah integer positif',
+            description: 'Nominal total akhir rupiah integer positif utuh tanpa titik desimal (contoh: 150000, 116000, bukan 150 atau 116)',
           },
           date: {
             type: SchemaType.STRING,

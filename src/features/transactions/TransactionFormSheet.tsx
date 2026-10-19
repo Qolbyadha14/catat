@@ -150,8 +150,8 @@ export function TransactionFormSheet({
     : (duplicateData ? '' : toAccountOptions[0]?.id || '');
 
   const handleAmountChange = (val: string) => {
-    // Allow digits, operators (+, -, *, /), decimal dots, and whitespace
-    const sanitized = val.replace(/,/g, '.').replace(/[^0-9+\-*/.\s]/g, '');
+    // Allow digits, operators (+, -, *, /), dots, commas, k/rb suffixes, and whitespace
+    const sanitized = val.replace(/[^0-9+\-*/.,kKrRbB\s]/g, '');
     setAmountInput(sanitized);
     if (mathError) setMathError(null);
   };

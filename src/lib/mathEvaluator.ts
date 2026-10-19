@@ -11,6 +11,28 @@ export interface MathEvalError {
 export type MathEvalResult = MathEvalSuccess | MathEvalError;
 
 /**
+ * Normalizes Indonesian numbers:
+ * 1. Shorthand suffixes: 150k / 150rb -> 150000, 2.5k -> 2500
+ * 2. Thousand separator dots: 116.000 -> 116000, 1.500.000 -> 1500000
+ * Preserves standard decimals: 0.1, 12.5
+ */
+export function normalizeIndonesianNumbers(text: string): string {
+  // Support k / rb shorthand (e.g. 150k, 150rb, 2.5k, 2,5k)
+  let res = text.replace(/(\d+(?:[.,]\d+)?)\s*(?:rb|k)\b/gi, (_, n) => {
+    const num = parseFloat(n.replace(',', '.'));
+    return String(Math.round(num * 1000));
+  });
+
+  // Support Indonesian thousand dots (e.g. 116.000 -> 116000, 1.500.000 -> 1500000)
+  res = res.replace(/\b(\d{1,3}(?:\.\d{3})+)(?:,(\d+))?\b/g, (_match, thousands, decimals) => {
+    const stripped = thousands.replace(/\./g, '');
+    return decimals ? `${stripped}.${decimals}` : stripped;
+  });
+
+  return res;
+}
+
+/**
  * Evaluates a basic arithmetic expression supporting +, -, *, / with standard operator precedence.
  * Zero dependencies, no eval() or Function().
  */
@@ -19,8 +41,11 @@ export function evaluateMathExpression(expr: string): MathEvalResult {
     return { success: false, error: 'Ekspresi kosong' };
   }
 
+  // Pre-normalize Indonesian currency format (thousand dots, k/rb shorthand)
+  const normalized = normalizeIndonesianNumbers(expr.trim());
+
   // Normalize commas to dots and trim
-  let cleaned = expr.trim().replace(/,/g, '.');
+  let cleaned = normalized.replace(/,/g, '.');
 
   // Ignore trailing operators and trailing whitespace (e.g. "15000+" -> "15000")
   cleaned = cleaned.replace(/[+\-*/\s]+$/, '');
