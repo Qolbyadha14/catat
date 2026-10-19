@@ -59,6 +59,7 @@ export function ManageSheet({
   const [kind, setKind] = useState<'asset' | 'liability'>('asset');
   const [categoryType, setCategoryType] = useState<'expense' | 'income'>('expense');
   const [monthlyBudgetInput, setMonthlyBudgetInput] = useState('');
+  const [dueDayInput, setDueDayInput] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -89,8 +90,10 @@ export function ManageSheet({
     if ('type' in item) {
       setCategoryType(item.type);
       setMonthlyBudgetInput(item.monthlyBudget ? new Intl.NumberFormat('id-ID').format(item.monthlyBudget) : '');
+      setDueDayInput('');
     } else {
       setMonthlyBudgetInput('');
+      setDueDayInput(item.dueDay ? String(item.dueDay) : '');
     }
     setFormError(null);
   };
@@ -101,6 +104,7 @@ export function ManageSheet({
     setName('');
     setIcon('');
     setMonthlyBudgetInput('');
+    setDueDayInput('');
     setFormError(null);
   };
 
@@ -108,6 +112,7 @@ export function ManageSheet({
     setEditingItem(null);
     setIsCreating(false);
     setMonthlyBudgetInput('');
+    setDueDayInput('');
     setFormError(null);
   };
 
@@ -157,17 +162,22 @@ export function ManageSheet({
       }
 
       setSaving(true);
+      const parsedDueDay = dueDayInput ? parseInt(dueDayInput, 10) : undefined;
+      const validDueDay = parsedDueDay && parsedDueDay >= 1 && parsedDueDay <= 31 ? parsedDueDay : null;
+
       try {
         if (editingItem) {
           await updateAccount(uid, editingItem.id, {
             name: trimmedName,
             icon: icon.trim() || undefined,
+            dueDay: validDueDay,
           });
         } else {
           await createAccount(uid, {
             name: trimmedName,
             icon: icon.trim() || undefined,
             kind,
+            dueDay: validDueDay ?? undefined,
             balance: 0,
           });
         }
@@ -372,11 +382,32 @@ export function ManageSheet({
                   </select>
                   <span className="form-help-text" style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: 4, display: 'block' }}>
                     {kind === 'liability'
-                      ? 'Pengeluaran via akun ini akan otomatis tercatat sebagai tagihan hutang yang harus dibayar.'
+                       ? 'Pengeluaran via akun ini akan otomatis tercatat sebagai tagihan hutang yang harus dibayar.'
                       : 'Akun kas dan tabungan yang siap dibelanjakan.'}
                   </span>
                 </div>
               )}
+
+              {/* If liability account: due date input */}
+              {activeTab === 'accounts' &&
+                ((isCreating && kind === 'liability') ||
+                  (editingItem && 'kind' in editingItem && editingItem.kind === 'liability')) && (
+                  <div className="form-group">
+                    <label className="form-label">Tanggal Jatuh Tempo Bulanan (1 - 31, Opsional)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={31}
+                      className="form-input"
+                      placeholder="Misal: 25 (setiap tgl 25)"
+                      value={dueDayInput}
+                      onChange={(e) => setDueDayInput(e.target.value)}
+                    />
+                    <span className="form-help-text" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                      Digunakan untuk menampilkan countdown pengingat tagihan di dashboard.
+                    </span>
+                  </div>
+                )}
 
               {/* If creating category: choose type */}
               {isCreating && activeTab === 'categories' && (
@@ -483,12 +514,19 @@ export function ManageSheet({
                             <span className="manage-item-icon">{acc.icon || '🏦'}</span>
                             <div className="manage-item-text">
                               <span className="manage-item-name">{acc.name}</span>
-                              <span className="manage-item-sub">
-                                {acc.kind === 'liability' && acc.balance < 0
-                                  ? `Tagihan: ${formatIdr(Math.abs(acc.balance))}`
-                                  : formatIdr(acc.balance)}{' '}
-                                • {acc.kind === 'asset' ? '🏦 Aset' : '💳 PayLater'}
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span className="manage-item-sub">
+                                  {acc.kind === 'liability' && acc.balance < 0
+                                    ? `Tagihan: ${formatIdr(Math.abs(acc.balance))}`
+                                    : formatIdr(acc.balance)}{' '}
+                                  • {acc.kind === 'asset' ? '🏦 Aset' : '💳 PayLater'}
+                                </span>
+                                {acc.dueDay && (
+                                  <span className="account-due-badge">
+                                    🗓️ Tgl {acc.dueDay}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </button>
                           <div className="manage-item-actions">

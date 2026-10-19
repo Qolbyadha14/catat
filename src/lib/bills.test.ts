@@ -1,4 +1,4 @@
-import { calculateDueDays, getUpcomingBills, type UpcomingBill } from './bills';
+import { calculateDueDays, getUpcomingBills } from './bills';
 import type { Account } from './schemas';
 
 function assert(condition: boolean, msg: string) {
@@ -37,6 +37,7 @@ const accounts: Account[] = [
     kind: 'liability',
     balance: -450000,
     dueDay: 25,
+    isArchived: false,
     createdAt: Date.now(),
   },
   {
@@ -44,6 +45,7 @@ const accounts: Account[] = [
     name: 'BCA',
     kind: 'asset',
     balance: 5000000,
+    isArchived: false,
     createdAt: Date.now(),
   },
   {
@@ -52,14 +54,19 @@ const accounts: Account[] = [
     kind: 'liability',
     balance: 0, // No bill
     dueDay: 20,
+    isArchived: false,
     createdAt: Date.now(),
   },
 ];
 
 const upcoming = getUpcomingBills(accounts, refDate);
 assert(upcoming.length === 1, 'Only accounts with outstanding liability should be returned');
-assert(upcoming[0].accountId === 'spaylater', 'Account ID should match');
-assert(upcoming[0].amount === 450000, 'Bill amount should be 450000');
-assert(upcoming[0].daysLeft === 6, 'Days left should be 6');
+const firstBill = upcoming[0];
+assert(Boolean(firstBill), 'First bill exists');
+if (firstBill) {
+  assert(firstBill.accountId === 'spaylater', 'Account ID should match');
+  assert(firstBill.amount === 450000, 'Bill amount should be 450000');
+  assert(firstBill.daysLeft === 6, 'Days left should be 6');
+}
 
 console.log('bills domain logic unit tests passed');
