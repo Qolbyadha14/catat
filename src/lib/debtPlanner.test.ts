@@ -2,7 +2,6 @@ import {
   getLiabilityAccountsWithDebt,
   sortDebtsByStrategy,
   calculateDebtPlan,
-  type DebtStrategy,
 } from './debtPlanner';
 import type { Account } from './schemas';
 
@@ -29,16 +28,16 @@ assert(!debts.some((d) => d.id === 'acc_archived'), 'Should not include archived
 
 // 2. Test Snowball sorting (smallest balance first)
 const snowballSorted = sortDebtsByStrategy(debts, 'snowball');
-assert(snowballSorted[0].id === 'acc_tiktok', 'Snowball: TikTok (500k) should be first');
-assert(snowballSorted[1].id === 'acc_shopee', 'Snowball: Shopee (1.5M) should be second');
-assert(snowballSorted[2].id === 'acc_bca_cc', 'Snowball: BCA CC (3M) should be third');
-assert(snowballSorted[3].id === 'acc_cimb_kta', 'Snowball: KTA (10M) should be fourth');
+assert(snowballSorted[0]!.id === 'acc_tiktok', 'Snowball: TikTok (500k) should be first');
+assert(snowballSorted[1]!.id === 'acc_shopee', 'Snowball: Shopee (1.5M) should be second');
+assert(snowballSorted[2]!.id === 'acc_bca_cc', 'Snowball: BCA CC (3M) should be third');
+assert(snowballSorted[3]!.id === 'acc_cimb_kta', 'Snowball: KTA (10M) should be fourth');
 
 // 3. Test Avalanche sorting (PayLater & KTA first, then CC)
 const avalancheSorted = sortDebtsByStrategy(debts, 'avalanche');
 assert(
-  avalancheSorted[0].name.toLowerCase().includes('paylater') ||
-  avalancheSorted[0].name.toLowerCase().includes('kta'),
+  avalancheSorted[0]!.name.toLowerCase().includes('paylater') ||
+  avalancheSorted[0]!.name.toLowerCase().includes('kta'),
   'Avalanche: high-risk / PayLater / KTA must be prioritized'
 );
 
@@ -47,8 +46,8 @@ const fixedStartDate = new Date(2026, 9, 1); // Oct 1, 2026
 const plan = calculateDebtPlan(mockAccounts, 2000000, 'snowball', fixedStartDate);
 assert(plan.totalDebt === 15000000, 'Total debt must be 15,000,000');
 assert(plan.items.length === 4, 'Should have 4 items in plan');
-assert(plan.items[0].isCurrentFocus === true, 'First item must be current focus');
-assert(plan.items[1].isCurrentFocus === false, 'Second item must not be current focus');
+assert(plan.items[0]!.isCurrentFocus === true, 'First item must be current focus');
+assert(plan.items[1]!.isCurrentFocus === false, 'Second item must not be current focus');
 assert(plan.totalMonths === 8, 'At 2M/mo, 15M takes ceil(15/2) = 8 months');
 assert(plan.debtFreeDate !== null, 'debtFreeDate must be computed');
 
