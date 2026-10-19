@@ -9,14 +9,45 @@ import {
   acceptDisclosure,
 } from '../../lib/ocr/rateLimiter';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
+import type { Category, Account } from '../../lib/schemas';
 
-interface ReceiptScanTabProps {
+export interface ReceiptScanTabProps {
   uid: string;
-  onScanSuccess: (result: OcrReceiptResult) => void;
+  categories?: Category[];
+  accounts?: Account[];
+  onScanSuccess: (result: OcrReceiptResult, previewUrl: string | null) => void;
   onCancelToManual: () => void;
 }
 
-export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: ReceiptScanTabProps) {
+export function extractImageFileFromClipboard(clipboardData: DataTransfer | null): File | null {
+  if (!clipboardData) return null;
+  if (clipboardData.items) {
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) return file;
+      }
+    }
+  }
+  if (clipboardData.files) {
+    for (let i = 0; i < clipboardData.files.length; i++) {
+      const file = clipboardData.files[i];
+      if (file.type.startsWith('image/')) {
+        return file;
+      }
+    }
+  }
+  return null;
+}
+
+export function ReceiptScanTab({
+  uid,
+  categories,
+  accounts,
+  onScanSuccess,
+  onCancelToManual,
+}: ReceiptScanTabProps) {
   const [hasConsent, setHasConsent] = useState(() => hasAcceptedDisclosure(uid));
   const [remaining, setRemaining] = useState(() => getRemainingScans(uid));
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,6 +77,23 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
       }
     };
   }, [previewUrl]);
+
+  // Global paste handler for clipboard screenshot
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (isProcessing) return;
+      const file = extractImageFileFromClipboard(e.clipboardData);
+      if (file) {
+        e.preventDefault();
+        handleProcessFile(file);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [isProcessing, hasConsent]);
 
   const handleConsent = () => {
     acceptDisclosure(uid);
@@ -91,17 +139,30 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
         }
       }, 3000);
 
-      // 5. Invoke AI
+      // 5. Invoke AI with categories & accounts context
+      const categoryContext = categories?.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+      }));
+      const accountContext = accounts?.map((a) => ({
+        id: a.id,
+        name: a.name,
+        kind: a.kind,
+      }));
+
       const result = await scanReceiptWithGemini(resized.blob, uid, {
         signal: controller.signal,
         timeoutMs: 60000,
+        categories: categoryContext,
+        accounts: accountContext,
       });
 
       // Update remaining quota state
       setRemaining(getRemainingScans(uid));
 
-      // 6. Zero auto-save: handoff to parent form
-      onScanSuccess(result);
+      // 6. Zero auto-save: handoff to parent form with previewUrl
+      onScanSuccess(result, localUrl);
     } catch (err: unknown) {
       if (controller.signal.aborted) {
         setError('Pemindaian struk dibatalkan.');
@@ -138,6 +199,28 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
     }
     setIsProcessing(false);
     setStatusMessage('');
+  };
+
+  const handlePasteClipboard = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find((t) => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const file = new File([blob], 'clipboard.png', { type: imageType });
+            handleProcessFile(file);
+            return;
+          }
+        }
+        setError('Tidak ada gambar di clipboard Anda. Silakan screenshot atau copy gambar struk terlebih dahulu.');
+      } else {
+        setError('Tekan tombol keyboard Cmd+V (Mac) atau Ctrl+V (Windows) untuk paste gambar.');
+      }
+    } catch {
+      setError('Izin akses clipboard tidak aktif. Gunakan shortcut keyboard Cmd+V atau Ctrl+V.');
+    }
   };
 
   const handleDragOver = (e: DragEvent) => {
@@ -288,12 +371,21 @@ export function ReceiptScanTab({ uid, onScanSuccess, onCancelToManual }: Receipt
               onClick={() => fileInputRef.current?.click()}
               disabled={remaining <= 0}
             >
-              🖼️ Pilih dari Galeri
+              🖼️ Pilih Galeri
+            </button>
+            <button
+              type="button"
+              className="btn-outline ocr-btn-paste"
+              onClick={handlePasteClipboard}
+              disabled={remaining <= 0}
+              title="Paste screenshot dari clipboard"
+            >
+              📋 Paste
             </button>
           </div>
 
           <span className="ocr-dropzone-hint">
-            Format JPG, PNG, atau WebP (maks. 20MB)
+            Format JPG, PNG, atau WebP (maks. 20MB) • Bisa paste langsung (Cmd+V / Ctrl+V)
           </span>
 
           {remaining <= 0 && (

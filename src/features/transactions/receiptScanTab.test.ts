@@ -102,4 +102,44 @@ function assert(condition: boolean, msg: string) {
   // parseOcrReceipt ONLY creates the structured object and makes NO writes to Firestore.
 }
 
+// 4. Clipboard Image Extraction Gate
+import { extractImageFileFromClipboard } from './ReceiptScanTab';
+
+{
+  const imgBlob = new Blob(['img-bytes'], { type: 'image/png' });
+  const imgFile = new File([imgBlob], 'clipboard.png', { type: 'image/png' });
+
+  // Mock DataTransfer with image item
+  const mockDtWithImage = {
+    items: [
+      {
+        type: 'image/png',
+        getAsFile: () => imgFile,
+      },
+    ],
+    files: [imgFile],
+  } as unknown as DataTransfer;
+
+  const extracted = extractImageFileFromClipboard(mockDtWithImage);
+  assert(extracted !== null, 'extracts image from clipboard');
+  assert(extracted?.name === 'clipboard.png', 'extracted image has correct name');
+
+  // Mock DataTransfer with only text
+  const mockDtWithText = {
+    items: [
+      {
+        type: 'text/plain',
+        getAsFile: () => new File(['hello'], 'text.txt', { type: 'text/plain' }),
+      },
+    ],
+    files: [],
+  } as unknown as DataTransfer;
+
+  const noImage = extractImageFileFromClipboard(mockDtWithText);
+  assert(noImage === null, 'returns null when no image in clipboard');
+
+  assert(extractImageFileFromClipboard(null) === null, 'returns null for null clipboardData');
+}
+
 console.log('ReceiptScanTab unit & validation gate tests pass');
+
