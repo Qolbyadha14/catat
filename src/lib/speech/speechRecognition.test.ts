@@ -43,8 +43,8 @@ assert(
 
 // 3. createSpeechRecognizer initializes with id-ID by default
 let transcriptResult = '';
-let isFinalResult = false;
-let ended = false;
+let isFinalResult: boolean = false;
+let ended: boolean = false;
 const recognizer = createSpeechRecognizer({
   windowObj: mockWin,
   lang: 'id-ID',
@@ -75,10 +75,10 @@ assert(
   transcriptResult === 'Makan siang tiga puluh lima ribu gopay',
   'Transcript should match speech event'
 );
-assert(isFinalResult === true, 'isFinal should be true');
+assert(Boolean(isFinalResult), 'isFinal should be true');
 
 recognizer?.stop();
 assert(recognizer?.isListening() === false, 'Recognizer should not be listening after stop');
-assert(ended === true, 'onEnd should have been called');
+assert(Boolean(ended), 'onEnd should have been called');
 
 console.log('speechRecognition unit tests passed');

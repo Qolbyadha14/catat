@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Category, Account } from '../../lib/schemas';
 import {
   parseTransactionText,
@@ -6,6 +6,11 @@ import {
   type TextCategoryContext,
   type TextAccountContext,
 } from '../../lib/nlp/textAssistantService';
+import {
+  isSpeechRecognitionSupported,
+  createSpeechRecognizer,
+  type SpeechRecognizerController,
+} from '../../lib/speech/speechRecognition';
 
 interface TextAssistantTabProps {
   categories: Category[];
@@ -31,6 +36,9 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognizerRef = useRef<SpeechRecognizerController | null>(null);
 
   const categoryContexts: TextCategoryContext[] = categories.map((c) => ({
     id: c.id,
@@ -77,6 +85,55 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
     }
   };
 
+  useEffect(() => {
+    const supported = isSpeechRecognitionSupported();
+    setSpeechSupported(supported);
+    if (!supported) return;
+
+    const controller = createSpeechRecognizer({
+      lang: 'id-ID',
+      onStart: () => {
+        setIsRecording(true);
+        setErrorMessage(null);
+      },
+      onResult: (text, isFinal) => {
+        setInputText(text);
+        if (isFinal) {
+          setIsRecording(false);
+          void handleProcess(text);
+        }
+      },
+      onError: (err) => {
+        setIsRecording(false);
+        if (err === 'not-allowed') {
+          setErrorMessage('Izin mikrofon tidak diberikan. Silakan izinkan akses mikrofon di browser.');
+        } else if (err === 'no-speech') {
+          setErrorMessage('Suara tidak terdeteksi. Silakan coba bicara kembali.');
+        } else {
+          setErrorMessage(`Kendala pengenalan suara (${err}). Silakan ketik manual.`);
+        }
+      },
+      onEnd: () => {
+        setIsRecording(false);
+      },
+    });
+
+    recognizerRef.current = controller;
+
+    return () => {
+      controller?.abort();
+    };
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognizerRef.current) return;
+    if (isRecording) {
+      recognizerRef.current.stop();
+    } else {
+      recognizerRef.current.start();
+    }
+  };
+
   const handleChipClick = (suggestion: string) => {
     // Strip leading emoji
     const cleaned = suggestion.replace(/^[^\w\s]+\s*/, '');
@@ -92,7 +149,7 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
           <span>Asisten AI Natural Language</span>
         </div>
         <p className="text-assistant-subtitle">
-          Ketik transaksi dalam bahasa santai sehari-hari. AI & parser otomatis mendeteksi nominal, kategori, dan akun Anda.
+          Ketik transaksi dalam bahasa santai sehari-hari atau tekan tombol mikrofon untuk bicara. AI & parser otomatis mendeteksi nominal, kategori, dan akun Anda.
         </p>
       </div>
 
@@ -117,6 +174,29 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
         />
 
         <div className="text-assistant-actions">
+          {speechSupported && (
+            <button
+              type="button"
+              className={`text-assistant-mic-btn ${isRecording ? 'is-recording' : ''}`}
+              onClick={toggleRecording}
+              disabled={isProcessing}
+              title={isRecording ? 'Klik untuk berhenti merekam' : 'Catat pakai suara'}
+              aria-label={isRecording ? 'Berhenti merekam suara' : 'Catat transaksi pakai suara'}
+            >
+              {isRecording ? (
+                <>
+                  <span className="mic-pulse-dot" aria-hidden="true" />
+                  <span>Mendengarkan...</span>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">🎙️</span>
+                  <span>Bicara</span>
+                </>
+              )}
+            </button>
+          )}
+
           {inputText && (
             <button
               type="button"

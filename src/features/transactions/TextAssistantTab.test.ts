@@ -52,4 +52,13 @@ const accounts = [
   assert(res.categoryId === 'cat-salary', 'Matched Gaji');
 }
 
+// Test voice input integration capability
+import { isSpeechRecognitionSupported, createSpeechRecognizer } from '../../lib/speech/speechRecognition';
+
+{
+  assert(typeof isSpeechRecognitionSupported === 'function', 'isSpeechRecognitionSupported is a function');
+  assert(typeof createSpeechRecognizer === 'function', 'createSpeechRecognizer is a function');
+  assert(isSpeechRecognitionSupported(undefined) === false, 'Returns false without window');
+}
+
 console.log('TextAssistantTab tests passed');
