@@ -282,11 +282,22 @@ export function ManageSheet({
                   <select
                     className="form-select"
                     value={kind}
-                    onChange={(e) => setKind(e.target.value as 'asset' | 'liability')}
+                    onChange={(e) => {
+                      const selected = e.target.value as 'asset' | 'liability';
+                      setKind(selected);
+                      if (selected === 'liability' && !icon) {
+                        setIcon('💳');
+                      }
+                    }}
                   >
-                    <option value="asset">Aset (Kas/Tabungan)</option>
-                    <option value="liability">Liabilitas (Hutang/Kredit)</option>
+                    <option value="asset">🏦 Aset (Kas Tunai, Rekening Bank, Dompet Digital)</option>
+                    <option value="liability">💳 PayLater & Tagihan (SPayLater, GoPay Later, Kredivo, dll)</option>
                   </select>
+                  <span className="form-help-text" style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: 4, display: 'block' }}>
+                    {kind === 'liability'
+                      ? 'Pengeluaran via akun ini akan otomatis tercatat sebagai tagihan hutang yang harus dibayar.'
+                      : 'Akun kas dan tabungan yang siap dibelanjakan.'}
+                  </span>
                 </div>
               )}
 
@@ -368,7 +379,10 @@ export function ManageSheet({
                             <div className="manage-item-text">
                               <span className="manage-item-name">{acc.name}</span>
                               <span className="manage-item-sub">
-                                {formatIdr(acc.balance)} • {acc.kind === 'asset' ? 'Aset' : 'Liabilitas'}
+                                {acc.kind === 'liability' && acc.balance < 0
+                                  ? `Tagihan: ${formatIdr(Math.abs(acc.balance))}`
+                                  : formatIdr(acc.balance)}{' '}
+                                • {acc.kind === 'asset' ? '🏦 Aset' : '💳 PayLater'}
                               </span>
                             </div>
                           </button>
