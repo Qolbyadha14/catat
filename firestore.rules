@@ -1,6 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isLedgerMember(ledgerId) {
+      return isAuthenticated() && (
+        ledgerId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/ledgers/$(ledgerId)) &&
+         request.auth.uid in get(/databases/$(database)/documents/ledgers/$(ledgerId)).data.members)
+      );
+    }
+
+    // Collaborative Family Ledgers
+    match /ledgers/{ledgerId} {
+      allow read: if isLedgerMember(ledgerId) || (
+        isAuthenticated() && resource != null && resource.data.inviteCode != null
+      );
+      allow create: if isAuthenticated();
+      allow update: if isLedgerMember(ledgerId) || (
+        isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'updatedAt'])
+      );
+      allow delete: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
+
+      match /accounts/{accountId} {
+        allow read, create: if isLedgerMember(ledgerId);
+        allow update: if isLedgerMember(ledgerId) && request.resource.data.kind == resource.data.kind;
+        allow delete: if false;
+      }
+
+      match /categories/{categoryId} {
+        allow read, create: if isLedgerMember(ledgerId);
+        allow update: if isLedgerMember(ledgerId) && request.resource.data.type == resource.data.type;
+        allow delete: if false;
+      }
+
+      match /transactions/{transactionId} {
+        allow read, write: if isLedgerMember(ledgerId);
+      }
+    }
+
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
 

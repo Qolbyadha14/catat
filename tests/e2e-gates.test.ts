@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'bun:test';
-import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, updateDoc, setDoc, query, where } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth } from '../src/lib/firebase';
 import { ensureUserDefaults } from '../src/features/auth/seedDefaults';
@@ -850,5 +850,88 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(hasAcceptedDisclosure(testUser)).toBe(false);
     acceptDisclosure(testUser);
     expect(hasAcceptedDisclosure(testUser)).toBe(true);
+  });
+
+  it('Gate 14: Family Collaborative Ledger — Multi-Member Access, CreatedBy Attribution & Invite Query', async () => {
+    const ledgerId = testUid;
+    const ledgerDocRef = doc(db, 'ledgers', ledgerId);
+
+    // 1. Create collaborative ledger for testUid
+    const initialLedger = {
+      id: ledgerId,
+      name: 'Keluarga Qolby',
+      ownerUid: testUid,
+      inviteCode: 'KATAT8',
+      members: {
+        [testUid]: {
+          uid: testUid,
+          name: 'Qolby',
+          email: 'qolby@example.com',
+          role: 'owner',
+          joinedAt: Date.now(),
+        },
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await setDoc(ledgerDocRef, initialLedger);
+
+    // 2. Add family member (e.g. spouse)
+    const spouseUid = `spouse_${Date.now()}`;
+    await setDoc(
+      ledgerDocRef,
+      {
+        members: {
+          ...initialLedger.members,
+          [spouseUid]: {
+            uid: spouseUid,
+            name: 'Sarah',
+            email: 'sarah@example.com',
+            role: 'member',
+            joinedAt: Date.now(),
+          },
+        },
+        updatedAt: Date.now(),
+      },
+      { merge: true }
+    );
+
+    // 3. Record transaction in ledger with createdBy, referenceKey, and items
+    const txId = `tx_collab_${Date.now()}`;
+    const txDocRef = doc(db, `ledgers/${ledgerId}/transactions`, txId);
+    await setDoc(txDocRef, {
+      id: txId,
+      type: 'expense',
+      amount: 45000,
+      date: Date.now(),
+      accountId: 'acc_shared',
+      categoryId: 'cat_groceries',
+      note: 'Belanja Sayur & Buah',
+      referenceKey: 'tiktok#578129381293812',
+      items: [
+        { name: 'Apel Fuji', qty: 2, price: 15000, subtotal: 30000 },
+        { name: 'Wortel 1kg', qty: 1, price: 15000, subtotal: 15000 },
+      ],
+      createdBy: {
+        uid: spouseUid,
+        name: 'Sarah',
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // 4. Read the transaction and verify createdBy & items
+    const snap = await getDoc(txDocRef);
+    expect(snap.exists()).toBe(true);
+    const data = snap.data();
+    expect(data?.createdBy?.name).toBe('Sarah');
+    expect(data?.referenceKey).toBe('tiktok#578129381293812');
+    expect(data?.items?.length).toBe(2);
+
+    // 5. Query ledger by invite code (allowed for invite link preview)
+    const inviteQuery = query(collection(db, 'ledgers'), where('inviteCode', '==', 'KATAT8'));
+    const inviteSnap = await getDocs(inviteQuery);
+    expect(inviteSnap.empty).toBe(false);
+    expect(inviteSnap.docs[0].data().name).toBe('Keluarga Qolby');
   });
 });
