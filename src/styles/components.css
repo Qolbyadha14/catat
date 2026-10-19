@@ -4608,6 +4608,228 @@ dialog::backdrop,
   background: var(--accent-primary-hover);
 }
 
+/* Weekly Cashflow Chart */
+.weekly-chart-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.weekly-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.weekly-chart-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weekly-chart-icon {
+  font-size: 16px;
+}
+
+.weekly-chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.weekly-chart-month-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+
+.weekly-chart-detail-pill {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weekly-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.weekly-detail-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.weekly-detail-metrics {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.metric-income {
+  color: var(--success-fg);
+}
+
+.metric-expense {
+  color: var(--danger-fg);
+}
+
+.metric-net.surplus {
+  color: var(--success-fg);
+}
+
+.metric-net.deficit {
+  color: var(--danger-fg);
+}
+
+.metric-divider {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.weekly-chart-bars-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 140px;
+  padding: 8px 0 0;
+  gap: 6px;
+}
+
+.weekly-bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 2px;
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.weekly-bar-column:hover {
+  background: var(--surface-secondary);
+}
+
+.weekly-bar-column.selected {
+  background: rgba(99, 102, 241, 0.08);
+  outline: 1px solid var(--accent-primary);
+}
+
+.weekly-peak-star {
+  position: absolute;
+  top: 0;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.weekly-bar-pair {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 90px;
+  width: 100%;
+  justify-content: center;
+}
+
+.weekly-bar-income {
+  background: var(--success-fg);
+  border-radius: 3px 3px 0 0;
+  width: 8px;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+
+.weekly-bar-expense {
+  background: var(--danger-fg);
+  border-radius: 3px 3px 0 0;
+  width: 8px;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+
+.weekly-bar-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 6px;
+  line-height: 1;
+}
+
+.weekly-bar-subdate {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1;
+}
+
+.weekly-chart-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+
+.weekly-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.legend-dot.income {
+  background: var(--success-fg);
+}
+
+.legend-dot.expense {
+  background: var(--danger-fg);
+}
+
+.weekly-peak-hint {
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
 
 
 

@@ -13,6 +13,7 @@ import { CategoryBreakdown } from './CategoryBreakdown';
 import { MonthNavigator } from './MonthNavigator';
 import { ManageSheet } from '../manage/ManageSheet';
 import { UpcomingBillsCard } from './UpcomingBillsCard';
+import { WeeklyCashflowChart } from './WeeklyCashflowChart';
 import type { UpcomingBill } from '../../lib/bills';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
@@ -379,6 +380,14 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
             </div>
           </div>
         </div>
+
+        {/* Weekly Cashflow Trend Chart */}
+        <WeeklyCashflowChart
+          transactions={transactions}
+          year={selectedMonth.getFullYear()}
+          month={selectedMonth.getMonth() + 1}
+          monthLabel={monthLabel}
+        />
 
         {/* Category Breakdown */}
         <CategoryBreakdown

@@ -69,12 +69,14 @@ export function computeWeeklyCashflow(
     const weekIdx = Math.min(Math.floor((day - 1) / 7), 4);
     const targetWeek = weeks[weekIdx];
 
-    if (tx.type === 'expense') {
-      targetWeek.expense += tx.amount;
-      totalExpense += tx.amount;
-    } else if (tx.type === 'income') {
-      targetWeek.income += tx.amount;
-      totalIncome += tx.amount;
+    if (targetWeek) {
+      if (tx.type === 'expense') {
+        targetWeek.expense += tx.amount;
+        totalExpense += tx.amount;
+      } else if (tx.type === 'income') {
+        targetWeek.income += tx.amount;
+        totalIncome += tx.amount;
+      }
     }
   }
 

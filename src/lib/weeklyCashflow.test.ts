@@ -1,4 +1,4 @@
-import { computeWeeklyCashflow, type WeekSummary } from './weeklyCashflow';
+import { computeWeeklyCashflow } from './weeklyCashflow';
 import type { Transaction } from './schemas';
 
 function assert(condition: boolean, msg: string) {
@@ -8,6 +8,7 @@ function assert(condition: boolean, msg: string) {
 // Year 2026, Month 10 (October, 31 days)
 const year = 2026;
 const month = 10;
+const now = Date.now();
 
 const mockTransactions: Transaction[] = [
   // Week 1 (Oct 3)
@@ -17,8 +18,10 @@ const mockTransactions: Transaction[] = [
     amount: 150000,
     accountId: 'acc-1',
     categoryId: 'food',
+    note: 'Makan',
     date: new Date(2026, 9, 3).getTime(),
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   },
   // Week 1 (Oct 5) - Income
   {
@@ -27,8 +30,10 @@ const mockTransactions: Transaction[] = [
     amount: 5000000,
     accountId: 'acc-1',
     categoryId: 'salary',
+    note: 'Gaji',
     date: new Date(2026, 9, 5).getTime(),
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   },
   // Week 2 (Oct 10) - Expense
   {
@@ -37,8 +42,10 @@ const mockTransactions: Transaction[] = [
     amount: 300000,
     accountId: 'acc-1',
     categoryId: 'bill',
+    note: 'Listrik',
     date: new Date(2026, 9, 10).getTime(),
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   },
   // Week 4 (Oct 25) - Expense
   {
@@ -47,8 +54,10 @@ const mockTransactions: Transaction[] = [
     amount: 450000,
     accountId: 'acc-1',
     categoryId: 'shopping',
+    note: 'Belanja',
     date: new Date(2026, 9, 25).getTime(),
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   },
 ];
 
@@ -56,19 +65,27 @@ const result = computeWeeklyCashflow(mockTransactions, year, month);
 
 // 1. Should produce 5 weeks for October (31 days)
 assert(result.weeks.length === 5, 'October should have 5 weeks');
-assert(result.weeks[0].weekNumber === 1, 'First week is Week 1');
-assert(result.weeks[0].dateRangeLabel === '1 - 7 Okt', 'Date range label matches');
+const w1 = result.weeks[0];
+const w2 = result.weeks[1];
+const w3 = result.weeks[2];
 
-// 2. Week 1 income and expense
-assert(result.weeks[0].income === 5000000, 'Week 1 income should be 5.000.000');
-assert(result.weeks[0].expense === 150000, 'Week 1 expense should be 150.000');
-assert(result.weeks[0].net === 4850000, 'Week 1 net should be 4.850.000');
+assert(Boolean(w1 && w2 && w3), 'Weeks exist');
 
-// 3. Week 2 expense
-assert(result.weeks[1].expense === 300000, 'Week 2 expense should be 300.000');
+if (w1 && w2 && w3) {
+  assert(w1.weekNumber === 1, 'First week is Week 1');
+  assert(w1.dateRangeLabel === '1 - 7 Okt', 'Date range label matches');
 
-// 4. Week 3 empty
-assert(result.weeks[2].expense === 0, 'Week 3 expense should be 0');
+  // 2. Week 1 income and expense
+  assert(w1.income === 5000000, 'Week 1 income should be 5.000.000');
+  assert(w1.expense === 150000, 'Week 1 expense should be 150.000');
+  assert(w1.net === 4850000, 'Week 1 net should be 4.850.000');
+
+  // 3. Week 2 expense
+  assert(w2.expense === 300000, 'Week 2 expense should be 300.000');
+
+  // 4. Week 3 empty
+  assert(w3.expense === 0, 'Week 3 expense should be 0');
+}
 
 // 5. Peak spending week
 assert(result.peakExpenseWeekNumber === 4, 'Week 4 had highest expense (450.000)');
