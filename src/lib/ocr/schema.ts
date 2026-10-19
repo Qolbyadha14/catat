@@ -5,6 +5,11 @@ export const ocrReceiptSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD').nullable(),
   merchant: z.string().trim().max(100).nullable(),
   confidence: z.enum(['high', 'low']),
+  categoryId: z.string().trim().nullable().optional().default(null),
+  accountId: z.string().trim().nullable().optional().default(null),
+  platform: z.enum(['shopeefood', 'gofood', 'spaylater', 'tiktok', 'bank_jago', 'qris', 'other']).optional().default('other'),
+  paymentMethod: z.string().trim().max(50).nullable().optional().default(null),
+  suggestedType: z.enum(['expense', 'transfer']).optional().default('expense'),
 });
 
 export type OcrReceiptRaw = z.infer<typeof ocrReceiptSchema>;
@@ -14,6 +19,11 @@ export interface OcrReceiptResult {
   date: string;
   merchant: string | null;
   confidence: 'high' | 'low';
+  categoryId: string | null;
+  accountId: string | null;
+  platform: 'shopeefood' | 'gofood' | 'spaylater' | 'tiktok' | 'bank_jago' | 'qris' | 'other';
+  paymentMethod: string | null;
+  suggestedType: 'expense' | 'transfer';
 }
 
 function toLocalDateString(d: Date): string {
@@ -44,5 +54,10 @@ export function parseOcrReceipt(input: unknown, referenceDate: Date = new Date()
     date: finalDate,
     merchant: parsed.merchant ? parsed.merchant.trim() : null,
     confidence: parsed.confidence,
+    categoryId: parsed.categoryId ?? null,
+    accountId: parsed.accountId ?? null,
+    platform: parsed.platform ?? 'other',
+    paymentMethod: parsed.paymentMethod ? parsed.paymentMethod.trim() : null,
+    suggestedType: parsed.suggestedType ?? 'expense',
   };
 }

@@ -42,4 +42,36 @@ if (config) {
   assert(config.responseMimeType === 'application/json', 'Response MIME type is application/json');
 }
 
+// 5. Extended Schema: categoryId, accountId, platform, paymentMethod, suggestedType
+import { parseOcrReceipt } from './schema';
+import { buildOcrSystemInstruction } from './geminiService';
+
+const mockAiOutput = {
+  amount: 45000,
+  date: '2026-10-19',
+  merchant: 'Kopi Kenangan Grand Indonesia',
+  confidence: 'high',
+  categoryId: 'cat_food_123',
+  accountId: 'acc_jago_456',
+  platform: 'shopeefood',
+  paymentMethod: 'ShopeePay',
+  suggestedType: 'expense',
+};
+const parsed = parseOcrReceipt(mockAiOutput);
+assert(parsed.amount === 45000, 'amount parsed correctly');
+assert(parsed.categoryId === 'cat_food_123', 'categoryId parsed');
+assert(parsed.accountId === 'acc_jago_456', 'accountId parsed');
+assert(parsed.platform === 'shopeefood', 'platform parsed');
+assert(parsed.paymentMethod === 'ShopeePay', 'paymentMethod parsed');
+assert(parsed.suggestedType === 'expense', 'suggestedType parsed');
+
+// 6. buildOcrSystemInstruction generates rich context
+const cats = [{ id: 'c1', name: 'Makan & Minum', type: 'expense' as const }];
+const accs = [{ id: 'a1', name: 'Bank Jago', kind: 'asset' as const }];
+const prompt = buildOcrSystemInstruction(cats, accs);
+assert(prompt.includes('Makan & Minum'), 'prompt contains category name');
+assert(prompt.includes('Bank Jago'), 'prompt contains account name');
+assert(prompt.includes('ShopeeFood'), 'prompt contains platform guidance');
+
 console.log('geminiService unit tests pass');
+

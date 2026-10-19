@@ -4,10 +4,24 @@ import { app, db } from '../firebase';
 import { parseOcrReceipt, type OcrReceiptResult } from './schema';
 import { recordScan } from './rateLimiter';
 
+export interface OcrCategoryContext {
+  id: string;
+  name: string;
+  type: 'expense' | 'income';
+}
+
+export interface OcrAccountContext {
+  id: string;
+  name: string;
+  kind: 'asset' | 'liability';
+}
+
 export interface ScanOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
   modelName?: string;
+  categories?: OcrCategoryContext[];
+  accounts?: OcrAccountContext[];
 }
 
 export const OCR_DAILY_LIMIT = 20;
@@ -111,12 +125,48 @@ export async function incrementScanUsage(uid: string, today: Date = new Date()):
   return nextCount;
 }
 
-export function getGeminiModel(modelName: string = DEFAULT_OCR_MODEL) {
+export function buildOcrSystemInstruction(
+  categories?: OcrCategoryContext[],
+  accounts?: OcrAccountContext[]
+): string {
+  let prompt = `Kamu adalah asisten OCR cerdas untuk struk transaksi digital dan fisik di Indonesia.
+Ekstrak informasi transaksi berikut secara akurat:
+1. amount: Total pembayaran/tagihan bersih (integer positif rupiah, abaikan subtotal dan diskon).
+2. date: Tanggal transaksi format YYYY-MM-DD. Jika tidak ada tahun, gunakan tahun ini. Null jika tidak tertera.
+3. merchant: Nama resto/toko/penerima transfer/tujuan tagihan (bersihkan dari nomor rekening atau ID transaksi panjang).
+4. platform: Salah satu dari "shopeefood", "gofood", "spaylater", "tiktok", "bank_jago", "qris", atau "other".
+5. paymentMethod: Metode pembayaran riil yang tertera (contoh: "Shopee Paylater", "GoPay", "Saldo Jago", "QRIS BCA").
+6. suggestedType: "transfer" jika struk adalah pelunasan tagihan paylater/kartu kredit atau kirim uang antar bank; "expense" jika pembelian barang/makanan/jasa.
+7. confidence: "high" jika angka total dan informasi terbaca jelas, "low" jika pudar/buram/meragukan.`;
+
+  if (categories && categories.length > 0) {
+    prompt += `\n\nPilihlah categoryId yang PALING TEPAT dari daftar kategori pengguna berikut:\n` +
+      categories.map((c) => `- ID: "${c.id}", Nama: "${c.name}", Tipe: "${c.type}"`).join('\n') +
+      `\nAturan Kategori:\n- Jika struk ShopeeFood / GoFood / resto / kafe: prioritaskan kategori makanan/minuman (expense).\n- Jika struk belanja pakaian/barang: pilih kategori belanja (expense).\n- Jika struk tagihan listrik/air/utilitas: pilih kategori tagihan/utilitas.\n- Jika tidak ada yang cocok, isi null.`;
+  } else {
+    prompt += `\ncategoryId: isi null jika tidak ada daftar kategori.`;
+  }
+
+  if (accounts && accounts.length > 0) {
+    prompt += `\n\nPilihlah accountId yang PALING TEPAT dari daftar akun/rekening pengguna berikut:\n` +
+      accounts.map((a) => `- ID: "${a.id}", Nama: "${a.name}", Tipe: "${a.kind}"`).join('\n') +
+      `\nAturan Akun:\n- Jika pembayaran menggunakan PayLater (SPayLater, TikTok Paylater) dan pengguna memiliki akun bertipe "liability" yang sesuai, pilih ID akun tersebut.\n- Jika struk dari Bank Jago, pilih akun Bank Jago.\n- Jika tidak ada akun yang cocok persis, pilih akun utama pertama atau isi null.`;
+  } else {
+    prompt += `\naccountId: isi null jika tidak ada daftar akun.`;
+  }
+
+  return prompt;
+}
+
+export function getGeminiModel(
+  modelName: string = DEFAULT_OCR_MODEL,
+  categories?: OcrCategoryContext[],
+  accounts?: OcrAccountContext[]
+) {
   const ai = getAI(app, { backend: new GoogleAIBackend() });
   return getGenerativeModel(ai, {
     model: modelName,
-    systemInstruction:
-      'Kamu adalah sistem OCR struk belanja Indonesia. Ekstrak total belanja (nominal rupiah integer positif, abaikan subtotal atau diskon), tanggal transaksi format YYYY-MM-DD, dan nama merchant/toko. Jika tidak ada informasi tanggal atau merchant, set null. Confidence bernilai "high" jika total terlihat jelas, atau "low" jika struk pudar, miring parah, atau angka diragukan.',
+    systemInstruction: buildOcrSystemInstruction(categories, accounts),
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: {
@@ -141,6 +191,31 @@ export function getGeminiModel(modelName: string = DEFAULT_OCR_MODEL) {
             enum: ['high', 'low'],
             description: 'Tingkat kepastian pembacaan',
           },
+          categoryId: {
+            type: SchemaType.STRING,
+            description: 'ID kategori yang paling cocok dari daftar pengguna',
+            nullable: true,
+          },
+          accountId: {
+            type: SchemaType.STRING,
+            description: 'ID akun yang paling cocok dari daftar pengguna',
+            nullable: true,
+          },
+          platform: {
+            type: SchemaType.STRING,
+            enum: ['shopeefood', 'gofood', 'spaylater', 'tiktok', 'bank_jago', 'qris', 'other'],
+            description: 'Platform asal struk',
+          },
+          paymentMethod: {
+            type: SchemaType.STRING,
+            description: 'Metode pembayaran riil tertera di struk',
+            nullable: true,
+          },
+          suggestedType: {
+            type: SchemaType.STRING,
+            enum: ['expense', 'transfer'],
+            description: 'Saran jenis transaksi (expense untuk belanja, transfer untuk bayar tagihan/kirim uang)',
+          },
         },
         required: ['amount', 'confidence'],
       },
@@ -153,14 +228,14 @@ export async function scanReceiptWithGemini(
   uid: string,
   options: ScanOptions = {}
 ): Promise<OcrReceiptResult> {
-  const { timeoutMs = 60000, signal, modelName = DEFAULT_OCR_MODEL } = options;
+  const { timeoutMs = 60000, signal, modelName = DEFAULT_OCR_MODEL, categories, accounts } = options;
 
   // 1. Pre-check quota BEFORE invoking AI (do not increment yet)
   await checkScanQuota(uid);
 
   // 2. Prepare part & model
   const imagePart = await blobToGenerativePart(blob);
-  const model = getGeminiModel(modelName);
+  const model = getGeminiModel(modelName, categories, accounts);
 
   // 3. Request with timeout
   let timer: ReturnType<typeof setTimeout> | null = null;
