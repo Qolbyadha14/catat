@@ -2091,17 +2091,17 @@ dialog::backdrop,
 
 /* Category Chip Grid */
 .category-chip-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
 }
 
 .category-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   min-height: 44px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -2113,6 +2113,8 @@ dialog::backdrop,
   text-align: left;
   transition: all var(--transition-fast);
   position: relative;
+  flex: 0 0 auto;
+  max-width: 100%;
 }
 
 .category-chip:hover {
@@ -2142,10 +2144,9 @@ dialog::backdrop,
 }
 
 .category-chip-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: normal;
+  line-height: 1.25;
 }
 
 .category-chip-badge {
@@ -2156,6 +2157,7 @@ dialog::backdrop,
   border-radius: var(--radius-full);
   font-weight: 700;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .category-empty-state {
@@ -2216,9 +2218,9 @@ dialog::backdrop,
 
 .account-pill-name {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: normal;
+  line-height: 1.25;
 }
 
 .account-pill-kind-badge {
