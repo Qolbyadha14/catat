@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Receipt, Users, TrendingUp, Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
 import { playHapticSound } from '../../lib/haptic';
 
 interface LoginViewProps {
@@ -26,15 +26,9 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
   const isBusy = loading || submitting;
 
   return (
-    <main className="w-full max-w-sm sm:max-w-md bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col items-center text-center relative z-10 animate-in fade-in zoom-in-95 duration-200">
-      {/* Top Accent Badge */}
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80 text-[11px] font-bold tracking-tight mb-3.5 shadow-2xs">
-        <span>✨</span>
-        <span>v2.0 • Pintar & Kolaboratif</span>
-      </div>
-
+    <main className="w-full max-w-sm bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 sm:p-10 shadow-xl shadow-slate-200/40 dark:shadow-none flex flex-col items-center text-center relative z-10 animate-in fade-in zoom-in-95 duration-200">
       {/* Official Brand Logo */}
-      <picture className="mb-2 block">
+      <picture className="mb-3 block">
         <source media="(prefers-color-scheme: dark)" srcSet="/brand/catat-logo-dark.svg" />
         <img
           src="/brand/catat-logo.svg"
@@ -44,61 +38,13 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
       </picture>
 
       {/* Slogan */}
-      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-tight mb-6 max-w-xs mx-auto">
+      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium tracking-tight mb-8 max-w-xs mx-auto">
         Catat keuangan, hidup lebih tenang.
       </p>
 
-      {/* 3 Core Value Proposition Highlights */}
-      <div className="w-full space-y-2.5 mb-6 text-left">
-        {/* 1. AI OCR Scanner */}
-        <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 transition-all hover:bg-slate-100/70 dark:hover:bg-slate-800">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-2xs">
-            <Receipt size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Scan Struk Berbasis AI
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-              Ekstraksi transaksi instan tanpa ketik manual
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Family Ledger */}
-        <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 transition-all hover:bg-slate-100/70 dark:hover:bg-slate-800">
-          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-2xs">
-            <Users size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Buku Kas Bersama
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-              Sinkronisasi real-time bersama pasangan & keluarga
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Debt & PayLater */}
-        <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 transition-all hover:bg-slate-100/70 dark:hover:bg-slate-800">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 shadow-2xs">
-            <TrendingUp size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Arus Kas & PayLater
-            </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-              Pantau jatuh tempo tagihan & anggaran bulanan
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Error Banner */}
       {error && (
-        <div className="w-full mb-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900 text-rose-700 dark:text-rose-400 text-xs font-medium text-center animate-in fade-in">
+        <div className="w-full mb-5 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900 text-rose-700 dark:text-rose-400 text-xs font-medium text-center animate-in fade-in">
           <span>⚠️ {error}</span>
         </div>
       )}
@@ -141,10 +87,10 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
       </button>
 
       {/* Security Trust Signals & Attribution */}
-      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 w-full flex flex-col items-center justify-center text-center">
+      <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 w-full flex flex-col items-center justify-center text-center">
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
           <Lock size={12} className="text-emerald-500 shrink-0" />
-          <span>Data terenkripsi & tersimpan aman di cloud Firebase</span>
+          <span>Data terenkripsi & tersimpan aman</span>
         </div>
         <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
           Crafted with care by CoreboyLabs
