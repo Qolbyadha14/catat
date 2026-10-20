@@ -79,7 +79,7 @@ export const BalanceHeroCard: React.FC<BalanceHeroCardProps> = ({
 
   return (
     <div className="px-5 mb-5">
-      <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1244d3] via-[#1a56ea] to-[#0c319e] p-5 text-white shadow-xl shadow-blue-600/30">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1244d3] via-[#1a56ea] to-[#0c319e] p-5 text-white shadow-lg shadow-blue-600/20">
         {/* Glow ambient background accents */}
         <div className="absolute -top-12 -right-12 w-44 h-44 bg-cyan-400/25 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-blue-400/20 rounded-full blur-xl pointer-events-none" />

@@ -119,7 +119,7 @@ export const StatsTab: React.FC<StatsTabProps> = ({
       </div>
 
       {/* Donut Chart Card */}
-      <div className="bg-white rounded-[32px] p-5 border border-slate-100 shadow-sm">
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
@@ -142,14 +142,12 @@ export const StatsTab: React.FC<StatsTabProps> = ({
       </div>
 
       {/* Weekly Cashflow Chart */}
-      <div className="bg-white rounded-[32px] p-1 border border-slate-100 shadow-sm overflow-hidden">
-        <WeeklyCashflowChart
-          transactions={transactions}
-          year={selectedMonth.getFullYear()}
-          month={selectedMonth.getMonth() + 1}
-          monthLabel={monthLabel}
-        />
-      </div>
+      <WeeklyCashflowChart
+        transactions={transactions}
+        year={selectedMonth.getFullYear()}
+        month={selectedMonth.getMonth() + 1}
+        monthLabel={monthLabel}
+      />
 
       {/* Ranked Category Spending List */}
       {donutData.length > 0 && (

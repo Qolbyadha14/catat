@@ -60,7 +60,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
   return (
     <div className="px-5 space-y-5 mb-8 animate-in fade-in duration-200">
       {/* Header Overview Card */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-[28px] p-5 shadow-lg border border-slate-700/60 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-md border border-slate-700/60 relative overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-cyan-300 flex items-center justify-center font-bold">
@@ -114,7 +114,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
         <h2 className="text-base font-bold text-slate-900 tracking-tight">Rincian Anggaran Kategori</h2>
 
         {budgetedCategories.length === 0 ? (
-          <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-6 text-center border border-slate-100 shadow-xs">
             <div className="text-3xl mb-2">🎯</div>
             <h3 className="text-sm font-bold text-slate-800">Belum Ada Target Anggaran</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto">

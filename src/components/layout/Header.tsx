@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   isProfileMenuOpen,
 }) => {
   return (
-    <header className="px-5 pt-3 pb-3 bg-[#f8fafc]">
+    <header className="px-5 py-3 sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100/80">
       <div className="flex items-center justify-between gap-3">
         {/* User Info */}
         <div className="flex items-center gap-3">

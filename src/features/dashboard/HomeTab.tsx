@@ -137,7 +137,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             Memuat data transaksi...
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <div className="bg-white rounded-3xl p-6 text-center border border-slate-100 shadow-sm my-2">
+          <div className="bg-white rounded-2xl p-6 text-center border border-slate-100 shadow-xs my-2">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2 text-xl">
               📝
             </div>

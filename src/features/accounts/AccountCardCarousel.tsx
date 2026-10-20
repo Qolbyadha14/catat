@@ -22,56 +22,50 @@ export const AccountCardCarousel: React.FC<AccountCardCarouselProps> = ({
 
     if (isLiability) {
       return {
-        gradient: 'from-rose-950 via-rose-800 to-slate-900',
-        logoText: 'PAYLATER',
-        chipColor: 'bg-rose-400/80 border-rose-300/80',
-        cardType: 'Liabilitas',
+        gradient: 'from-rose-950 via-rose-900 to-slate-900',
+        badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+        badgeText: 'PayLater',
       };
     }
     if (nameLower.includes('bca')) {
       return {
-        gradient: 'from-[#003882] via-[#0055b8] to-[#00204d]',
-        logoText: 'BCA',
-        chipColor: 'bg-amber-300/80 border-amber-400/80',
-        cardType: 'Debit Prioritas',
+        gradient: 'from-[#003366] via-[#004080] to-[#002244]',
+        badgeBg: 'bg-blue-400/20 text-blue-200 border-blue-400/30',
+        badgeText: 'Bank BCA',
       };
     }
     if (nameLower.includes('mandiri')) {
       return {
-        gradient: 'from-[#002d62] via-[#0b4f9c] to-[#001f44]',
-        logoText: 'MANDIRI',
-        chipColor: 'bg-amber-300/80 border-amber-400/80',
-        cardType: 'Debit Card',
+        gradient: 'from-[#002855] via-[#003d7a] to-[#001f3f]',
+        badgeBg: 'bg-sky-400/20 text-sky-200 border-sky-400/30',
+        badgeText: 'Bank Mandiri',
       };
     }
     if (nameLower.includes('gopay') || nameLower.includes('ovo') || nameLower.includes('dana') || nameLower.includes('shopee')) {
       return {
-        gradient: 'from-teal-800 via-emerald-700 to-slate-900',
-        logoText: acc.name.toUpperCase(),
-        chipColor: 'bg-emerald-300/80 border-emerald-400/80',
-        cardType: 'E-Wallet',
+        gradient: 'from-teal-900 via-emerald-800 to-slate-900',
+        badgeBg: 'bg-emerald-400/20 text-emerald-200 border-emerald-400/30',
+        badgeText: 'E-Wallet',
       };
     }
     if (nameLower.includes('cash') || nameLower.includes('tunai') || acc.icon === '💵') {
       return {
         gradient: 'from-slate-800 via-slate-700 to-zinc-900',
-        logoText: 'CASH',
-        chipColor: 'bg-zinc-400/80 border-zinc-300/80',
-        cardType: 'Dompet Tunai',
+        badgeBg: 'bg-slate-400/20 text-slate-200 border-slate-400/30',
+        badgeText: 'Tunai',
       };
     }
 
     return {
-      gradient: 'from-blue-900 via-indigo-800 to-slate-900',
-      logoText: acc.name.slice(0, 10).toUpperCase(),
-      chipColor: 'bg-amber-300/80 border-amber-400/80',
-      cardType: 'Rekening',
+      gradient: 'from-slate-900 via-blue-950 to-slate-900',
+      badgeBg: 'bg-blue-400/20 text-blue-200 border-blue-400/30',
+      badgeText: 'Rekening',
     };
   };
 
   return (
     <div className="relative">
-      <div className="overflow-x-auto no-scrollbar flex gap-3.5 snap-x snap-mandatory py-1 px-5">
+      <div className="overflow-x-auto no-scrollbar flex gap-3 snap-x snap-mandatory py-1 px-5">
         {accounts.map((acc, index) => {
           const style = getCardStyle(acc);
           const isLiability = acc.kind === 'liability';
@@ -85,68 +79,60 @@ export const AccountCardCarousel: React.FC<AccountCardCarouselProps> = ({
                 playHapticSound('tap');
                 onSelectIndex(index);
               }}
-              className={`min-w-[280px] sm:min-w-[310px] snap-center rounded-[28px] p-5 text-white shadow-xl cursor-pointer transition-all duration-200 hover:scale-[1.02] bg-gradient-to-tr ${style.gradient} relative overflow-hidden border ${
-                isSelected ? 'border-white/40 ring-2 ring-white/20' : 'border-white/10'
+              className={`min-w-[260px] sm:min-w-[280px] snap-center rounded-2xl p-4 text-white shadow-md cursor-pointer transition-all duration-200 hover:scale-[1.01] bg-gradient-to-br ${style.gradient} relative overflow-hidden border ${
+                isSelected ? 'border-white/50 ring-2 ring-white/20' : 'border-white/10'
               }`}
             >
-              {/* Gloss reflection overlay */}
-              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-44 h-44 bg-white/10 rounded-full blur-xl pointer-events-none" />
-
-              {/* Top card row: Logo & Chip */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2.5">
-                  {/* EMV Chip visual */}
-                  <div className={`w-8 h-6 rounded-md ${style.chipColor} border flex items-center justify-center p-0.5 shadow-xs`}>
-                    <div className="w-full h-full border border-amber-700/30 rounded-xs grid grid-cols-2 gap-0.5" />
+              {/* Header: Icon, Name & Type Badge */}
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur-xs flex items-center justify-center text-sm font-bold shrink-0">
+                    {acc.icon || (isLiability ? '💳' : '🏦')}
                   </div>
-                  <span className="text-[11px] font-black tracking-widest uppercase opacity-90">
-                    {style.logoText}
-                  </span>
-                </div>
-
-                {/* Overlapping circles visual (Mastercard-like) */}
-                <div className="flex -space-x-2">
-                  <div className="w-5 h-5 rounded-full bg-rose-500/90 shadow-xs" />
-                  <div className="w-5 h-5 rounded-full bg-amber-400/90 shadow-xs" />
-                </div>
-              </div>
-
-              {/* Card Number masked */}
-              <div className="font-mono text-sm tracking-widest font-semibold mb-4 text-slate-200">
-                •••• •••• •••• {acc.id.slice(-4).toUpperCase() || '5083'}
-              </div>
-
-              {/* Bottom Row: Holder & Balance */}
-              <div className="flex items-end justify-between border-t border-white/15 pt-2.5">
-                <div>
-                  <span className="text-[9px] uppercase tracking-wider text-slate-300 block">
-                    {style.cardType}
-                  </span>
-                  <span className="text-xs font-bold truncate max-w-[140px] block text-white">
+                  <span className="text-xs font-bold truncate text-white">
                     {acc.name}
                   </span>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-[9px] uppercase tracking-wider text-slate-300 block">
-                    {isLiability ? 'Total Tagihan' : 'Saldo'}
-                  </span>
-                  <span
-                    className={`text-sm font-black tracking-tight ${
-                      isLiability
-                        ? debt > 0
-                          ? 'text-rose-300'
-                          : 'text-emerald-300'
-                        : 'text-white'
-                    }`}
-                  >
-                    {isLiability
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${style.badgeBg} shrink-0`}>
+                  {style.badgeText}
+                </span>
+              </div>
+
+              {/* Main: Balance / Debt Amount */}
+              <div className="my-2">
+                <span className="text-[10px] font-medium text-slate-300 uppercase tracking-wider block">
+                  {isLiability ? 'Tagihan Saat Ini' : 'Saldo Akun'}
+                </span>
+                <div
+                  className={`text-lg sm:text-xl font-extrabold tracking-tight mt-0.5 ${
+                    isLiability
                       ? debt > 0
-                        ? formatIdr(debt)
-                        : '✓ Rp 0 (Lunas)'
-                      : formatIdr(acc.balance)}
-                  </span>
+                        ? 'text-rose-300'
+                        : 'text-emerald-300'
+                      : 'text-white'
+                  }`}
+                >
+                  {isLiability
+                    ? debt > 0
+                      ? formatIdr(debt)
+                      : '✓ Rp 0 (Lunas)'
+                    : formatIdr(acc.balance)}
                 </div>
+              </div>
+
+              {/* Footer row: Extra contextual details */}
+              <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[10px] text-slate-300/80">
+                <span>
+                  {isLiability && acc.dueDay
+                    ? `Jatuh tempo: Tgl ${acc.dueDay}`
+                    : isLiability
+                    ? 'Kewajiban / Tagihan'
+                    : 'Uang Tersedia'}
+                </span>
+                <span className="text-white/60 text-[9px] font-mono">
+                  {isSelected ? '● Aktif' : 'Pilih'}
+                </span>
               </div>
             </div>
           );
