@@ -27,3 +27,4 @@ dist-ssr
 *.sw?
 .firebase
 sample-ui-ux
+.superpowers
