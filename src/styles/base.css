@@ -1,7 +1,11 @@
 /* Minimal reset + base */
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body, #root { height: 100%; }
+html, body, #root {
+  height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
 
 html.preload,
 html.preload * {

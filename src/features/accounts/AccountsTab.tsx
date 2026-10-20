@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Plus, Zap } from 'lucide-react';
 import type { Account } from '../../lib/schemas';
 import { calculateAccountSummary, getAccountDebt } from '../../lib/accountCalculations';
 import { formatIdr } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
-import { AccountCardCarousel } from './AccountCardCarousel';
 import { DebtPlannerCard } from '../dashboard/DebtPlannerCard';
 
 export interface AccountsTabProps {
@@ -20,19 +19,17 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   onPayDebt,
   onOpenAddAccount,
 }) => {
-  const [selectedCardIndex, setSelectedCardIndex] = useState<number>(0);
-
   const activeAccounts = accounts.filter((a) => !a.isArchived);
   const accountSummary = calculateAccountSummary(activeAccounts);
 
   return (
-    <div className="space-y-5 mb-8 animate-in fade-in duration-200">
+    <div className="w-full min-w-0 max-w-full space-y-5 mb-8 animate-in fade-in duration-200">
       {/* Header */}
       <div className="px-5 flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-slate-900 tracking-tight">Dompet & Rekening</h2>
           <div className="text-[11px] font-medium text-slate-400 mt-0.5">
-            Total {activeAccounts.length} Akun • Saldo Bersih: {formatIdr(accountSummary.netBalance)}
+            Total {activeAccounts.length} Akun Terhubung
           </div>
         </div>
 
@@ -49,14 +46,36 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
         </button>
       </div>
 
-      {/* Realistic Card Carousel */}
-      {activeAccounts.length > 0 && (
-        <AccountCardCarousel
-          accounts={activeAccounts}
-          selectedIndex={selectedCardIndex}
-          onSelectIndex={setSelectedCardIndex}
-        />
-      )}
+      {/* Net Worth & Balance Overview Card (Vertical, Solid, Clean) */}
+      <div className="px-5">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 p-5 text-white shadow-md border border-slate-700/50 relative overflow-hidden">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-1">
+            <span className="uppercase tracking-wider text-[11px]">Kekayaan Bersih (Net Worth)</span>
+            <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-slate-200">
+              {activeAccounts.length} Akun
+            </span>
+          </div>
+
+          <div className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
+            {formatIdr(accountSummary.netBalance)}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-white/10 grid grid-cols-2 gap-3 text-xs">
+            <div className="bg-white/5 rounded-xl p-2.5">
+              <span className="text-[10px] font-medium text-slate-400 block">💰 Total Aset</span>
+              <span className="text-sm font-bold text-emerald-300 mt-0.5 block">
+                {formatIdr(accountSummary.totalAssets)}
+              </span>
+            </div>
+            <div className="bg-white/5 rounded-xl p-2.5">
+              <span className="text-[10px] font-medium text-slate-400 block">💳 Total Tagihan</span>
+              <span className="text-sm font-bold text-rose-300 mt-0.5 block">
+                {accountSummary.totalLiabilities > 0 ? formatIdr(accountSummary.totalLiabilities) : 'Rp 0 (Lunas)'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Uang Saya (Aset) Listing */}
       <section className="px-5 space-y-2.5">
