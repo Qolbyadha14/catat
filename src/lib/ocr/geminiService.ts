@@ -3,6 +3,8 @@ import { doc, getDoc, runTransaction } from 'firebase/firestore';
 import { app, db } from '../firebase';
 import { parseOcrReceipt, type OcrReceiptResult } from './schema';
 import { recordScan } from './rateLimiter';
+import { getCachedSystemConfig } from '../config/systemConfigService';
+import { logAiUsage } from '../telemetry/telemetryService';
 
 export interface OcrCategoryContext {
   id: string;
@@ -84,28 +86,30 @@ export function formatOcrDateKey(d: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export async function checkScanQuota(uid: string, today: Date = new Date()): Promise<number> {
+export async function checkScanQuota(uid: string, today: Date = new Date(), limitOverride?: number): Promise<number> {
   const dateKey = formatOcrDateKey(today);
   const usageId = `${uid}_${dateKey}`;
   const usageRef = doc(db, 'scanUsage', usageId);
   const snap = await getDoc(usageRef);
   const current = snap.exists() ? (snap.data().count ?? 0) : 0;
-  if (current >= OCR_DAILY_LIMIT) {
-    throw new Error('Batas kuota harian tercapai (maksimal 20 scan per hari).');
+  const limit = limitOverride ?? getCachedSystemConfig().dailyOcrLimit ?? OCR_DAILY_LIMIT;
+  if (current >= limit) {
+    throw new Error(`Batas kuota harian tercapai (maksimal ${limit} scan per hari).`);
   }
   return current;
 }
 
-export async function incrementScanUsage(uid: string, today: Date = new Date()): Promise<number> {
+export async function incrementScanUsage(uid: string, today: Date = new Date(), limitOverride?: number): Promise<number> {
   const dateKey = formatOcrDateKey(today);
   const usageId = `${uid}_${dateKey}`;
   const usageRef = doc(db, 'scanUsage', usageId);
+  const limit = limitOverride ?? getCachedSystemConfig().dailyOcrLimit ?? OCR_DAILY_LIMIT;
 
   const nextCount = await runTransaction(db, async (tx) => {
     const snap = await tx.get(usageRef);
     const current = snap.exists() ? (snap.data().count ?? 0) : 0;
-    if (current >= OCR_DAILY_LIMIT) {
-      throw new Error('Batas kuota harian tercapai (maksimal 20 scan per hari).');
+    if (current >= limit) {
+      throw new Error(`Batas kuota harian tercapai (maksimal ${limit} scan per hari).`);
     }
     const updated = current + 1;
     tx.set(
@@ -124,6 +128,7 @@ export async function incrementScanUsage(uid: string, today: Date = new Date()):
   recordScan(uid, dateKey);
   return nextCount;
 }
+
 
 export function buildOcrSystemInstruction(
   categories?: OcrCategoryContext[],
@@ -251,10 +256,29 @@ export async function scanReceiptWithGemini(
   uid: string,
   options: ScanOptions = {}
 ): Promise<OcrReceiptResult> {
-  const { timeoutMs = 60000, signal, modelName = DEFAULT_OCR_MODEL, categories, accounts } = options;
+  const sysConfig = getCachedSystemConfig();
+  if (sysConfig.aiKillSwitch) {
+    throw new Error('Fitur AI sedang dinonaktifkan sementara oleh sistem untuk pemeliharaan.');
+  }
+
+  const effectiveLimit = sysConfig.dailyOcrLimit || OCR_DAILY_LIMIT;
+  const activeDefaultModel = sysConfig.defaultOcrModel || DEFAULT_OCR_MODEL;
+  const activeFallbackModel = sysConfig.fallbackOcrModel || FALLBACK_OCR_MODEL;
+
+  const {
+    timeoutMs = 60000,
+    signal,
+    modelName = activeDefaultModel,
+    categories,
+    accounts,
+  } = options;
+
+  const startTime = performance.now();
+  let usedModel = modelName;
+  let isFallback = false;
 
   // 1. Pre-check quota BEFORE invoking AI (do not increment yet)
-  await checkScanQuota(uid);
+  await checkScanQuota(uid, new Date(), effectiveLimit);
 
   // 2. Prepare parts & model
   const blobs = Array.isArray(blobOrBlobs) ? blobOrBlobs : [blobOrBlobs];
@@ -285,16 +309,28 @@ export async function scanReceiptWithGemini(
   });
 
   const generatePromise = (async () => {
-    let res;
+    let res: {
+      response: {
+        text: () => string;
+        usageMetadata?: {
+          promptTokenCount?: number;
+          candidatesTokenCount?: number;
+          totalTokenCount?: number;
+        };
+      };
+    };
+
     try {
       res = await model.generateContent([
         ...imageParts,
         promptText,
       ]);
     } catch (err: unknown) {
-      if (modelName === DEFAULT_OCR_MODEL && !signal?.aborted) {
-        // Fallback to gemini-3.5-flash if lite encounters an issue
-        const fallbackModel = getGeminiModel(FALLBACK_OCR_MODEL);
+      if (modelName === activeDefaultModel && !signal?.aborted) {
+        // Fallback to activeFallbackModel if lite encounters an issue
+        const fallbackModel = getGeminiModel(activeFallbackModel);
+        usedModel = activeFallbackModel;
+        isFallback = true;
         res = await fallbackModel.generateContent([
           ...imageParts,
           promptText,
@@ -312,18 +348,51 @@ export async function scanReceiptWithGemini(
       throw new Error('Nominal total struk tidak terdeteksi jelas. Pastikan foto struk terang dan angka total terlihat.');
     }
 
-    return parseOcrReceipt(rawJson);
+    const usageMeta = res.response.usageMetadata;
+    const tokensUsed = usageMeta
+      ? {
+          promptTokens: usageMeta.promptTokenCount,
+          responseTokens: usageMeta.candidatesTokenCount,
+          totalTokens: usageMeta.totalTokenCount,
+        }
+      : undefined;
+
+    return {
+      parsedResult: parseOcrReceipt(rawJson),
+      tokensUsed,
+    };
   })();
 
-  let result: OcrReceiptResult;
   try {
-    result = await Promise.race([generatePromise, timeoutPromise]);
+    const { parsedResult, tokensUsed } = await Promise.race([generatePromise, timeoutPromise]);
+    const durationMs = performance.now() - startTime;
+
+    logAiUsage({
+      uid,
+      feature: 'ocr',
+      model: usedModel,
+      durationMs,
+      status: isFallback ? 'fallback' : 'success',
+      tokensUsed,
+    });
+
+    // 4. Only commit quota increment on successful AI extraction
+    await incrementScanUsage(uid, new Date(), effectiveLimit);
+
+    return parsedResult;
+  } catch (err: unknown) {
+    const durationMs = performance.now() - startTime;
+    logAiUsage({
+      uid,
+      feature: 'ocr',
+      model: usedModel,
+      durationMs,
+      status: 'error',
+      errorMsg: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   } finally {
     if (timer) clearTimeout(timer);
   }
-
-  // 4. Only commit quota increment on successful AI extraction
-  await incrementScanUsage(uid);
-
-  return result;
 }
+

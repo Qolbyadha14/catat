@@ -124,3 +124,8 @@ export async function updateSystemConfig(
   await setDoc(configRef, payload, { merge: true });
   cachedConfig = resolveMergedConfig({ ...cachedConfig, ...payload });
 }
+
+export function setCachedSystemConfigForTest(config: Partial<SystemConfig>): void {
+  cachedConfig = resolveMergedConfig({ ...cachedConfig, ...config });
+}
+

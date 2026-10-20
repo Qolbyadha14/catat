@@ -1,6 +1,9 @@
 import { getAI, getGenerativeModel, GoogleAIBackend, SchemaType } from 'firebase/ai';
 import { app } from '../firebase';
 
+import { getCachedSystemConfig } from '../config/systemConfigService';
+import { logAiUsage } from '../telemetry/telemetryService';
+
 export interface TextCategoryContext {
   id: string;
   name: string;
@@ -29,7 +32,10 @@ export interface ParseTextOptions {
   categories?: TextCategoryContext[];
   accounts?: TextAccountContext[];
   timeoutMs?: number;
+  uid?: string;
+  userEmail?: string;
 }
+
 
 /**
  * Parses Indonesian currency amounts:
@@ -364,22 +370,49 @@ export async function parseTransactionText(
   text: string,
   options: ParseTextOptions = {}
 ): Promise<ParsedTransactionResult> {
-  const { categories = [], accounts = [], timeoutMs = 4000 } = options;
+  const { categories = [], accounts = [], timeoutMs = 4000, uid = 'anonymous', userEmail } = options;
 
   if (!text || text.trim().length === 0) {
     return parseTransactionLocally('', categories, accounts);
   }
 
+  const sysConfig = getCachedSystemConfig();
+  if (sysConfig.aiKillSwitch) {
+    return parseTransactionLocally(text, categories, accounts);
+  }
+
+  const startTime = performance.now();
+  const modelName = sysConfig.defaultOcrModel || 'gemini-3.5-flash-lite';
+
   // Attempt Gemini AI with timeout
   try {
-    const aiPromise = parseTransactionWithGemini(text, categories, accounts);
+    const aiPromise = parseTransactionWithGemini(text, categories, accounts, modelName);
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('AI timeout')), timeoutMs)
     );
 
-    return await Promise.race([aiPromise, timeoutPromise]);
+    const result = await Promise.race([aiPromise, timeoutPromise]);
+    logAiUsage({
+      uid,
+      userEmail,
+      feature: 'nlp',
+      model: modelName,
+      durationMs: performance.now() - startTime,
+      status: 'success',
+    });
+    return result;
   } catch (error) {
     console.warn('Gemini text assistant unavailable or timed out, using local parser:', error);
+    logAiUsage({
+      uid,
+      userEmail,
+      feature: 'nlp',
+      model: modelName,
+      durationMs: performance.now() - startTime,
+      status: 'fallback',
+      errorMsg: error instanceof Error ? error.message : String(error),
+    });
     return parseTransactionLocally(text, categories, accounts);
   }
 }
+

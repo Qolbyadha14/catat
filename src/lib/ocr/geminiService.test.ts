@@ -81,6 +81,29 @@ assert(prompt.includes('Bank Jago'), 'prompt contains account name');
   assert(part1.inlineData.data !== '' && part2.inlineData.data !== '', 'generates valid base64 data for parts');
 }
 
+// 8. Dynamic config limit and killswitch tests
+import { scanReceiptWithGemini } from './geminiService';
+import { setCachedSystemConfigForTest } from '../config/systemConfigService';
+
+{
+  setCachedSystemConfigForTest({ aiKillSwitch: true });
+  let killed = false;
+  try {
+    const dummyBlob = new Blob(['test'], { type: 'image/jpeg' });
+    await scanReceiptWithGemini(dummyBlob, 'test-user');
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('dinonaktifkan sementara')) {
+      killed = true;
+    }
+  }
+  assert(killed, 'scanReceiptWithGemini aborts when aiKillSwitch is active');
+
+  // Reset kill switch
+  setCachedSystemConfigForTest({ aiKillSwitch: false });
+}
+
 console.log('geminiService unit tests pass');
+
+
 
 
