@@ -5,10 +5,9 @@ import {
   RotateCcw,
   Search,
   CheckCircle,
-  AlertCircle,
-  Shield,
 } from 'lucide-react';
-import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+
 import { db } from '../../lib/firebase';
 import { formatTelemetryDateKey } from '../../lib/telemetry/telemetryService';
 import { isShowcaseMode, MOCK_SHOWCASE_USER } from '../../lib/showcaseMockData';

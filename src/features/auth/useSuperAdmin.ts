@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { isShowcaseMode } from '../../lib/showcaseMockData';
 
@@ -51,7 +51,7 @@ export function useSuperAdmin(uid?: string | null, email?: string | null): Super
         setIsSuperAdmin(snap.exists());
         setLoading(false);
       },
-      (error) => {
+      (_error) => {
         // Fallback to email check if Firestore listener errors
         setIsSuperAdmin(isSuperAdminEmail(email));
         setLoading(false);
@@ -63,3 +63,4 @@ export function useSuperAdmin(uid?: string | null, email?: string | null): Super
 
   return { isSuperAdmin, loading };
 }
+

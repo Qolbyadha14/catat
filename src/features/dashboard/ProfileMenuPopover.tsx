@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import type { ThemeMode } from '../../lib/theme';
+import { useSuperAdmin } from '../auth/useSuperAdmin';
 
 interface ProfileMenuPopoverProps {
   user: User;
   isOpen: boolean;
   onClose: () => void;
   onOpenManage: () => void;
+  onOpenAdmin?: () => void;
   onSignOut: () => Promise<void>;
   theme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
@@ -17,10 +19,13 @@ export function ProfileMenuPopover({
   isOpen,
   onClose,
   onOpenManage,
+  onOpenAdmin,
   onSignOut,
   theme,
   onThemeChange,
 }: ProfileMenuPopoverProps) {
+  const { isSuperAdmin } = useSuperAdmin(user?.uid, user?.email);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,6 +39,7 @@ export function ProfileMenuPopover({
 
   const displayName = user.displayName || user.email?.split('@')[0] || 'Pengguna';
   const initial = displayName.slice(0, 2).toUpperCase();
+
 
   return (
     <div className="profile-popover-backdrop" onClick={onClose}>
@@ -73,7 +79,34 @@ export function ProfileMenuPopover({
           <span className="profile-menu-chevron" aria-hidden="true">›</span>
         </button>
 
+        {isSuperAdmin && onOpenAdmin && (
+          <>
+            <div className="profile-popover-divider" />
+            <button
+              type="button"
+              className="profile-menu-row-btn"
+              onClick={() => {
+                onClose();
+                onOpenAdmin();
+              }}
+            >
+              <span className="profile-menu-icon" aria-hidden="true">🛡️</span>
+              <div className="profile-menu-text">
+                <span className="profile-menu-title flex items-center gap-1.5">
+                  <span>Super Admin Hub</span>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    Admin
+                  </span>
+                </span>
+                <span className="profile-menu-desc">Pantau AI telemetry, kuota pengguna & kontrol sistem</span>
+              </div>
+              <span className="profile-menu-chevron" aria-hidden="true">›</span>
+            </button>
+          </>
+        )}
+
         <div className="profile-popover-divider" />
+
 
         {/* Theme Segmented Switcher */}
         <div className="profile-theme-section">

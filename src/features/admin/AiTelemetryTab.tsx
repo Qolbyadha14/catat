@@ -5,12 +5,12 @@ import {
   Clock,
   Sparkles,
   Search,
-  Filter,
   AlertTriangle,
   XCircle,
   FileText,
   MessageSquare,
 } from 'lucide-react';
+
 import type { AiLogEntry, AiTelemetrySummary } from '../../lib/telemetry/telemetryService';
 
 interface AiTelemetryTabProps {

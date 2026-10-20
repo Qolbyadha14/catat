@@ -5,8 +5,8 @@ import {
   Save,
   CheckCircle,
   AlertTriangle,
-  Zap,
 } from 'lucide-react';
+
 import type { SystemConfig } from '../../lib/config/systemConfigService';
 import { updateSystemConfig } from '../../lib/config/systemConfigService';
 

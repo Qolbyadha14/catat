@@ -943,4 +943,53 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(inviteSnap.empty).toBe(false);
     expect(inviteSnap.docs[0].data().name).toBe('Keluarga Qolby');
   });
+
+  it('Gate 13: Super Admin Hub, System Config & AI Telemetry Logging Integration', async () => {
+    const { getSystemConfig } = await import('../src/lib/config/systemConfigService');
+    const { logAiUsage, calculateTelemetrySummary } = await import('../src/lib/telemetry/telemetryService');
+    const { isSuperAdminEmail } = await import('../src/features/auth/useSuperAdmin');
+
+    // 1. Verify system config defaults & getter
+    const config = await getSystemConfig();
+    expect(config.dailyOcrLimit).toBeGreaterThanOrEqual(20);
+    expect(config.defaultOcrModel).toBe('gemini-3.5-flash-lite');
+    expect(config.aiKillSwitch).toBe(false);
+
+    // 2. Verify isSuperAdminEmail
+    expect(isSuperAdminEmail('admin@catat.com')).toBe(true);
+    expect(isSuperAdminEmail('random@gmail.com')).toBe(false);
+
+    // 3. Log an AI telemetry event fire-and-forget
+    await logAiUsage({
+      uid: testUid,
+      userEmail: 'test@catat.com',
+      feature: 'ocr',
+      model: config.defaultOcrModel,
+      durationMs: 850,
+      status: 'success',
+      tokensUsed: { promptTokens: 300, responseTokens: 100, totalTokens: 400 },
+    });
+
+    // 4. Verify telemetry summary calculation
+    const summary = calculateTelemetrySummary([
+      {
+        id: 'mock-1',
+        uid: testUid,
+        userEmail: 'test@catat.com',
+        feature: 'ocr',
+        model: 'gemini-3.5-flash-lite',
+        durationMs: 850,
+        status: 'success',
+        tokensUsed: { promptTokens: 300, responseTokens: 100, totalTokens: 400 },
+        timestamp: Date.now(),
+        dateKey: '2026-10-20',
+      },
+    ]);
+    expect(summary.totalCalls).toBe(1);
+    expect(summary.ocrCalls).toBe(1);
+    expect(summary.successCount).toBe(1);
+    expect(summary.avgDurationMs).toBe(850);
+    expect(summary.totalTokens).toBe(400);
+  });
 });
+

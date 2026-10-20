@@ -1,12 +1,13 @@
-import { describe, it, expect } from 'bun:test';
 import { isSuperAdminEmail } from './useSuperAdmin';
 
-describe('useSuperAdmin', () => {
-  it('correctly identifies admin email format or known admin emails', () => {
-    expect(isSuperAdminEmail('admin@catat.com')).toBe(true);
-    expect(isSuperAdminEmail('qolby@coreboylabs.com')).toBe(true);
-    expect(isSuperAdminEmail('regular@user.com')).toBe(false);
-    expect(isSuperAdminEmail(null)).toBe(false);
-    expect(isSuperAdminEmail(undefined)).toBe(false);
-  });
-});
+function assert(condition: boolean, msg: string) {
+  if (!condition) throw new Error(`Assertion failed: ${msg}`);
+}
+
+assert(isSuperAdminEmail('admin@catat.com') === true, 'admin@catat.com is superadmin');
+assert(isSuperAdminEmail('qolby@coreboylabs.com') === true, 'qolby@coreboylabs.com is superadmin');
+assert(isSuperAdminEmail('regular@user.com') === false, 'regular@user.com is not superadmin');
+assert(isSuperAdminEmail(null) === false, 'null is not superadmin');
+assert(isSuperAdminEmail(undefined) === false, 'undefined is not superadmin');
+
+console.log('useSuperAdmin tests pass');

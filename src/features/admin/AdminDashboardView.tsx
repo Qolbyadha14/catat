@@ -6,9 +6,8 @@ import {
   Users,
   Sliders,
   ArrowLeft,
-  Sparkles,
-  ShieldAlert,
 } from 'lucide-react';
+
 import {
   type AiLogEntry,
   subscribeAiLogs,

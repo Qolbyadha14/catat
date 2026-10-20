@@ -51,9 +51,11 @@ import { SearchModal } from '../../components/modals/SearchModal';
 interface DashboardViewProps {
   user: User;
   onSignOut: () => Promise<void>;
+  onOpenAdmin?: () => void;
 }
 
-export function DashboardView({ user, onSignOut }: DashboardViewProps) {
+export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewProps) {
+
   const { theme, setTheme } = useTheme();
 
   // Navigation Tab State
@@ -533,10 +535,12 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
           setIsProfileMenuOpen(false);
           setIsManageOpen(true);
         }}
+        onOpenAdmin={onOpenAdmin}
         onSignOut={onSignOut}
         theme={theme}
         onThemeChange={setTheme}
       />
+
 
       {/* Native Delete Confirmation Dialog */}
       <dialog
