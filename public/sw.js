@@ -37,8 +37,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never intercept Vite internals, HMR, web sockets, or dev scripts
+  // Never intercept Firebase internal routes (/__/*), Vite internals, HMR, web sockets, or dev scripts
   if (
+    url.pathname.startsWith('/__') ||
     url.pathname.startsWith('/@') ||
     url.pathname.includes('node_modules') ||
     url.pathname.startsWith('/src/') ||
