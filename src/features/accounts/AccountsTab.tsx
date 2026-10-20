@@ -27,8 +27,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       {/* Header */}
       <div className="px-5 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-slate-900 tracking-tight">Dompet & Rekening</h2>
-          <div className="text-[11px] font-medium text-slate-400 mt-0.5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Dompet & Rekening</h2>
+          <div className="text-[11px] font-medium text-slate-400 dark:text-slate-400 mt-0.5">
             Total {activeAccounts.length} Akun Terhubung
           </div>
         </div>
@@ -39,7 +39,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             playHapticSound('click');
             onOpenAddAccount();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs transition-colors cursor-pointer border border-blue-200/60"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold text-xs transition-colors cursor-pointer border border-blue-200/60 dark:border-blue-800"
         >
           <Plus size={14} />
           <span>Tambah Akun</span>
@@ -81,14 +81,14 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       <section className="px-5 space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
               💰 Uang Saya (Aset)
             </span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
               {accountSummary.assetAccounts.length} Akun
             </span>
           </div>
-          <span className="text-xs font-black text-slate-900">
+          <span className="text-xs font-black text-slate-900 dark:text-slate-100">
             {formatIdr(accountSummary.totalAssets)}
           </span>
         </div>
@@ -97,20 +97,20 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
           {accountSummary.assetAccounts.map((acc) => (
             <div
               key={acc.id}
-              className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between hover:shadow-sm transition-shadow"
+              className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between hover:shadow-sm transition-shadow"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-base">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-base">
                   {acc.icon || (acc.name.toLowerCase().includes('cash') || acc.name.toLowerCase().includes('tunai') ? '💵' : '🏦')}
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">{acc.name}</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{acc.name}</div>
                   <div className="text-[10px] text-slate-400 capitalize">{acc.kind}</div>
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="text-xs font-extrabold text-slate-900">
+                <div className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
                   {formatIdr(acc.balance)}
                 </div>
               </div>
@@ -124,14 +124,14 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
         <section className="px-5 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
                 💳 PayLater & Tagihan
               </span>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-400">
                 {accountSummary.liabilityAccounts.length} Akun
               </span>
             </div>
-            <span className="text-xs font-black text-rose-600">
+            <span className="text-xs font-black text-rose-600 dark:text-rose-400">
               {accountSummary.totalLiabilities > 0
                 ? `Hutang: ${formatIdr(accountSummary.totalLiabilities)}`
                 : '✓ Semua Lunas'}
@@ -144,19 +144,19 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               return (
                 <div
                   key={acc.id}
-                  className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between hover:shadow-sm transition-shadow"
+                  className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between hover:shadow-sm transition-shadow"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-base">
+                    <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-slate-700 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-base">
                       {acc.icon || '💳'}
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-900">{acc.name}</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{acc.name}</div>
                       <div className="text-[10px] text-slate-400">
                         {debt > 0 ? (
-                          <span className="text-rose-600 font-semibold">Tagihan: {formatIdr(debt)}</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-semibold">Tagihan: {formatIdr(debt)}</span>
                         ) : (
-                          <span className="text-emerald-600 font-semibold">✓ Rp 0 (Lunas)</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Rp 0 (Lunas)</span>
                         )}
                       </div>
                     </div>
@@ -176,7 +176,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                         <span>Bayar</span>
                       </button>
                     ) : (
-                      <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                      <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-lg">
                         Lunas
                       </div>
                     )}

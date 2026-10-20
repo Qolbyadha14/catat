@@ -9,6 +9,8 @@ import {
 import { auth } from '../../lib/firebase';
 import { ensureUserDefaults } from './seedDefaults';
 
+import { isShowcaseMode, MOCK_SHOWCASE_USER } from '../../lib/showcaseMockData';
+
 export interface AuthState {
   user: User | null;
   loading: boolean;
@@ -23,6 +25,12 @@ export function useAuth(): AuthState {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isShowcaseMode()) {
+      setUser(MOCK_SHOWCASE_USER);
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(
       auth,
       async (currentUser) => {

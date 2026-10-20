@@ -12,7 +12,8 @@
     "test:ocr-live": "export PATH=\"/opt/homebrew/opt/openjdk@25/bin:$PATH\" && FIREBASE_APPCHECK_DEBUG_TOKEN=\"51561ED6-6CB7-4A7B-9068-C845B5E7AE4F\" firebase emulators:exec --only auth,firestore \"bun test tests/ocr-live.test.ts\"",
     "test:e2e": "export PATH=\"/opt/homebrew/opt/openjdk@25/bin:$PATH\" && firebase emulators:exec --only auth,firestore \"bun test tests/e2e-gates.test.ts\"",
     "emulators": "export PATH=\"/opt/homebrew/opt/openjdk@25/bin:$PATH\" && firebase emulators:start --only auth,firestore",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "showcase": "bun run scripts/showcase/index.ts"
   },
   "dependencies": {
     "firebase": "^13.0.0",

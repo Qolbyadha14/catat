@@ -111,8 +111,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       <section className="px-5 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">Pelacakan Transaksi Harian</h2>
-            <div className="text-[11px] font-medium text-slate-400">
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Pelacakan Transaksi Harian</h2>
+            <div className="text-[11px] font-medium text-slate-400 dark:text-slate-400">
               {filteredTransactions.length} Transaksi Tercatat
             </div>
           </div>
@@ -187,7 +187,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               return (
                 <div
                   key={tx.id}
-                  className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between hover:shadow-md transition-shadow group"
+                  className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between hover:shadow-md transition-shadow group"
                 >
                   {/* Left: Squircle Icon & Title/Subtitle */}
                   <div className="flex items-center gap-3 min-w-0 pr-2">
@@ -198,18 +198,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     </div>
 
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate">
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                         {title}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
                         <span>{subtitle}</span>
                         {tx.createdBy?.name && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 font-semibold text-[9px]">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[9px]">
                             👤 {tx.createdBy.name}
                           </span>
                         )}
                         {tx.items && tx.items.length > 0 && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[9px]">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold text-[9px]">
                             🛒 {tx.items.length} item
                           </span>
                         )}
@@ -222,10 +222,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     <span
                       className={`text-xs font-extrabold tracking-tight ${
                         isIncome
-                          ? 'text-emerald-600'
+                          ? 'text-emerald-600 dark:text-emerald-400'
                           : isExpense
-                          ? 'text-slate-900'
-                          : 'text-cyan-700'
+                          ? 'text-slate-900 dark:text-slate-100'
+                          : 'text-cyan-700 dark:text-cyan-400'
                       }`}
                     >
                       {isIncome ? '+' : isExpense ? '-' : ''}

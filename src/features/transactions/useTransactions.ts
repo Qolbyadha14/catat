@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { transactionSchema, type Transaction } from '../../lib/schemas';
+import { isShowcaseMode, MOCK_SHOWCASE_TRANSACTIONS } from '../../lib/showcaseMockData';
 
 export function useTransactions(uid: string, maxItems: number = 50, ledgerId?: string) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -9,6 +10,12 @@ export function useTransactions(uid: string, maxItems: number = 50, ledgerId?: s
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isShowcaseMode()) {
+      setTransactions(MOCK_SHOWCASE_TRANSACTIONS);
+      setLoading(false);
+      return;
+    }
+
     if (!uid && !ledgerId) return;
 
     const colRef = ledgerId

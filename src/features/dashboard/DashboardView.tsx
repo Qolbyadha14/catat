@@ -16,6 +16,7 @@ import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
 import { calculateNetCashflow } from '../../lib/cashflow';
 import { useTheme } from '../../lib/theme';
+import { isShowcaseMode } from '../../lib/showcaseMockData';
 import {
   filterTransactions,
   countActiveFilters,
@@ -146,7 +147,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
 
   // Ensure default accounts exist for personal user on mount
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid && !isShowcaseMode()) {
       ensureUserDefaults(user.uid).catch(console.error);
     }
   }, [user?.uid]);

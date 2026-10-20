@@ -15,6 +15,9 @@ export function resolveTheme(
 export function getStoredTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'system';
   try {
+    const params = new URLSearchParams(window.location.search);
+    const urlTheme = params.get('theme');
+    if (urlTheme === 'light' || urlTheme === 'dark' || urlTheme === 'system') return urlTheme;
     const val = localStorage.getItem('theme');
     if (val === 'light' || val === 'dark' || val === 'system') return val;
   } catch {}
@@ -33,6 +36,11 @@ export function applyTheme(mode: ThemeMode): ResolvedTheme {
       document.documentElement.removeAttribute('data-theme');
     } else {
       document.documentElement.setAttribute('data-theme', mode);
+    }
+    if (resolved === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
 
     let meta = document.querySelector('meta[name="theme-color"]');

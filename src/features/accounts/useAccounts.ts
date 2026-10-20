@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { accountSchema, type Account } from '../../lib/schemas';
+import { isShowcaseMode, MOCK_SHOWCASE_ACCOUNTS } from '../../lib/showcaseMockData';
 
 export function useAccounts(uid: string, ledgerId?: string) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -9,6 +10,12 @@ export function useAccounts(uid: string, ledgerId?: string) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isShowcaseMode()) {
+      setAccounts(MOCK_SHOWCASE_ACCOUNTS);
+      setLoading(false);
+      return;
+    }
+
     if (!uid && !ledgerId) return;
 
     const colRef = ledgerId

@@ -19,9 +19,16 @@
       (function() {
         document.documentElement.classList.add('preload');
         try {
-          var t = localStorage.getItem('theme');
-          if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-          else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+          var p = new URLSearchParams(window.location.search);
+          var t = p.get('theme') || localStorage.getItem('theme');
+          var isDark = t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.classList.add('dark');
+          } else if (t === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.classList.remove('dark');
+          }
         } catch (e) {}
         window.addEventListener('DOMContentLoaded', function() {
           document.documentElement.classList.remove('preload');
