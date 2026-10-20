@@ -1,20 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { User } from 'firebase/auth';
-import type { Transaction, Account } from '../../lib/schemas';
+import type { Transaction, Account, Category, Ledger } from '../../lib/schemas';
 import { calculateAccountSummary, getAccountDebt } from '../../lib/accountCalculations';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { useTransactions } from '../transactions/useTransactions';
 import { deleteTransaction } from '../transactions/transactionService';
+import { updateCategory } from '../categories/categoryService';
 import { TransactionFormSheet, type InitialTransferData } from '../transactions/TransactionFormSheet';
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
-import { TransactionHistoryHeader } from '../transactions/TransactionHistoryHeader';
-import { CategoryBreakdown } from './CategoryBreakdown';
-import { MonthNavigator } from './MonthNavigator';
 import { ManageSheet } from '../manage/ManageSheet';
-import { UpcomingBillsCard } from './UpcomingBillsCard';
-import { DebtPlannerCard } from './DebtPlannerCard';
-import { WeeklyCashflowChart } from './WeeklyCashflowChart';
 import { ensureLedgerDefaults, ensureUserDefaults } from '../auth/seedDefaults';
 import type { UpcomingBill } from '../../lib/bills';
 import { formatIdr, formatDate } from '../../lib/formatters';
@@ -40,7 +35,17 @@ import {
   subscribeToLedger,
   createAndSaveLedger,
 } from '../../lib/ledgerService';
-import type { Ledger } from '../../lib/schemas';
+
+// Modern Components
+import { MobileFrame } from '../../components/layout/MobileFrame';
+import { Header } from '../../components/layout/Header';
+import { BottomNav, type NavTabType } from '../../components/navigation/BottomNav';
+import { HomeTab } from './HomeTab';
+import { AccountsTab } from '../accounts/AccountsTab';
+import { BudgetsTab } from '../budgets/BudgetsTab';
+import { BudgetModal } from '../budgets/BudgetModal';
+import { StatsTab } from '../analytics/StatsTab';
+import { SearchModal } from '../../components/modals/SearchModal';
 
 interface DashboardViewProps {
   user: User;
@@ -50,6 +55,9 @@ interface DashboardViewProps {
 export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const { theme, setTheme } = useTheme();
 
+  // Navigation Tab State
+  const [currentTab, setCurrentTab] = useState<NavTabType>('dashboard');
+
   // Family Ledger State
   const [activeLedgerId, setActiveLedgerId] = useState<string | null>(null);
   const [activeLedger, setActiveLedger] = useState<Ledger | null>(null);
@@ -58,6 +66,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [joinCodeFromUrl, setJoinCodeFromUrl] = useState('');
   const [isCreatingLedger, setIsCreatingLedger] = useState(false);
 
+  // Firestore Data Hooks
   const { accounts, loading: accLoading } = useAccounts(user.uid, activeLedgerId || undefined);
   const { categories, loading: catLoading } = useCategories(user.uid, activeLedgerId || undefined);
   const { transactions, loading: txLoading } = useTransactions(user.uid, 50, activeLedgerId || undefined);
@@ -76,12 +85,13 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
   const [searchInput, setSearchInput] = useState<string>('');
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(DEFAULT_FILTER_CRITERIA);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
-  const handleSearchChange = (val: string) => {
-    setSearchInput(val);
-    setFilterCriteria((prev) => ({ ...prev, keyword: val }));
-  };
+  // Budget Modal State
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState<boolean>(false);
+  const [selectedBudgetCat, setSelectedBudgetCat] = useState<Category | null>(null);
 
+  // Sheets & Dialogs State
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -147,7 +157,6 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       setActiveLedger(null);
       return;
     }
-    // Ensure all default accounts exist in this active family ledger (including CIMB CC, KTA, TikTok, Shopee, BCA)
     ensureLedgerDefaults(activeLedgerId).catch(console.error);
 
     const unsub = subscribeToLedger(activeLedgerId, (ledger) => {
@@ -327,387 +336,145 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
     }
   };
 
+  const handleSaveBudget = async (categoryId: string, limit: number) => {
+    await updateCategory(user.uid, categoryId, { monthlyBudget: limit }, activeLedgerId || undefined);
+  };
+
   const isLoading = accLoading || catLoading || txLoading;
+  const userInitials = user.displayName
+    ? user.displayName.slice(0, 2).toUpperCase()
+    : (user.email ? user.email.slice(0, 2).toUpperCase() : 'U');
 
   return (
-    <div className="app-container">
+    <MobileFrame activeTab={currentTab}>
       {/* Offline Banner */}
       {!isOnline && (
-        <div className="offline-banner">
+        <div className="bg-amber-500 text-slate-950 font-bold text-xs py-1.5 px-4 text-center">
           <span>⚠️ Mode offline — data disimpan di perangkat & disinkronkan saat terhubung</span>
         </div>
       )}
 
-      {/* Header */}
-      <header className="app-header">
-        <div className="brand-group">
-          <h1>
-            Catat <span className="brand-badge">COREBOY</span>
-          </h1>
-          <p className="brand-sub">Your money, under control.</p>
-        </div>
-        <div className="user-profile-menu">
-          <button
-            type="button"
-            className={`btn-header-family ${activeLedger ? 'active' : ''}`}
-            onClick={() => setIsFamilySheetOpen(true)}
-            title={activeLedger ? `Buku Kas: ${activeLedger.name}` : 'Buku Kas Keluarga'}
-            aria-label="Buku Kas Keluarga"
-          >
-            <span className="btn-family-icon">👥</span>
-            <span className="btn-family-label">{activeLedger ? activeLedger.name : 'Keluarga'}</span>
-            {activeLedger && <span className="family-badge-dot" title="Mode Kas Bersama Aktif" />}
-          </button>
-          <button
-            type="button"
-            className="btn-header-avatar"
-            onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-            title="Menu Profil & Pengaturan"
-            aria-label="Menu Profil & Pengaturan"
-            aria-expanded={isProfileMenuOpen}
-          >
-            <div className="user-avatar" title={user.email ?? ''}>
-              {user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'U'}
-            </div>
-          </button>
-        </div>
-      </header>
+      {/* Modern Top Header */}
+      <Header
+        userName={user.displayName || user.email?.split('@')[0] || 'Pengguna'}
+        userPhoto={user.photoURL || undefined}
+        userInitials={userInitials}
+        activeLedgerName={activeLedger ? activeLedger.name : null}
+        onOpenFamilyLedger={() => setIsFamilySheetOpen(true)}
+        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenProfileMenu={() => setIsProfileMenuOpen(true)}
+        isProfileMenuOpen={isProfileMenuOpen}
+      />
 
-      {/* Main Content */}
-      <main className="app-content">
-        {/* Month Navigator */}
-        <MonthNavigator
-          currentDate={selectedMonth}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-        />
-
-        {/* Balance Hero Card */}
-        <div className="hero-card">
-          <div className="hero-label">{accountSummary.hasLiabilities ? 'Saldo Bersih' : 'Total Saldo'}</div>
-          <div className="hero-balance">{formatIdr(accountSummary.netBalance)}</div>
-          {accountSummary.totalLiabilities > 0 && (
-            <div className="hero-liabilities-breakdown">
-              <span className="hero-breakdown-item">
-                <span className="hero-breakdown-label">💰 Total Aset:</span> {formatIdr(accountSummary.totalAssets)}
-              </span>
-              <span className="hero-breakdown-divider">•</span>
-              <span className="hero-breakdown-item text-danger">
-                <span className="hero-breakdown-label">💳 Tagihan PayLater:</span> {formatIdr(accountSummary.totalLiabilities)}
-              </span>
-            </div>
-          )}
-          <div className="stats-row">
-            <div className="stat-item">
-              <span className="stat-title">Pemasukan {monthLabel}</span>
-              <span className="stat-val-income">+{formatIdr(monthIncome)}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-title">Pengeluaran {monthLabel}</span>
-              <span className="stat-val-expense">-{formatIdr(monthExpense)}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-title">Arus Kas Bersih</span>
-              <span className={netCashflow.isSurplus ? 'stat-val-income' : 'stat-val-expense'}>
-                {netCashflow.formatted}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Weekly Cashflow Trend Chart */}
-        <WeeklyCashflowChart
-          transactions={transactions}
-          year={selectedMonth.getFullYear()}
-          month={selectedMonth.getMonth() + 1}
-          monthLabel={monthLabel}
-        />
-
-        {/* Category Breakdown */}
-        <CategoryBreakdown
-          transactions={transactions}
-          categoryMap={categoryMap}
-          startOfMonth={startOfMonth}
-          endOfMonth={endOfMonth}
-          monthLabel={monthLabel}
-        />
-
-        {/* Upcoming Bills Reminder Card */}
-        <UpcomingBillsCard accounts={accounts} onPayBill={handlePayUpcomingBill} />
-
-        {/* Debt Snowball & Avalanche Strategy Card */}
-        <DebtPlannerCard accounts={accounts} onPayDebt={handlePayDebt} />
-
-        {/* Accounts Section */}
-        <section className="accounts-dashboard-section">
-          <div className="section-header" style={{ marginBottom: 10 }}>
-            <span className="section-title">Kantong Akun</span>
-            {accountSummary.liabilityAccounts.length > 0 && (
-              <span className="accounts-summary-tag">
-                {accountSummary.assetAccounts.length} Aset • {accountSummary.liabilityAccounts.length} PayLater
-              </span>
-            )}
-          </div>
-
-          {/* Aset Sub-Group */}
-          <div className="accounts-group-block">
-            <div className="accounts-group-label">
-              <span>💰 Uang Saya (Aset)</span>
-              <span className="accounts-group-total">{formatIdr(accountSummary.totalAssets)}</span>
-            </div>
-            <div className="accounts-scroller">
-              {accountSummary.assetAccounts.map((acc) => (
-                <div key={acc.id} className="account-chip">
-                  <div className="account-chip-icon">{acc.icon || '🏦'}</div>
-                  <div className="account-chip-info">
-                    <div className="account-chip-name">{acc.name}</div>
-                    <div className="account-chip-balance">{formatIdr(acc.balance)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* PayLater & Tagihan Sub-Group (if user has liability accounts) */}
-          {accountSummary.liabilityAccounts.length > 0 && (
-            <div className="accounts-group-block liability-group">
-              <div className="accounts-group-label">
-                <span>💳 PayLater & Tagihan</span>
-                {accountSummary.totalLiabilities > 0 ? (
-                  <span className="accounts-group-total liability-total">
-                    Tagihan: {formatIdr(accountSummary.totalLiabilities)}
-                  </span>
-                ) : (
-                  <span className="accounts-group-total lunas-total">✓ Semua Lunas</span>
-                )}
-              </div>
-              <div className="accounts-scroller">
-                {accountSummary.liabilityAccounts.map((acc) => {
-                  const debt = getAccountDebt(acc);
-                  return (
-                    <div
-                      key={acc.id}
-                      className={`account-chip liability-chip ${debt > 0 ? 'has-debt' : 'is-settled'}`}
-                    >
-                      <div className="account-chip-icon">{acc.icon || '💳'}</div>
-                      <div className="account-chip-info">
-                        <div className="account-chip-name">{acc.name}</div>
-                        <div className="account-chip-balance">
-                          {debt > 0 ? (
-                            <span className="tagihan-badge">Tagihan: {formatIdr(debt)}</span>
-                          ) : (
-                            <span className="lunas-badge">✓ Rp 0 (Lunas)</span>
-                          )}
-                        </div>
-                      </div>
-                      {debt > 0 && (
-                        <button
-                          type="button"
-                          className="btn-pay-tagihan"
-                          onClick={() => handlePayBill(acc)}
-                          title={`Bayar tagihan ${acc.name}`}
-                          aria-label={`Bayar tagihan ${acc.name}`}
-                        >
-                          ⚡ Bayar
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Transactions Section & Filters */}
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <TransactionHistoryHeader
-            transactionCount={filteredTransactions.length}
-            searchInput={searchInput}
-            onSearchChange={handleSearchChange}
-            activeFilterCount={activeFilterCount}
-            onOpenFilter={() => setIsFilterSheetOpen(true)}
+      {/* Main Tab Views */}
+      <div className="pt-1">
+        {currentTab === 'dashboard' && (
+          <HomeTab
+            netBalance={accountSummary.netBalance}
+            totalAssets={accountSummary.totalAssets}
+            totalLiabilities={accountSummary.totalLiabilities}
+            hasLiabilities={accountSummary.hasLiabilities}
+            monthIncome={monthIncome}
+            monthExpense={monthExpense}
+            netCashflow={netCashflow}
+            selectedMonthLabel={monthLabel}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            transactions={transactions}
             filteredTransactions={filteredTransactions}
             accountMap={accountMap}
             categoryMap={categoryMap}
+            categories={categories}
+            accounts={accounts}
+            isLoading={isLoading}
+            isFiltered={isFiltered}
+            onResetFilters={handleResetFilters}
+            onOpenAddModal={() => {
+              setEditingTx(null);
+              setDuplicateData(null);
+              setTransferPrefill(null);
+              setIsSheetOpen(true);
+            }}
+            onEditTransaction={(tx) => {
+              setEditingTx(tx);
+              setDuplicateData(null);
+              setTransferPrefill(null);
+              setIsSheetOpen(true);
+            }}
+            onDuplicateTransaction={handleDuplicate}
+            onDeleteTransaction={openDeleteModal}
+            onPayUpcomingBill={handlePayUpcomingBill}
+            onOpenBudgetsTab={() => setCurrentTab('budgets')}
           />
+        )}
 
-          {/* List or Empty State */}
-          {isLoading ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--muted-foreground)' }}>
-              Memuat data transaksi...
-            </div>
-          ) : filteredTransactions.length === 0 ? (
-            isFiltered ? (
-              <div className="empty-state-card">
-                <div className="empty-illustration" style={{ opacity: 0.5 }}>🔍</div>
-                <h3>Tidak ada transaksi cocok</h3>
-                <p>Coba sesuaikan kata kunci atau atur ulang filter pencarian.</p>
-                <button
-                  type="button"
-                  className="btn-link-action"
-                  onClick={handleResetFilters}
-                >
-                  Reset filter
-                </button>
-              </div>
-            ) : (
-              <div className="empty-state-card">
-                <div className="empty-illustration">📝</div>
-                <h3>Belum ada transaksi</h3>
-                <p>Mulai catat transaksi pertamamu untuk melacak pemasukan dan pengeluaran.</p>
-                <button
-                  type="button"
-                  className="btn-hero"
-                  style={{ width: 'auto', padding: '0 20px', height: 42, marginTop: 6 }}
-                  onClick={() => {
-                    setEditingTx(null);
-                    setDuplicateData(null);
-                    setIsSheetOpen(true);
-                  }}
-                >
-                  + Catat Transaksi Pertama
-                </button>
-              </div>
-            )
-          ) : (
-            <div className="card-list">
-              {filteredTransactions.map((tx) => {
-                const isExpense = tx.type === 'expense';
-                const isIncome = tx.type === 'income';
-                const isTransfer = tx.type === 'transfer';
+        {currentTab === 'accounts' && (
+          <AccountsTab
+            accounts={accounts}
+            onPayLiability={handlePayBill}
+            onPayDebt={handlePayDebt}
+            onOpenAddAccount={() => setIsManageOpen(true)}
+          />
+        )}
 
-                let icon = '💸';
-                let title = tx.note || 'Transaksi';
-                let sub = formatDate(tx.date);
+        {currentTab === 'budgets' && (
+          <BudgetsTab
+            categories={categories}
+            transactions={transactions}
+            onOpenBudgetModal={(cat) => {
+              setSelectedBudgetCat(cat);
+              setIsBudgetModalOpen(true);
+            }}
+          />
+        )}
 
-                if (isTransfer) {
-                  icon = '🔄';
-                  const fromAcc = accountMap.get(tx.fromAccountId);
-                  const toAcc = accountMap.get(tx.toAccountId);
-                  const fromName = fromAcc
-                    ? `${fromAcc.name}${fromAcc.isArchived ? ' (Arsip)' : ''}`
-                    : 'Akun';
-                  const toName = toAcc
-                    ? `${toAcc.name}${toAcc.isArchived ? ' (Arsip)' : ''}`
-                    : 'Akun';
-                  title = `${fromName} → ${toName}`;
-                  sub = `${formatDate(tx.date)}${tx.note ? ` • ${tx.note}` : ''}`;
-                } else {
-                  const cat = categoryMap.get(tx.categoryId);
-                  if (cat?.icon) icon = cat.icon;
-                  const catName = cat
-                    ? `${cat.name}${cat.isArchived ? ' (Arsip)' : ''}`
-                    : (isIncome ? 'Pemasukan' : 'Pengeluaran');
-                  const acc = accountMap.get(tx.accountId);
-                  const accName = acc
-                    ? `${acc.name}${acc.isArchived ? ' (Arsip)' : ''}`
-                    : '';
-                  title = catName;
-                  sub = `${formatDate(tx.date)} • ${accName}${tx.note ? ` • ${tx.note}` : ''}`;
-                }
-
-                return (
-                  <div key={tx.id} className="tx-item">
-                    <div className="tx-left">
-                      <div className="tx-icon">{icon}</div>
-                      <div className="tx-info">
-                        <span className="tx-title">{title}</span>
-                        <span className="tx-sub">
-                          {sub}
-                          {tx.createdBy?.name && (
-                            <>
-                              {' • '}
-                              <span className="tx-creator-pill" title={`Dicatat oleh ${tx.createdBy.name}`}>
-                                <span className="tx-creator-avatar">
-                                  {tx.createdBy.name.slice(0, 1).toUpperCase()}
-                                </span>
-                                {tx.createdBy.name}
-                              </span>
-                            </>
-                          )}
-                          {tx.items && tx.items.length > 0 && (
-                            <>
-                              {' • '}
-                              <span className="tx-items-indicator" title={`${tx.items.length} rincian barang`}>
-                                🛒 {tx.items.length} item
-                              </span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="tx-right">
-                      <span
-                        className={`tx-amount ${
-                          isIncome
-                            ? 'tx-amount-income'
-                            : isExpense
-                            ? 'tx-amount-expense'
-                            : 'tx-amount-transfer'
-                        }`}
-                      >
-                        {isIncome ? '+' : isExpense ? '-' : ''}
-                        {formatIdr(tx.amount)}
-                      </span>
-                      <div className="tx-actions">
-                        <button
-                          type="button"
-                          className="btn-tx-duplicate"
-                          title="Duplikat transaksi"
-                          aria-label="Duplikat transaksi"
-                          onClick={() => handleDuplicate(tx)}
-                        >
-                          📋
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-tx-edit"
-                          title="Ubah transaksi"
-                          aria-label="Ubah transaksi"
-                          onClick={() => {
-                            setEditingTx(tx);
-                            setDuplicateData(null);
-                            setIsSheetOpen(true);
-                          }}
-                        >
-                          Ubah
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-tx-delete"
-                          title="Hapus transaksi"
-                          aria-label="Hapus transaksi"
-                          disabled={deletingId === tx.id}
-                          onClick={() => openDeleteModal(tx)}
-                        >
-                          {deletingId === tx.id ? '...' : 'Hapus'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </main>
-
-      {/* Floating Bottom Action */}
-      <div className="fab-bottom">
-        <button
-          type="button"
-          className="btn-hero"
-          onClick={() => {
-            setEditingTx(null);
-            setDuplicateData(null);
-            setIsSheetOpen(true);
-          }}
-        >
-          + Catat Transaksi
-        </button>
+        {currentTab === 'stats' && (
+          <StatsTab
+            transactions={transactions}
+            categories={categories}
+            accounts={accounts}
+            selectedMonth={selectedMonth}
+          />
+        )}
       </div>
+
+      {/* Floating Bottom Navigation Dock */}
+      <BottomNav
+        currentTab={currentTab}
+        onChangeTab={setCurrentTab}
+        onOpenAddModal={() => {
+          setEditingTx(null);
+          setDuplicateData(null);
+          setTransferPrefill(null);
+          setIsSheetOpen(true);
+        }}
+      />
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        transactions={transactions}
+        categories={categories}
+        accounts={accounts}
+        onSelectTransaction={(tx) => {
+          setEditingTx(tx);
+          setDuplicateData(null);
+          setTransferPrefill(null);
+          setIsSheetOpen(true);
+        }}
+      />
+
+      {/* Budget Limit Setting Modal */}
+      <BudgetModal
+        isOpen={isBudgetModalOpen}
+        onClose={() => {
+          setIsBudgetModalOpen(false);
+          setSelectedBudgetCat(null);
+        }}
+        category={selectedBudgetCat}
+        onSaveBudget={handleSaveBudget}
+      />
 
       {/* Filter Bottom Sheet */}
       {isFilterSheetOpen && (
@@ -723,7 +490,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         />
       )}
 
-      {/* Bottom Sheet Form */}
+      {/* Transaction Form Bottom Sheet */}
       {isSheetOpen && (
         <TransactionFormSheet
           key={editingTx?.id ?? (duplicateData ? 'dup' : (transferPrefill ? 'pay' : 'new'))}
@@ -840,6 +607,6 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
         currentUser={userProfileCreator}
         onJoinSuccess={handleJoinSuccess}
       />
-    </div>
+    </MobileFrame>
   );
 }
