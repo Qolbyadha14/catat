@@ -238,4 +238,107 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
       await assertFails(setDoc(targetRef, { uid: 'user-b', count: 1 }));
     });
   });
+
+  describe('Firestore Security Rules: Super Admin, System Config, and AI Telemetry Logs', () => {
+    beforeEach(async () => {
+      // Seed superadmin user-admin into system_admins
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'system_admins/user-admin'), {
+          email: 'admin@catat.com',
+          role: 'superadmin',
+          addedAt: Date.now(),
+        });
+        await setDoc(doc(context.firestore(), 'system_config/global'), {
+          dailyOcrLimit: 20,
+          defaultOcrModel: 'gemini-3.5-flash-lite',
+          aiKillSwitch: false,
+        });
+        await setDoc(doc(context.firestore(), 'users/user-regular'), {
+          email: 'reg@test.com',
+          displayName: 'Regular User',
+        });
+        await setDoc(doc(context.firestore(), 'ledgers/ledger-family'), {
+          name: 'Keluarga Bahagia',
+          ownerUid: 'user-regular',
+          members: ['user-regular'],
+        });
+      });
+    });
+
+    it('Normal user can read system_config/global but cannot write/update it', async () => {
+      const userRegular = testEnv.authenticatedContext('user-regular');
+      const db = userRegular.firestore();
+      const configRef = doc(db, 'system_config/global');
+
+      await assertSucceeds(getDoc(configRef));
+      await assertFails(setDoc(configRef, { dailyOcrLimit: 50 }, { merge: true }));
+      await assertFails(updateDoc(configRef, { dailyOcrLimit: 50 }));
+    });
+
+    it('Super admin can read and update system_config/global', async () => {
+      const admin = testEnv.authenticatedContext('user-admin');
+      const db = admin.firestore();
+      const configRef = doc(db, 'system_config/global');
+
+      await assertSucceeds(getDoc(configRef));
+      await assertSucceeds(updateDoc(configRef, { dailyOcrLimit: 30 }));
+    });
+
+    it('Normal user can create their own ai_log but cannot read or update ai_logs', async () => {
+      const userRegular = testEnv.authenticatedContext('user-regular');
+      const db = userRegular.firestore();
+      const myLogRef = doc(db, 'ai_logs/log-123');
+
+      // Create own log succeeds
+      await assertSucceeds(
+        setDoc(myLogRef, {
+          uid: 'user-regular',
+          feature: 'ocr',
+          model: 'gemini-3.5-flash-lite',
+          durationMs: 1200,
+          status: 'success',
+          timestamp: Date.now(),
+          dateKey: '2026-10-20',
+        })
+      );
+
+      // Reading logs is denied to regular users
+      await assertFails(getDoc(myLogRef));
+
+      // Updating logs is denied
+      await assertFails(updateDoc(myLogRef, { status: 'error' }));
+
+      // Spoofing uid on create is denied
+      const spoofLogRef = doc(db, 'ai_logs/log-spoof');
+      await assertFails(
+        setDoc(spoofLogRef, {
+          uid: 'other-user',
+          feature: 'ocr',
+        })
+      );
+    });
+
+    it('Super admin can read ai_logs, list users, and list ledgers', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'ai_logs/log-sample'), {
+          uid: 'user-regular',
+          feature: 'nlp',
+          status: 'success',
+        });
+      });
+
+      const admin = testEnv.authenticatedContext('user-admin');
+      const db = admin.firestore();
+
+      // Super admin can read ai_logs
+      await assertSucceeds(getDoc(doc(db, 'ai_logs/log-sample')));
+
+      // Super admin can read users directory
+      await assertSucceeds(getDoc(doc(db, 'users/user-regular')));
+
+      // Super admin can read family ledgers
+      await assertSucceeds(getDoc(doc(db, 'ledgers/ledger-family')));
+    });
+  });
 });
+
