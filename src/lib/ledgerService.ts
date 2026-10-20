@@ -18,13 +18,32 @@ const INVITE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
 /**
  * Generates an uppercase alphanumeric invite code of specified length.
+ * When a seed (e.g. user UID) is provided, produces a stable, deterministic invite code.
  */
-export function generateInviteCode(length: number = 6): string {
-  let result = '';
+export function generateInviteCode(length: number = 6, seed?: string): string {
   const charsLen = INVITE_CHARS.length;
+  if (!seed) {
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      const randIdx = Math.floor(Math.random() * charsLen);
+      result += INVITE_CHARS[randIdx];
+    }
+    return result;
+  }
+
+  // Deterministic 32-bit FNV-1a hash variation using seed (e.g. user UID)
+  let h1 = 0x811c9dc5;
+  let h2 = 0x27d4eb2f;
+  for (let i = 0; i < seed.length; i++) {
+    const ch = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 0x01000193);
+    h2 = Math.imul(h2 ^ (ch << 3), 0x01000193);
+  }
+
+  let result = '';
   for (let i = 0; i < length; i++) {
-    const randIdx = Math.floor(Math.random() * charsLen);
-    result += INVITE_CHARS[randIdx];
+    const val = Math.abs((h1 ^ (h2 << (i * 5)) ^ (i * 0x5bd1e995)) >>> 0);
+    result += INVITE_CHARS[val % charsLen];
   }
   return result;
 }
@@ -56,7 +75,7 @@ export function createInitialLedger(
   const now = Date.now();
   const ownerName = owner.displayName?.trim() || owner.email?.split('@')[0] || 'Keluarga';
   const ledgerName = name?.trim() || `Keluarga ${ownerName}`;
-  const inviteCode = generateInviteCode(6);
+  const inviteCode = generateInviteCode(6, owner.uid);
 
   const ownerMember: LedgerMember = {
     uid: owner.uid,
@@ -77,6 +96,40 @@ export function createInitialLedger(
     },
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+/**
+ * Preserves existing ledger integrity (invite code, members, createdAt)
+ * when re-initializing or re-activating an existing ledger document.
+ */
+export function reconcileOrPreserveLedger(
+  existing: Ledger,
+  owner: { uid: string; displayName?: string | null; email?: string | null; photoURL?: string | null },
+  name?: string
+): Ledger {
+  const ownerName = owner.displayName?.trim() || owner.email?.split('@')[0] || 'Keluarga';
+  const ownerMember: LedgerMember = existing.members?.[owner.uid] || {
+    uid: owner.uid,
+    name: ownerName,
+    email: owner.email || '',
+    photoURL: owner.photoURL || undefined,
+    role: 'owner',
+    joinedAt: existing.createdAt || Date.now(),
+  };
+
+  return {
+    ...existing,
+    id: existing.id || owner.uid,
+    name: name?.trim() || existing.name || `Keluarga ${ownerName}`,
+    ownerUid: existing.ownerUid || owner.uid,
+    inviteCode: existing.inviteCode || generateInviteCode(6, owner.uid),
+    members: {
+      ...existing.members,
+      [owner.uid]: ownerMember,
+    },
+    createdAt: existing.createdAt || Date.now(),
+    updatedAt: Date.now(),
   };
 }
 
@@ -170,9 +223,9 @@ export async function joinLedgerByCode(
     });
   });
 
-  // Update user's activeLedgerId
+  // Update user's activeLedgerId & permanent familyLedgerId
   const userRef = doc(db, 'users', user.uid);
-  await setDoc(userRef, { activeLedgerId: ledger.id }, { merge: true });
+  await setDoc(userRef, { activeLedgerId: ledger.id, familyLedgerId: ledger.id }, { merge: true });
 
   return {
     ...ledger,
@@ -184,18 +237,32 @@ export async function joinLedgerByCode(
 }
 
 /**
- * Creates and persists a new family ledger in Firestore, and sets it as user's active ledger.
+ * Creates or re-activates and persists a family ledger in Firestore.
+ * Strictly preserves the invite code, existing members, and history if the ledger already exists.
  */
 export async function createAndSaveLedger(
   owner: { uid: string; displayName?: string | null; email?: string | null; photoURL?: string | null },
   name?: string
 ): Promise<Ledger> {
-  const initial = createInitialLedger(owner, name);
-  const ledgerRef = doc(db, 'ledgers', initial.id);
-  await setDoc(ledgerRef, initial);
-  await ensureLedgerDefaults(initial.id);
-  await setDoc(doc(db, 'users', owner.uid), { activeLedgerId: initial.id }, { merge: true });
-  return initial;
+  const ledgerRef = doc(db, 'ledgers', owner.uid);
+  const snap = await getDoc(ledgerRef);
+
+  let targetLedger: Ledger;
+  if (snap.exists()) {
+    targetLedger = reconcileOrPreserveLedger(snap.data() as Ledger, owner, name);
+    await setDoc(ledgerRef, targetLedger, { merge: true });
+  } else {
+    targetLedger = createInitialLedger(owner, name);
+    await setDoc(ledgerRef, targetLedger);
+  }
+
+  await ensureLedgerDefaults(targetLedger.id);
+  await setDoc(
+    doc(db, 'users', owner.uid),
+    { activeLedgerId: targetLedger.id, familyLedgerId: targetLedger.id },
+    { merge: true }
+  );
+  return targetLedger;
 }
 
 /**
@@ -236,7 +303,45 @@ export async function getUserActiveLedgerId(uid: string): Promise<string | null>
 
 /**
  * Sets the user's active ledger ID in their user profile document.
+ * When activating a ledger, also retains familyLedgerId so the user never loses their family ledger reference.
  */
 export async function setUserActiveLedgerId(uid: string, ledgerId: string | null): Promise<void> {
-  await setDoc(doc(db, 'users', uid), { activeLedgerId: ledgerId }, { merge: true });
+  const updateData: Record<string, unknown> = { activeLedgerId: ledgerId };
+  if (ledgerId) {
+    updateData.familyLedgerId = ledgerId;
+  }
+  await setDoc(doc(db, 'users', uid), updateData, { merge: true });
+}
+
+/**
+ * Retrieves the user's family ledger (owned or joined) even if activeLedgerId is currently null.
+ */
+export async function getUserFamilyLedger(uid: string): Promise<Ledger | null> {
+  try {
+    // 1. Check user profile for active or family ledger pointer
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    if (userSnap.exists()) {
+      const data = userSnap.data() as { activeLedgerId?: string; familyLedgerId?: string };
+      const targetId = data.activeLedgerId || data.familyLedgerId;
+      if (targetId) {
+        const ledgerSnap = await getDoc(doc(db, 'ledgers', targetId));
+        if (ledgerSnap.exists()) {
+          const lData = ledgerSnap.data() as Ledger;
+          if (lData.ownerUid === uid || lData.members?.[uid]) {
+            return { ...lData, id: ledgerSnap.id };
+          }
+        }
+      }
+    }
+
+    // 2. Fallback: check if user owns ledgers/{uid}
+    const ownedSnap = await getDoc(doc(db, 'ledgers', uid));
+    if (ownedSnap.exists()) {
+      return { ...(ownedSnap.data() as Ledger), id: ownedSnap.id };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }

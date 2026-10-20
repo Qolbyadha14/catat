@@ -8,6 +8,8 @@ interface FamilyLedgerSheetProps {
   onClose: () => void;
   currentUserId: string;
   activeLedger: Ledger | null;
+  savedLedger?: Ledger | null;
+  onSwitchToFamily?: () => void;
   onOpenJoinDialog: () => void;
   onSwitchToPersonal?: () => void;
   onCreateLedger?: () => Promise<void>;
@@ -19,6 +21,8 @@ export function FamilyLedgerSheet({
   onClose,
   currentUserId,
   activeLedger,
+  savedLedger,
+  onSwitchToFamily,
   onOpenJoinDialog,
   onSwitchToPersonal,
   onCreateLedger,
@@ -49,7 +53,9 @@ export function FamilyLedgerSheet({
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const membersList = activeLedger ? Object.values(activeLedger.members) : [];
+  const displayLedger = activeLedger || savedLedger;
+  const isPersonalModeWithSaved = !activeLedger && !!savedLedger;
+  const membersList = displayLedger ? Object.values(displayLedger.members) : [];
 
   return (
     <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true">
@@ -62,7 +68,7 @@ export function FamilyLedgerSheet({
           <div>
             <h3>👥 Buku Kas Keluarga</h3>
             <p className="sheet-subtitle">
-              {activeLedger ? activeLedger.name : 'Kelola keuangan bersama keluarga'}
+              {displayLedger ? displayLedger.name : 'Kelola keuangan bersama keluarga'}
             </p>
           </div>
           <button
@@ -77,8 +83,17 @@ export function FamilyLedgerSheet({
         </div>
 
         <div className="sheet-scroll-body family-sheet-body">
-          {activeLedger ? (
+          {displayLedger ? (
             <>
+              {isPersonalModeWithSaved && (
+                <div className="p-3 mb-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">ℹ️</span>
+                    <span>Mode Pribadi sedang aktif. Kode undangan & anggota keluarga Anda tetap aman tersimpan.</span>
+                  </div>
+                </div>
+              )}
+
               {/* Invite Code Card */}
               <div className="family-invite-card">
                 <div className="family-invite-header">
@@ -86,11 +101,11 @@ export function FamilyLedgerSheet({
                   <span className="family-invite-hint">Bagikan kode ini untuk mengundang</span>
                 </div>
                 <div className="family-invite-code-wrap">
-                  <div className="family-invite-code">{activeLedger.inviteCode}</div>
+                  <div className="family-invite-code">{displayLedger.inviteCode}</div>
                   <button
                     type="button"
                     className="btn-copy-code"
-                    onClick={() => handleCopyCode(activeLedger.inviteCode)}
+                    onClick={() => handleCopyCode(displayLedger.inviteCode)}
                     title="Salin Kode Undangan"
                   >
                     {copied ? '✓ Tersalin!' : '📋 Salin'}
@@ -99,7 +114,7 @@ export function FamilyLedgerSheet({
                 <button
                   type="button"
                   className="btn-wa-share"
-                  onClick={() => handleShareWhatsApp(activeLedger)}
+                  onClick={() => handleShareWhatsApp(displayLedger)}
                 >
                   <span className="btn-wa-icon">💬</span>
                   <span>Bagikan Undangan ke WhatsApp</span>
@@ -147,6 +162,19 @@ export function FamilyLedgerSheet({
 
               {/* Action buttons */}
               <div className="family-actions-group">
+                {isPersonalModeWithSaved && onSwitchToFamily && (
+                  <button
+                    type="button"
+                    className="btn-hero"
+                    onClick={() => {
+                      onSwitchToFamily();
+                      onClose();
+                    }}
+                  >
+                    🔄 Beralih ke Buku Kas Keluarga
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="btn-family-secondary"
@@ -158,7 +186,7 @@ export function FamilyLedgerSheet({
                   ➕ Gabung Buku Kas Lain
                 </button>
 
-                {onSwitchToPersonal && (
+                {!isPersonalModeWithSaved && onSwitchToPersonal && (
                   <button
                     type="button"
                     className="btn-family-tertiary"

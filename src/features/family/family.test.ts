@@ -21,4 +21,8 @@ assert(initial.ownerUid === 'u1', 'sets ownerUid');
 assert(initial.members['u1']?.name === 'Budi Santoso', 'sets owner member');
 assert(initial.members['u1']?.role === 'owner', 'sets owner role');
 
+// Test 4: invite code is stable per user
+const initialAgain = createInitialLedger({ uid: 'u1', displayName: 'Budi Santoso' });
+assert(initial.inviteCode === initialAgain.inviteCode, 'invite code remains stable across sessions for same user');
+
 console.log('Family feature unit tests pass');

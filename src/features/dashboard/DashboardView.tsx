@@ -35,6 +35,7 @@ import {
   setUserActiveLedgerId,
   subscribeToLedger,
   createAndSaveLedger,
+  getUserFamilyLedger,
 } from '../../lib/ledgerService';
 
 // Modern Components
@@ -64,6 +65,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   // Family Ledger State
   const [activeLedgerId, setActiveLedgerId] = useState<string | null>(null);
   const [activeLedger, setActiveLedger] = useState<Ledger | null>(null);
+  const [savedFamilyLedger, setSavedFamilyLedger] = useState<Ledger | null>(null);
   const [isFamilySheetOpen, setIsFamilySheetOpen] = useState(false);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [joinCodeFromUrl, setJoinCodeFromUrl] = useState('');
@@ -138,14 +140,22 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     }
   }, []);
 
-  // Fetch active ledger on mount
+  // Fetch active ledger and saved family ledger on mount
   useEffect(() => {
+    if (!user?.uid || isShowcaseMode()) return;
+
     getUserActiveLedgerId(user.uid).then((storedLedgerId) => {
       if (storedLedgerId) {
         setActiveLedgerId(storedLedgerId);
       }
     });
-  }, [user.uid]);
+
+    getUserFamilyLedger(user.uid).then((famLedger) => {
+      if (famLedger) {
+        setSavedFamilyLedger(famLedger);
+      }
+    });
+  }, [user?.uid]);
 
   // Ensure default accounts exist for personal user on mount
   useEffect(() => {
@@ -164,6 +174,9 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
 
     const unsub = subscribeToLedger(activeLedgerId, (ledger) => {
       setActiveLedger(ledger);
+      if (ledger) {
+        setSavedFamilyLedger(ledger);
+      }
     });
     return () => unsub();
   }, [activeLedgerId]);
@@ -174,10 +187,20 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       const newLedger = await createAndSaveLedger(userProfileCreator);
       setActiveLedgerId(newLedger.id);
       setActiveLedger(newLedger);
+      setSavedFamilyLedger(newLedger);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Gagal membuat buku kas keluarga');
     } finally {
       setIsCreatingLedger(false);
+    }
+  };
+
+  const handleSwitchToFamily = async () => {
+    const targetId = savedFamilyLedger?.id;
+    if (targetId) {
+      await setUserActiveLedgerId(user.uid, targetId);
+      setActiveLedgerId(targetId);
+      setActiveLedger(savedFamilyLedger);
     }
   };
 
@@ -190,6 +213,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   const handleJoinSuccess = (joinedLedger: Ledger) => {
     setActiveLedgerId(joinedLedger.id);
     setActiveLedger(joinedLedger);
+    setSavedFamilyLedger(joinedLedger);
   };
 
   const activeAccounts = useMemo(() => accounts.filter((a) => !a.isArchived), [accounts]);
@@ -598,6 +622,8 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         onClose={() => setIsFamilySheetOpen(false)}
         currentUserId={user.uid}
         activeLedger={activeLedger}
+        savedLedger={savedFamilyLedger}
+        onSwitchToFamily={handleSwitchToFamily}
         onOpenJoinDialog={() => setIsJoinDialogOpen(true)}
         onSwitchToPersonal={activeLedger ? handleSwitchToPersonal : undefined}
         onCreateLedger={handleCreateLedger}
