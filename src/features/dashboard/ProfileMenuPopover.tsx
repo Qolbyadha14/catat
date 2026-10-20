@@ -123,6 +123,19 @@ export function ProfileMenuPopover({
           <span className="profile-menu-icon" aria-hidden="true">🚪</span>
           <span>Keluar Akun</span>
         </button>
+
+        {/* Brand Identity Footer */}
+        <div className="pt-3 pb-1 flex flex-col items-center justify-center border-t border-slate-100 dark:border-slate-800/60 mt-2">
+          <picture className="opacity-75 hover:opacity-100 transition-opacity">
+            <source media="(prefers-color-scheme: dark)" srcSet="/brand/catat-logo-dark.svg" />
+            <img
+              src="/brand/catat-logo.svg"
+              alt="catat by coreboylabs"
+              className="h-5 w-auto"
+            />
+          </picture>
+          <span className="text-[10px] text-slate-400 mt-1 font-medium">v2.0 • Catat keuangan, hidup lebih tenang</span>
+        </div>
       </div>
     </div>
   );

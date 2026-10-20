@@ -24,9 +24,15 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
 
   return (
     <main className="login-wrap">
-      <div className="login-icon">💳</div>
-      <h1 className="login-title">Catat Coreboy</h1>
-      <p className="login-sub">Your money, under control.</p>
+      <picture className="mb-3 block">
+        <source media="(prefers-color-scheme: dark)" srcSet="/brand/catat-logo-dark.svg" />
+        <img
+          src="/brand/catat-logo.svg"
+          alt="catat by coreboylabs"
+          className="w-56 max-w-xs h-auto mx-auto"
+        />
+      </picture>
+      <p className="login-sub">Catat keuangan, hidup lebih tenang.</p>
 
       {error && (
         <div className="form-error-banner" style={{ marginBottom: 16, width: '100%', maxWidth: 320 }}>
