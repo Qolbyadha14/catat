@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Target } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import type { Category } from '../../lib/schemas';
 import { formatIdr } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
@@ -17,13 +17,11 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   category,
   onSaveBudget,
 }) => {
-  if (!isOpen || !category) return null;
-
   const [limitStr, setLimitStr] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (category.monthlyBudget) {
+    if (category?.monthlyBudget) {
       setLimitStr(category.monthlyBudget.toString());
     } else {
       setLimitStr('');
@@ -39,6 +37,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!category) return;
     const val = parseFloat(limitStr) || 0;
     try {
       setIsSaving(true);
@@ -51,6 +50,8 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
       setIsSaving(false);
     }
   };
+
+  if (!isOpen || !category) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in">

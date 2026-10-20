@@ -1,18 +1,7 @@
 import React from 'react';
 import {
-  Utensils,
-  Briefcase,
-  ShoppingBag,
-  Car,
-  Zap,
-  HeartPulse,
-  Tv,
-  TrendingUp,
   Wallet,
   ArrowRightLeft,
-  CheckCircle2,
-  Calendar,
-  AlertCircle,
   Copy,
   Pencil,
   Trash2,
@@ -67,7 +56,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   filteredTransactions,
   accountMap,
   categoryMap,
-  categories,
+  categories: _categories,
   accounts,
   isLoading,
   isFiltered,
@@ -77,7 +66,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   onDuplicateTransaction,
   onDeleteTransaction,
   onPayUpcomingBill,
-  onOpenBudgetsTab,
+  onOpenBudgetsTab: _onOpenBudgetsTab,
 }) => {
   // Helper for category squircle icons & colors
   const getCategoryDetails = (catId?: string) => {

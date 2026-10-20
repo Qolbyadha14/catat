@@ -17,7 +17,7 @@ export const AccountCardCarousel: React.FC<AccountCardCarouselProps> = ({
 }) => {
   // Gradient picker based on account type and name
   const getCardStyle = (acc: Account) => {
-    const isLiability = acc.kind === 'liability' || acc.type === 'liability';
+    const isLiability = acc.kind === 'liability';
     const nameLower = acc.name.toLowerCase();
 
     if (isLiability) {
@@ -52,7 +52,7 @@ export const AccountCardCarousel: React.FC<AccountCardCarouselProps> = ({
         cardType: 'E-Wallet',
       };
     }
-    if (acc.type === 'cash') {
+    if (nameLower.includes('cash') || nameLower.includes('tunai') || acc.icon === '💵') {
       return {
         gradient: 'from-slate-800 via-slate-700 to-zinc-900',
         logoText: 'CASH',
@@ -74,7 +74,7 @@ export const AccountCardCarousel: React.FC<AccountCardCarouselProps> = ({
       <div className="overflow-x-auto no-scrollbar flex gap-3.5 snap-x snap-mandatory py-1 px-5">
         {accounts.map((acc, index) => {
           const style = getCardStyle(acc);
-          const isLiability = acc.kind === 'liability' || acc.type === 'liability';
+          const isLiability = acc.kind === 'liability';
           const debt = isLiability ? getAccountDebt(acc) : 0;
           const isSelected = selectedIndex === index;
 

@@ -21,8 +21,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   accounts,
   onSelectTransaction,
 }) => {
-  if (!isOpen) return null;
-
   const [query, setQuery] = useState('');
 
   const accountMap = useMemo(() => {
@@ -42,12 +40,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     const q = query.toLowerCase().trim();
 
     return transactions.filter((t) => {
-      const catName = (categoryMap.get(t.categoryId) || '').toLowerCase();
-      const accName = (accountMap.get(t.accountId) || '').toLowerCase();
-      const fromName = (accountMap.get(t.fromAccountId) || '').toLowerCase();
-      const toName = (accountMap.get(t.toAccountId) || '').toLowerCase();
+      const catName = ('categoryId' in t && t.categoryId ? (categoryMap.get(t.categoryId) || '') : '').toLowerCase();
+      const accName = ('accountId' in t && t.accountId ? (accountMap.get(t.accountId) || '') : '').toLowerCase();
+      const fromName = ('fromAccountId' in t && t.fromAccountId ? (accountMap.get(t.fromAccountId) || '') : '').toLowerCase();
+      const toName = ('toAccountId' in t && t.toAccountId ? (accountMap.get(t.toAccountId) || '') : '').toLowerCase();
       const note = (t.note || '').toLowerCase();
       const amt = t.amount.toString();
+      const dateText = formatDate(t.date).toLowerCase();
 
       return (
         note.includes(q) ||
@@ -56,10 +55,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         fromName.includes(q) ||
         toName.includes(q) ||
         amt.includes(q) ||
-        t.date.includes(q)
+        dateText.includes(q)
       );
     });
   }, [query, transactions, categoryMap, accountMap]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-xs animate-in fade-in">

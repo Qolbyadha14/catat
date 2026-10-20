@@ -169,8 +169,6 @@ export function TransactionFormSheet({
 
   const amountInputId = useId();
 
-  if (!isOpen) return null;
-
   const filteredCategories = categories.filter((c) => c.type === type);
   const isCategoryValid = filteredCategories.some((c) => c.id === categoryId);
   const currentCategoryId = isCategoryValid
@@ -647,6 +645,8 @@ export function TransactionFormSheet({
       setSaving(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

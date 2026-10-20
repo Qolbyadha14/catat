@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, CreditCard, Wallet, ShieldCheck, Zap } from 'lucide-react';
+import { Plus, Zap } from 'lucide-react';
 import type { Account } from '../../lib/schemas';
 import { calculateAccountSummary, getAccountDebt } from '../../lib/accountCalculations';
 import { formatIdr } from '../../lib/formatters';
@@ -82,11 +82,11 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-base">
-                  {acc.icon || (acc.type === 'cash' ? '💵' : '🏦')}
+                  {acc.icon || (acc.name.toLowerCase().includes('cash') || acc.name.toLowerCase().includes('tunai') ? '💵' : '🏦')}
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-900">{acc.name}</div>
-                  <div className="text-[10px] text-slate-400 capitalize">{acc.type}</div>
+                  <div className="text-[10px] text-slate-400 capitalize">{acc.kind}</div>
                 </div>
               </div>
 

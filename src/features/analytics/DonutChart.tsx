@@ -89,7 +89,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         {/* Center Cutout Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-            {highlightedItem ? highlightedItem.name : 'Total Pengeluaran'}
+            {highlightedItem ? highlightedItem.name : selectedMonthLabel}
           </span>
           <span className="text-base font-black text-slate-900 tracking-tight leading-tight mt-0.5">
             {highlightedItem ? formatIdr(highlightedItem.amount) : formatIdr(totalAmount)}

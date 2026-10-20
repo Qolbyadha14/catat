@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, AlertTriangle, CheckCircle2, ChevronRight, Plus } from 'lucide-react';
+import { Target, AlertTriangle, CheckCircle2, Plus } from 'lucide-react';
 import type { Category, Transaction } from '../../lib/schemas';
 import { formatIdr } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
@@ -19,11 +19,12 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
 
   // Filter current month transactions
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
 
   const currentMonthExpenses = transactions.filter(
-    (t) => t.type === 'expense' && t.date >= startOfMonth && t.date < endOfMonth
+    (t): t is Extract<Transaction, { type: 'expense' }> =>
+      t.type === 'expense' && t.date >= startOfMonth && t.date < endOfMonth
   );
 
   // Group budgets

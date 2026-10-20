@@ -82,8 +82,6 @@ export function ManageSheet({
     return showArchived ? categories : categories.filter((c) => !c.isArchived);
   }, [categories, showArchived]);
 
-  if (!isOpen) return null;
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -266,6 +264,8 @@ export function ManageSheet({
       }
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>

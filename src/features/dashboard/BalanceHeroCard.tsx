@@ -63,6 +63,7 @@ export const BalanceHeroCard: React.FC<BalanceHeroCardProps> = ({
   const pathD = points.reduce((acc, point, i, arr) => {
     if (i === 0) return `M ${point.x},${point.y}`;
     const prev = arr[i - 1];
+    if (!prev) return acc;
     const cp1x = prev.x + (point.x - prev.x) / 2;
     const cp1y = prev.y;
     const cp2x = prev.x + (point.x - prev.x) / 2;

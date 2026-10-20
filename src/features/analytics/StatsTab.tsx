@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PieChart, BarChart3, Download, TrendingUp, Calendar, ArrowDownRight } from 'lucide-react';
+import { PieChart, Download } from 'lucide-react';
 import type { Account, Category, Transaction } from '../../lib/schemas';
 import { formatIdr } from '../../lib/formatters';
 import { formatMonthYear } from '../../lib/monthNavigator';
@@ -35,16 +35,13 @@ export const StatsTab: React.FC<StatsTabProps> = ({
   const monthLabel = formatMonthYear(selectedMonth);
 
   // Filter current month transactions
-  const startOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
-    .toISOString()
-    .split('T')[0];
-  const endOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1)
-    .toISOString()
-    .split('T')[0];
+  const startOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1, 0, 0, 0, 0).getTime();
+  const endOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
 
   const monthExpenses = useMemo(() => {
     return transactions.filter(
-      (t) => t.type === 'expense' && t.date >= startOfMonth && t.date < endOfMonth
+      (t): t is Extract<Transaction, { type: 'expense' }> =>
+        t.type === 'expense' && t.date >= startOfMonth && t.date < endOfMonth
     );
   }, [transactions, startOfMonth, endOfMonth]);
 
@@ -71,7 +68,7 @@ export const StatsTab: React.FC<StatsTabProps> = ({
         name,
         amount: amt,
         percentage: pct,
-        color: PALETTE[idx % PALETTE.length],
+        color: PALETTE[idx % PALETTE.length] || '#3b82f6',
         icon: cat?.icon,
       });
       idx++;
