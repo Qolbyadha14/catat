@@ -9,9 +9,6 @@ export interface SuperAdminState {
 }
 
 const KNOWN_ADMIN_EMAILS = new Set([
-  'admin@catat.com',
-  'qolby@coreboylabs.com',
-  'qolbyadha@gmail.com',
   'qolbyadha04@gmail.com',
 ]);
 
