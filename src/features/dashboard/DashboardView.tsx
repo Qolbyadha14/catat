@@ -367,7 +367,7 @@ export function DashboardView({ user, onSignOut }: DashboardViewProps) {
       />
 
       {/* Main Tab Views */}
-      <div className="pt-1">
+      <div className="pt-1 flex-1 flex flex-col min-w-0">
         {currentTab === 'dashboard' && (
           <HomeTab
             netBalance={accountSummary.netBalance}

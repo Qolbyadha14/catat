@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Users } from 'lucide-react';
+import { Search, Users, ChevronDown } from 'lucide-react';
 import { playHapticSound } from '../../lib/haptic';
 
 export interface HeaderProps {
@@ -24,32 +24,50 @@ export const Header: React.FC<HeaderProps> = ({
   isProfileMenuOpen,
 }) => {
   return (
-    <header className="px-5 py-3 sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100/80">
+    <header className="px-5 py-3 sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100/90 shadow-2xs">
       <div className="flex items-center justify-between gap-3">
-        {/* User Info */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        {/* Left: Tap-friendly User Profile (opens Profile & Settings) */}
+        <button
+          type="button"
+          onClick={() => {
+            playHapticSound('tap');
+            onOpenProfileMenu();
+          }}
+          className="flex items-center gap-2.5 p-1 -ml-1 rounded-2xl hover:bg-slate-100/80 active:scale-98 transition-all text-left cursor-pointer group select-none min-w-0"
+          title="Buka Menu Profil & Pengaturan"
+          aria-label="Menu Profil & Pengaturan"
+          aria-expanded={isProfileMenuOpen}
+        >
+          <div className="relative shrink-0">
             {userPhoto ? (
               <img
                 src={userPhoto}
                 alt="Avatar"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/20"
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/20 group-hover:ring-blue-500/50 transition-all"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm ring-2 ring-blue-500/20 shadow-xs">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-sm ring-2 ring-blue-500/20 group-hover:ring-blue-500/50 shadow-xs transition-all">
                 {userInitials}
               </div>
             )}
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
           </div>
-          <div>
-            <div className="text-[11px] font-medium text-slate-400 leading-tight">Selamat Datang,</div>
-            <div className="text-sm font-bold text-slate-900 tracking-tight truncate max-w-[150px]">{userName}</div>
+          <div className="min-w-0 pr-1">
+            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-tight">
+              Halo,
+            </div>
+            <div className="text-sm font-bold text-slate-900 tracking-tight truncate max-w-[120px] sm:max-w-[160px] flex items-center gap-1">
+              <span>{userName}</span>
+              <ChevronDown
+                size={13}
+                className="text-slate-400 group-hover:text-slate-700 transition-colors shrink-0"
+              />
+            </div>
           </div>
-        </div>
+        </button>
 
-        {/* Action Icons */}
-        <div className="flex items-center gap-2">
+        {/* Right: Only 2 focused utility actions (Ledger Switcher + Search) */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Family Ledger Switch Button */}
           <button
             type="button"
@@ -57,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
               playHapticSound('click');
               onOpenFamilyLedger();
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
               activeLedgerName
                 ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-xs'
                 : 'bg-slate-100 text-slate-600 border-slate-200/80 hover:bg-slate-200'
@@ -66,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Buku Kas Keluarga"
           >
             <Users size={14} className={activeLedgerName ? 'text-blue-600' : 'text-slate-500'} />
-            <span className="text-[11px] font-bold max-w-[85px] truncate">
+            <span className="text-[11px] font-bold max-w-[95px] truncate">
               {activeLedgerName || 'Keluarga'}
             </span>
             {activeLedgerName && (
@@ -86,21 +104,6 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label="Cari Transaksi"
           >
             <Search size={16} />
-          </button>
-
-          {/* Profile / Settings Trigger */}
-          <button
-            type="button"
-            onClick={() => {
-              playHapticSound('tap');
-              onOpenProfileMenu();
-            }}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors cursor-pointer border border-slate-200/60 relative"
-            title="Menu Profil & Pengaturan"
-            aria-label="Menu Profil & Pengaturan"
-            aria-expanded={isProfileMenuOpen}
-          >
-            <span className="text-xs font-black">{userInitials}</span>
           </button>
         </div>
       </div>

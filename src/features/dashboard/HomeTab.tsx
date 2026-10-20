@@ -87,7 +87,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
+    <div className="space-y-4 animate-in fade-in duration-200 flex-1 flex flex-col">
       {/* 1. Hero Balance Card */}
       <BalanceHeroCard
         netBalance={netBalance}
@@ -108,7 +108,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       </div>
 
       {/* 3. Transaction History Section */}
-      <section className="px-5">
+      <section className="px-5 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-base font-bold text-slate-900 tracking-tight">Pelacakan Transaksi Harian</h2>
@@ -133,16 +133,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
         {/* Transactions List */}
         {isLoading ? (
-          <div className="text-center py-10 text-slate-400 text-xs">
+          <div className="text-center py-12 text-slate-400 text-xs flex-1 flex items-center justify-center">
             Memuat data transaksi...
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border border-slate-100 shadow-xs my-2">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2 text-xl">
+          <div className="bg-slate-50/70 rounded-3xl py-12 px-6 flex-1 min-h-[220px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200/90 shadow-2xs my-2">
+            <div className="w-14 h-14 rounded-2xl bg-white text-blue-600 flex items-center justify-center shadow-xs border border-slate-100 mb-3 text-2xl">
               📝
             </div>
-            <h3 className="text-sm font-bold text-slate-800">Belum Ada Transaksi</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto">
+            <h3 className="text-base font-bold text-slate-800 tracking-tight">Belum Ada Transaksi</h3>
+            <p className="text-xs text-slate-500 mt-1.5 max-w-xs text-center leading-relaxed">
               Mulai catat transaksi pemasukan atau pengeluaran pertamamu.
             </p>
             <button
@@ -151,9 +151,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 playHapticSound('success');
                 onOpenAddModal();
               }}
-              className="mt-3 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm shadow-blue-500/25 cursor-pointer inline-flex items-center gap-1.5"
+              className="mt-4 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer inline-flex items-center justify-center gap-2"
             >
-              <Plus size={14} />
+              <Plus size={15} />
               <span>Catat Transaksi Sekarang</span>
             </button>
           </div>
