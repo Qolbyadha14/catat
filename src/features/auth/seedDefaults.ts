@@ -35,7 +35,19 @@ const DEFAULT_CATEGORIES: Omit<SeedCategory, 'createdAt'>[] = [
   { id: 'cat_other_income', name: 'Pemasukan Lain', type: 'income', icon: '📈', isArchived: false },
 ];
 
-export async function ensureUserDefaults(uid: string): Promise<void> {
+export interface UserProfileSeed {
+  uid: string;
+  email?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+}
+
+export async function ensureUserDefaults(userOrUid: string | UserProfileSeed): Promise<void> {
+  const uid = typeof userOrUid === 'string' ? userOrUid : userOrUid.uid;
+  const email = typeof userOrUid === 'string' ? '' : (userOrUid.email || '');
+  const displayName = typeof userOrUid === 'string' ? '' : (userOrUid.displayName || '');
+  const photoURL = typeof userOrUid === 'string' ? '' : (userOrUid.photoURL || '');
+
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
 
@@ -46,7 +58,11 @@ export async function ensureUserDefaults(uid: string): Promise<void> {
     // Marker doc
     batch.set(userRef, {
       uid,
+      email,
+      displayName,
+      photoURL,
       createdAt: now,
+      lastActiveAt: now,
       seeded: true,
     });
 
@@ -55,7 +71,20 @@ export async function ensureUserDefaults(uid: string): Promise<void> {
       const catRef = doc(db, 'users', uid, 'categories', cat.id);
       batch.set(catRef, { ...cat, createdAt: now });
     }
+  } else {
+    batch.set(
+      userRef,
+      {
+        uid,
+        ...(email ? { email } : {}),
+        ...(displayName ? { displayName } : {}),
+        ...(photoURL ? { photoURL } : {}),
+        lastActiveAt: now,
+      },
+      { merge: true }
+    );
   }
+
 
   // Ensure all default accounts exist (idempotent for new and existing users)
   for (const acc of DEFAULT_ACCOUNTS) {

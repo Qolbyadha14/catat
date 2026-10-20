@@ -36,7 +36,7 @@ export function useAuth(): AuthState {
       async (currentUser) => {
         if (currentUser) {
           try {
-            await ensureUserDefaults(currentUser.uid);
+            await ensureUserDefaults(currentUser);
             setUser(currentUser);
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Gagal inisialisasi data pengguna';
@@ -61,11 +61,12 @@ export function useAuth(): AuthState {
     try {
       const provider = new GoogleAuthProvider();
       const res = await signInWithPopup(auth, provider);
-      await ensureUserDefaults(res.user.uid);
+      await ensureUserDefaults(res.user);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Gagal masuk dengan Google';
       setError(msg);
       throw err;
+
     }
   };
 
