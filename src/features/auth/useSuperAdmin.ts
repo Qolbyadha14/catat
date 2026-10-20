@@ -12,7 +12,9 @@ const KNOWN_ADMIN_EMAILS = new Set([
   'admin@catat.com',
   'qolby@coreboylabs.com',
   'qolbyadha@gmail.com',
+  'qolbyadha04@gmail.com',
 ]);
+
 
 export function isSuperAdminEmail(email?: string | null): boolean {
   if (!email) return false;
