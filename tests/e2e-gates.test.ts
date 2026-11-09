@@ -41,9 +41,12 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
           return store.size;
         },
       };
-      (globalThis as unknown as { window: { localStorage: Storage } }).window = {
+      // location dibutuhkan isShowcaseMode() yang dipanggil oleh query helper
+      (globalThis as unknown as { window: { localStorage: Storage; location: { search: string } } }).window = {
         localStorage: mockStorage,
+        location: { search: '' },
       };
+      (globalThis as unknown as { localStorage: Storage }).localStorage = mockStorage;
     }
 
     // Authenticate with Firebase Auth emulator to satisfy firestore.rules (request.auth.uid == uid)
@@ -990,6 +993,63 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(summary.successCount).toBe(1);
     expect(summary.avgDurationMs).toBe(850);
     expect(summary.totalTokens).toBe(400);
+  });
+
+  it('Gate 15: Month-scoped query returns every transaction in the month (no 50-item cap)', async () => {
+    const { transactionsInRangeQuery, parseTransactionDocs, findTransactionByReferenceKey } = await import(
+      '../src/features/transactions/transactionQueries'
+    );
+    const { getMonthRange } = await import('../src/lib/monthNavigator');
+
+    // Februari 2030 agar tidak bercampur dengan transaksi Date.now() dari gate lain
+    const { startOfMonth, endOfMonth } = getMonthRange(new Date(2030, 1, 1));
+    const col = collection(db, 'users', testUid, 'transactions');
+    const now = Date.now();
+    const writes: Promise<void>[] = [];
+
+    for (let i = 0; i < 60; i++) {
+      const id = `tx_feb2030_${i}`;
+      writes.push(
+        setDoc(doc(col, id), {
+          id,
+          type: 'expense',
+          amount: 1_000 + i,
+          accountId: 'acc_gate15',
+          categoryId: 'cat_gate15',
+          date: startOfMonth + i * 60_000,
+          note: '',
+          referenceKey: i === 0 ? 'shopee#GATE15-REF' : null,
+          createdAt: now,
+          updatedAt: now,
+        })
+      );
+    }
+    for (let i = 0; i < 5; i++) {
+      const id = `tx_jan2030_${i}`;
+      writes.push(
+        setDoc(doc(col, id), {
+          id,
+          type: 'expense',
+          amount: 500,
+          accountId: 'acc_gate15',
+          categoryId: 'cat_gate15',
+          date: startOfMonth - (i + 1) * 60_000,
+          note: '',
+          createdAt: now,
+          updatedAt: now,
+        })
+      );
+    }
+    await Promise.all(writes);
+
+    const snap = await getDocs(transactionsInRangeQuery(testUid, { start: startOfMonth, end: endOfMonth }));
+    const result = parseTransactionDocs(snap.docs);
+    expect(result.length).toBe(60);
+    expect(result.every((t) => t.date >= startOfMonth && t.date < endOfMonth)).toBe(true);
+    expect(result[0]!.date).toBeGreaterThan(result[59]!.date);
+
+    expect((await findTransactionByReferenceKey(testUid, 'shopee#GATE15-REF'))?.id).toBe('tx_feb2030_0');
+    expect(await findTransactionByReferenceKey(testUid, 'shopee#TIDAK-ADA')).toBeNull();
   });
 
   // Harus tetap menjadi test terakhir: gate ini mengganti user yang login.
