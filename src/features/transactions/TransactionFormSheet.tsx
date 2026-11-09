@@ -12,7 +12,9 @@ import { OcrReviewCard, formatReviewNote } from './OcrReviewCard';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
-import { findDuplicateReceipt } from '../../lib/ledgerService';
+import { getMonthRange } from '../../lib/monthNavigator';
+import { useTransactions } from './useTransactions';
+import { findTransactionByReferenceKey } from './transactionQueries';
 import { formatLiveAmount, calculateNewCursorPosition } from '../../lib/currencyInputFormatter';
 import { formatIdr } from '../../lib/formatters';
 import { evaluateTransactionBudgetImpact } from '../../lib/budgeting';
@@ -37,7 +39,6 @@ interface TransactionFormSheetProps {
   onSuccess?: () => void;
   createdBy?: Creator;
   ledgerId?: string;
-  existingTransactions?: Transaction[];
 }
 
 export function TransactionFormSheet({
@@ -53,7 +54,6 @@ export function TransactionFormSheet({
   onSuccess,
   createdBy,
   ledgerId,
-  existingTransactions = [],
 }: TransactionFormSheetProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'text' | 'ocr'>(() => {
     if (initialTx || duplicateData || initialDraft || initialTransfer) return 'manual';
@@ -187,6 +187,17 @@ export function TransactionFormSheet({
     ? toAccountId
     : (duplicateData ? '' : toAccountOptions[0]?.id || '');
 
+  // Bulan dari tanggal transaksi, bukan bulan yang sedang dibuka di dashboard.
+  // Jika sama, Firestore SDK memakai ulang listener dashboard.
+  const budgetMonth = useMemo(() => {
+    const parsed = dateStr ? new Date(dateStr) : null;
+    // Tanggal kosong atau tidak valid: rentang kosong, jadi tidak ada data dan tidak ada peringatan
+    if (!parsed || Number.isNaN(parsed.getTime())) return { start: 0, end: 0 };
+    const { startOfMonth, endOfMonth } = getMonthRange(parsed);
+    return { start: startOfMonth, end: endOfMonth };
+  }, [dateStr]);
+  const { transactions: budgetMonthTransactions } = useTransactions(uid, budgetMonth, ledgerId);
+
   const budgetWarning = useMemo(() => {
     if (type !== 'expense' || !currentCategoryId) return null;
     const cat = categories.find((c) => c.id === currentCategoryId);
@@ -197,17 +208,15 @@ export function TransactionFormSheet({
     const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
 
     let currentSpent = 0;
-    if (existingTransactions) {
-      for (const tx of existingTransactions) {
-        if (
-          tx.type === 'expense' &&
-          tx.categoryId === currentCategoryId &&
-          tx.date >= startOfMonth &&
-          tx.date < endOfMonth &&
-          tx.id !== initialTx?.id
-        ) {
-          currentSpent += tx.amount;
-        }
+    for (const tx of budgetMonthTransactions) {
+      if (
+        tx.type === 'expense' &&
+        tx.categoryId === currentCategoryId &&
+        tx.date >= startOfMonth &&
+        tx.date < endOfMonth &&
+        tx.id !== initialTx?.id
+      ) {
+        currentSpent += tx.amount;
       }
     }
 
@@ -223,7 +232,7 @@ export function TransactionFormSheet({
       };
     }
     return null;
-  }, [type, currentCategoryId, categories, dateStr, existingTransactions, initialTx, rawAmount]);
+  }, [type, currentCategoryId, categories, dateStr, budgetMonthTransactions, initialTx, rawAmount]);
 
   const handleAmountChange = (val: string) => {
     const currentCursor = amountInputRef.current?.selectionStart ?? val.length;
@@ -369,8 +378,11 @@ export function TransactionFormSheet({
       merchant: res.merchant,
     });
 
-    const dup = findDuplicateReceipt(existingTransactions, res.referenceKey);
-    setDuplicateMatch(dup);
+    // Cek duplikat di seluruh riwayat; hasilnya hanya peringatan, jadi tidak memblokir review
+    setDuplicateMatch(null);
+    findTransactionByReferenceKey(uid, res.referenceKey, ledgerId)
+      .then(setDuplicateMatch)
+      .catch(() => setDuplicateMatch(null));
     setReferenceKey(res.referenceKey || null);
     setItems(res.items || []);
 

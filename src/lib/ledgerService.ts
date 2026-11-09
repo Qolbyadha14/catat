@@ -1,6 +1,6 @@
 import { doc, getDoc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Ledger, LedgerMember, Transaction } from './schemas';
+import type { Ledger, LedgerMember } from './schemas';
 import { ensureLedgerDefaults } from '../features/auth/seedDefaults';
 
 // Character set avoiding ambiguous characters (0, O, 1, I)
@@ -138,21 +138,6 @@ export function addMemberToLedger(ledger: Ledger, member: LedgerMember): Ledger 
   };
 }
 
-/**
- * Finds if any transaction in the ledger matches the given referenceKey.
- */
-export function findDuplicateReceipt(
-  transactions: Transaction[],
-  referenceKey: string | null | undefined
-): Transaction | null {
-  if (!referenceKey) return null;
-  const cleanRef = referenceKey.trim().toLowerCase();
-  return (
-    transactions.find(
-      (tx) => tx.referenceKey && tx.referenceKey.trim().toLowerCase() === cleanRef
-    ) ?? null
-  );
-}
 
 const MAX_INVITE_CODE_ATTEMPTS = 5;
 

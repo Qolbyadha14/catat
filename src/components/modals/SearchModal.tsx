@@ -11,6 +11,8 @@ export interface SearchModalProps {
   categories: Category[];
   accounts: Account[];
   onSelectTransaction?: (tx: Transaction) => void;
+  /** Label cakupan data yang dicari, misalnya "November 2026" */
+  scopeLabel?: string;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
@@ -20,6 +22,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   categories,
   accounts,
   onSelectTransaction,
+  scopeLabel,
 }) => {
   const [query, setQuery] = useState('');
 
@@ -77,7 +80,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari transaksi, nominal, akun, kategori..."
+              placeholder={scopeLabel ? `Cari transaksi ${scopeLabel}...` : 'Cari transaksi, nominal, akun, kategori...'}
               className="w-full pl-9 pr-8 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {query && (

@@ -92,9 +92,10 @@ export const StatsTab: React.FC<StatsTabProps> = ({
 
   const handleExportCsv = () => {
     playHapticSound('success');
+    // `transactions` sudah berisi seluruh transaksi bulan terpilih
     const content = generateCsvContent(transactions, accountMap, categoryMap);
-    const dateStr = new Date().toISOString().split('T')[0];
-    downloadCsv(`catat_laporan_keuangan_${dateStr}.csv`, content);
+    const monthKey = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
+    downloadCsv(`catat_laporan_keuangan_${monthKey}.csv`, content);
   };
 
   return (

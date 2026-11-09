@@ -4,9 +4,8 @@ import {
   createInitialLedger,
   reconcileOrPreserveLedger,
   addMemberToLedger,
-  findDuplicateReceipt,
 } from './ledgerService';
-import type { LedgerMember, Transaction } from './schemas';
+import type { LedgerMember } from './schemas';
 
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
@@ -71,22 +70,5 @@ const reconciled = reconcileOrPreserveLedger(
 assert(reconciled.inviteCode === 'OLD999', 'strictly preserves existing custom/established invite code');
 assert(reconciled.members['u2']?.name === 'Sarah', 'preserves existing members');
 assert(reconciled.name === 'Keluarga Bahagia', 'updates name when supplied');
-
-// 4. findDuplicateReceipt
-const existingTx = {
-  id: 'tx_1',
-  type: 'expense' as const,
-  amount: 10000,
-  date: 1000,
-  accountId: 'acc_1',
-  categoryId: 'cat_1',
-  referenceKey: 'tiktok#123',
-  createdAt: 1000,
-  updatedAt: 1000,
-} as Transaction;
-
-assert(findDuplicateReceipt([existingTx], 'tiktok#123')?.id === 'tx_1', 'finds duplicate');
-assert(findDuplicateReceipt([existingTx], 'tiktok#456') === null, 'returns null when not found');
-assert(findDuplicateReceipt([existingTx], null) === null, 'returns null for null ref');
 
 console.log('ledgerService tests pass');

@@ -141,7 +141,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <div className="w-14 h-14 rounded-2xl bg-white text-blue-600 flex items-center justify-center shadow-xs border border-slate-100 mb-3 text-2xl">
               📝
             </div>
-            <h3 className="text-base font-bold text-slate-800 tracking-tight">Belum Ada Transaksi</h3>
+            <h3 className="text-base font-bold text-slate-800 tracking-tight">
+              Belum ada transaksi di {selectedMonthLabel}
+            </h3>
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs text-center leading-relaxed">
               Mulai catat transaksi pemasukan atau pengeluaran pertamamu.
             </p>

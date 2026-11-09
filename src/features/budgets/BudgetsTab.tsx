@@ -3,24 +3,25 @@ import { Target, AlertTriangle, CheckCircle2, Plus } from 'lucide-react';
 import type { Category, Transaction } from '../../lib/schemas';
 import { formatIdr } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
+import { formatMonthYear, getMonthRange } from '../../lib/monthNavigator';
 
 export interface BudgetsTabProps {
   categories: Category[];
   transactions: Transaction[];
+  selectedMonth: Date;
   onOpenBudgetModal: (category: Category) => void;
 }
 
 export const BudgetsTab: React.FC<BudgetsTabProps> = ({
   categories,
   transactions,
+  selectedMonth,
   onOpenBudgetModal,
 }) => {
   const activeCategories = categories.filter((c) => !c.isArchived);
 
-  // Filter current month transactions
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
+  const { startOfMonth, endOfMonth } = getMonthRange(selectedMonth);
+  const monthLabel = formatMonthYear(selectedMonth);
 
   const currentMonthExpenses = transactions.filter(
     (t): t is Extract<Transaction, { type: 'expense' }> =>
@@ -67,7 +68,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
               <Target size={16} />
             </div>
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Total Anggaran Bulan Ini
+              {`Anggaran ${monthLabel}`}
             </span>
           </div>
 

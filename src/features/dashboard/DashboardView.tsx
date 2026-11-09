@@ -468,6 +468,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
           <BudgetsTab
             categories={categories}
             transactions={transactions}
+            selectedMonth={selectedMonth}
             onOpenBudgetModal={(cat) => {
               setSelectedBudgetCat(cat);
               setIsBudgetModalOpen(true);
@@ -504,6 +505,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         transactions={transactions}
         categories={categories}
         accounts={accounts}
+        scopeLabel={monthLabel}
         onSelectTransaction={(tx) => {
           setEditingTx(tx);
           setDuplicateData(null);
@@ -556,7 +558,6 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
           initialTransfer={transferPrefill}
           createdBy={userProfileCreator}
           ledgerId={activeLedgerId || undefined}
-          existingTransactions={transactions}
         />
       )}
 
