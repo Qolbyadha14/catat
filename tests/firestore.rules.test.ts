@@ -7,7 +7,19 @@ import {
 } from '@firebase/rules-unit-testing';
 import * as fs from 'fs';
 import * as path from 'path';
-import { doc, getDoc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
 
 let testEnv: RulesTestEnvironment;
 
@@ -339,6 +351,143 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
       // Super admin can read family ledgers
       await assertSucceeds(getDoc(doc(db, 'ledgers/ledger-family')));
     });
+
+    it('Daftar admin tidak bisa dibaca user biasa; tiap user hanya bisa membaca dokumen adminnya sendiri', async () => {
+      const regularDb = testEnv.authenticatedContext('user-regular').firestore();
+      await assertFails(getDoc(doc(regularDb, 'system_admins/user-admin')));
+      await assertFails(getDocs(collection(regularDb, 'system_admins')));
+      await assertSucceeds(getDoc(doc(regularDb, 'system_admins/user-regular')));
+
+      const adminDb = testEnv.authenticatedContext('user-admin').firestore();
+      await assertSucceeds(getDoc(doc(adminDb, 'system_admins/user-admin')));
+    });
   });
 });
 
+
+describe('Family Ledger & Invite Guard', () => {
+  const OWNER = 'owner-a';
+  const MEMBER = 'member-b';
+  const OUTSIDER = 'outsider-c';
+  const CODE = 'ABC234';
+
+  const ownerEntry = { uid: OWNER, name: 'Owner', email: 'o@test.com', role: 'owner', joinedAt: 1 };
+  const memberEntry = { uid: MEMBER, name: 'Member', email: 'm@test.com', role: 'member', joinedAt: 2 };
+  const outsiderEntry = { uid: OUTSIDER, name: 'Outsider', email: '', joinedAt: 3 };
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const rootDb = context.firestore();
+      await setDoc(doc(rootDb, `ledgers/${OWNER}`), {
+        id: OWNER,
+        name: 'Keluarga A',
+        ownerUid: OWNER,
+        inviteCode: CODE,
+        members: { [OWNER]: ownerEntry, [MEMBER]: memberEntry },
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await setDoc(doc(rootDb, `invites/${CODE}`), { ledgerId: OWNER, createdAt: 1 });
+      await setDoc(doc(rootDb, `ledgers/${OWNER}/transactions/tx_1`), { amount: 1000 });
+    });
+  });
+
+  it('Non-anggota tidak bisa membaca ledger, me-list ledger, atau membaca transaksinya', async () => {
+    const outsiderDb = testEnv.authenticatedContext(OUTSIDER).firestore();
+    await assertFails(getDoc(doc(outsiderDb, `ledgers/${OWNER}`)));
+    await assertFails(getDocs(query(collection(outsiderDb, 'ledgers'), where('inviteCode', '==', CODE))));
+    await assertFails(getDoc(doc(outsiderDb, `ledgers/${OWNER}/transactions/tx_1`)));
+  });
+
+  it('Kode undangan bisa diambil per kode tapi tidak bisa di-list', async () => {
+    const outsiderDb = testEnv.authenticatedContext(OUTSIDER).firestore();
+    await assertSucceeds(getDoc(doc(outsiderDb, `invites/${CODE}`)));
+    await assertFails(getDocs(collection(outsiderDb, 'invites')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), `invites/${CODE}`)));
+  });
+
+  it('Join tanpa kode, dengan kode salah, atau sebagai owner ditolak', async () => {
+    const ref = doc(testEnv.authenticatedContext(OUTSIDER).firestore(), `ledgers/${OWNER}`);
+    await assertFails(updateDoc(ref, { [`members.${OUTSIDER}`]: { ...outsiderEntry, role: 'member' }, updatedAt: 3 }));
+    await assertFails(
+      updateDoc(ref, { [`members.${OUTSIDER}`]: { ...outsiderEntry, role: 'member', joinCode: 'WRONG9' }, updatedAt: 3 })
+    );
+    await assertFails(
+      updateDoc(ref, { [`members.${OUTSIDER}`]: { ...outsiderEntry, role: 'owner', joinCode: CODE }, updatedAt: 3 })
+    );
+  });
+
+  it('Join dengan kode yang benar sebagai member diizinkan, lalu transaksi bisa dibaca', async () => {
+    const outsiderDb = testEnv.authenticatedContext(OUTSIDER).firestore();
+    await assertSucceeds(
+      updateDoc(doc(outsiderDb, `ledgers/${OWNER}`), {
+        [`members.${OUTSIDER}`]: { ...outsiderEntry, role: 'member', joinCode: CODE },
+        updatedAt: 3,
+      })
+    );
+    await assertSucceeds(getDoc(doc(outsiderDb, `ledgers/${OWNER}/transactions/tx_1`)));
+  });
+
+  it('Calon anggota tidak bisa menghapus atau menambahkan anggota lain', async () => {
+    const ref = doc(testEnv.authenticatedContext(OUTSIDER).firestore(), `ledgers/${OWNER}`);
+    await assertFails(updateDoc(ref, { [`members.${MEMBER}`]: deleteField(), updatedAt: 3 }));
+    await assertFails(
+      updateDoc(ref, {
+        [`members.${OUTSIDER}`]: { ...outsiderEntry, role: 'member', joinCode: CODE },
+        'members.ghost-d': { uid: 'ghost-d', name: 'Ghost', email: '', role: 'member', joinedAt: 3, joinCode: CODE },
+        updatedAt: 3,
+      })
+    );
+  });
+
+  it('Anggota hanya boleh mengubah atau menghapus entry miliknya sendiri', async () => {
+    const ref = doc(testEnv.authenticatedContext(MEMBER).firestore(), `ledgers/${OWNER}`);
+    await assertFails(updateDoc(ref, { ownerUid: MEMBER }));
+    await assertFails(updateDoc(ref, { inviteCode: 'NEW234' }));
+    await assertFails(updateDoc(ref, { [`members.${OWNER}`]: deleteField() }));
+    await assertFails(updateDoc(ref, { [`members.${MEMBER}.role`]: 'owner' }));
+    await assertSucceeds(updateDoc(ref, { [`members.${MEMBER}.name`]: 'Member Baru', updatedAt: 4 }));
+    await assertSucceeds(updateDoc(ref, { [`members.${MEMBER}`]: deleteField(), updatedAt: 5 }));
+  });
+
+  it('Owner boleh mengelola anggota dan kode, tapi tidak boleh memindahkan kepemilikan', async () => {
+    const ref = doc(testEnv.authenticatedContext(OWNER).firestore(), `ledgers/${OWNER}`);
+    await assertFails(updateDoc(ref, { ownerUid: MEMBER }));
+    await assertSucceeds(updateDoc(ref, { [`members.${MEMBER}`]: deleteField(), updatedAt: 6 }));
+    await assertSucceeds(updateDoc(ref, { inviteCode: 'NEW234', updatedAt: 7 }));
+  });
+
+  it('Ledger hanya bisa dibuat dengan ID = UID pembuat dan tanpa anggota lain', async () => {
+    const outsiderDb = testEnv.authenticatedContext(OUTSIDER).firestore();
+    const entry = { ...outsiderEntry, role: 'owner' };
+    const base = { name: 'Keluarga C', ownerUid: OUTSIDER, inviteCode: 'CCC234', createdAt: 1, updatedAt: 1 };
+
+    await assertFails(setDoc(doc(outsiderDb, 'ledgers/victim-z'), { ...base, id: 'victim-z', members: { [OUTSIDER]: entry } }));
+    await assertFails(
+      setDoc(doc(outsiderDb, `ledgers/${OUTSIDER}`), {
+        ...base,
+        id: OUTSIDER,
+        members: { [OUTSIDER]: entry, 'ghost-d': { ...memberEntry, uid: 'ghost-d' } },
+      })
+    );
+    await assertSucceeds(setDoc(doc(outsiderDb, `ledgers/${OUTSIDER}`), { ...base, id: OUTSIDER, members: { [OUTSIDER]: entry } }));
+  });
+
+  it('Hanya owner yang bisa membuat dan menghapus indeks undangan, dan kodenya harus cocok dengan ledger', async () => {
+    const ownerDb = testEnv.authenticatedContext(OWNER).firestore();
+    const batch = writeBatch(ownerDb);
+    batch.update(doc(ownerDb, `ledgers/${OWNER}`), { inviteCode: 'NEW234', updatedAt: 8 });
+    batch.set(doc(ownerDb, 'invites/NEW234'), { ledgerId: OWNER, createdAt: 8 });
+    batch.delete(doc(ownerDb, `invites/${CODE}`));
+    await assertSucceeds(batch.commit());
+
+    await assertFails(setDoc(doc(ownerDb, 'invites/FAKE23'), { ledgerId: OWNER, createdAt: 9 }));
+    await assertFails(setDoc(doc(ownerDb, 'invites/NEW234'), { ledgerId: OWNER, createdAt: 9 }));
+
+    const memberDb = testEnv.authenticatedContext(MEMBER).firestore();
+    await assertFails(setDoc(doc(memberDb, 'invites/MEM234'), { ledgerId: OWNER, createdAt: 9 }));
+
+    const outsiderDb = testEnv.authenticatedContext(OUTSIDER).firestore();
+    await assertFails(deleteDoc(doc(outsiderDb, 'invites/NEW234')));
+  });
+});
