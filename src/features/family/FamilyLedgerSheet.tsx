@@ -14,6 +14,7 @@ interface FamilyLedgerSheetProps {
   onSwitchToPersonal?: () => void;
   onCreateLedger?: () => Promise<void>;
   isCreating?: boolean;
+  onRotateInviteCode?: () => Promise<void>;
 }
 
 export function FamilyLedgerSheet({
@@ -27,8 +28,12 @@ export function FamilyLedgerSheet({
   onSwitchToPersonal,
   onCreateLedger,
   isCreating = false,
+  onRotateInviteCode,
 }: FamilyLedgerSheetProps) {
   const [copied, setCopied] = useState(false);
+  const [isConfirmingRotate, setIsConfirmingRotate] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
+  const [rotateError, setRotateError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -51,6 +56,20 @@ export function FamilyLedgerSheet({
     );
     const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleRotate = async () => {
+    if (!onRotateInviteCode) return;
+    try {
+      setIsRotating(true);
+      setRotateError(null);
+      await onRotateInviteCode();
+      setIsConfirmingRotate(false);
+    } catch (err: unknown) {
+      setRotateError(err instanceof Error ? err.message : 'Gagal mengganti kode undangan.');
+    } finally {
+      setIsRotating(false);
+    }
   };
 
   const displayLedger = activeLedger || savedLedger;
@@ -119,6 +138,47 @@ export function FamilyLedgerSheet({
                   <span className="btn-wa-icon">💬</span>
                   <span>Bagikan Undangan ke WhatsApp</span>
                 </button>
+
+                {onRotateInviteCode && displayLedger.ownerUid === currentUserId && (
+                  <div className="mt-3 text-xs">
+                    {isConfirmingRotate ? (
+                      <div className="flex flex-col gap-2" role="group" aria-label="Konfirmasi ganti kode">
+                        <span>Kode lama langsung tidak bisa dipakai. Undangan yang sudah dikirim perlu dibagikan ulang.</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="btn-family-tertiary"
+                            onClick={() => setIsConfirmingRotate(false)}
+                            disabled={isRotating}
+                          >
+                            Batal
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-family-secondary"
+                            onClick={handleRotate}
+                            disabled={isRotating}
+                          >
+                            {isRotating ? 'Mengganti...' : 'Ganti kode'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-family-tertiary"
+                        onClick={() => setIsConfirmingRotate(true)}
+                      >
+                        🔁 Buat kode undangan baru
+                      </button>
+                    )}
+                    {rotateError && (
+                      <p role="alert" className="mt-2 text-rose-600 dark:text-rose-400">
+                        {rotateError}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Members Section */}

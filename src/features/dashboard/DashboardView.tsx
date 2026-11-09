@@ -36,6 +36,8 @@ import {
   subscribeToLedger,
   createAndSaveLedger,
   getUserFamilyLedger,
+  ensureInviteIndex,
+  rotateInviteCode,
 } from '../../lib/ledgerService';
 
 // Modern Components
@@ -181,6 +183,15 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     return () => unsub();
   }, [activeLedgerId]);
 
+  // Ledger yang dibuat sebelum koleksi invites/ ada belum punya indeks kode.
+  // Owner membuatnya saat membuka aplikasi; rules hanya mengizinkan owner.
+  const ownedLedgerId = savedFamilyLedger?.ownerUid === user.uid ? savedFamilyLedger.id : null;
+  const ownedInviteCode = ownedLedgerId ? savedFamilyLedger?.inviteCode ?? null : null;
+  useEffect(() => {
+    if (!ownedLedgerId || !ownedInviteCode || isShowcaseMode()) return;
+    ensureInviteIndex(ownedLedgerId, ownedInviteCode).catch(console.error);
+  }, [ownedLedgerId, ownedInviteCode]);
+
   const handleCreateLedger = async () => {
     try {
       setIsCreatingLedger(true);
@@ -214,6 +225,14 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     setActiveLedgerId(joinedLedger.id);
     setActiveLedger(joinedLedger);
     setSavedFamilyLedger(joinedLedger);
+  };
+
+  const handleRotateInviteCode = async () => {
+    const ledger = savedFamilyLedger;
+    if (!ledger || ledger.ownerUid !== user.uid) return;
+    const newCode = await rotateInviteCode(ledger);
+    // Jika ledger sedang aktif, subscribeToLedger juga akan mengirim kode baru
+    setSavedFamilyLedger({ ...ledger, inviteCode: newCode });
   };
 
   const activeAccounts = useMemo(() => accounts.filter((a) => !a.isArchived), [accounts]);
@@ -628,6 +647,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         onSwitchToPersonal={activeLedger ? handleSwitchToPersonal : undefined}
         onCreateLedger={handleCreateLedger}
         isCreating={isCreatingLedger}
+        onRotateInviteCode={handleRotateInviteCode}
       />
 
       {/* Join Ledger Dialog */}
