@@ -35,15 +35,29 @@ export const RECAPTCHA_ENTERPRISE_SITE_KEY =
 
 export let appCheck: AppCheck | undefined;
 
-if (typeof window !== 'undefined') {
-  const debugToken =
-    import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN ??
-    (globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN;
+/**
+ * Debug token hanya boleh dipakai di Vite dev dan di test runner.
+ * Vite mengganti `import.meta.env.DEV` dengan `false` saat build produksi,
+ * sehingga cabang pertama (beserta nilai token dari .env) dibuang dari bundle.
+ */
+function resolveAppCheckDebugToken(): string | boolean | undefined {
+  if (import.meta.env.DEV) {
+    return import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
+  }
+  if (isTest) {
+    return (
+      proc?.env?.FIREBASE_APPCHECK_DEBUG_TOKEN ??
+      proc?.env?.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN ??
+      (globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN
+    );
+  }
+  return undefined;
+}
 
+if (typeof window !== 'undefined') {
+  const debugToken = resolveAppCheckDebugToken();
   if (debugToken) {
     (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
-  } else if (isDev) {
-    (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   }
 
   try {

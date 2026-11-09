@@ -13,8 +13,14 @@ import {
   DEFAULT_OCR_MODEL,
 } from '../src/lib/ocr/geminiService';
 
-// Ensure debug token is wired
-const DEBUG_TOKEN = process.env.FIREBASE_APPCHECK_DEBUG_TOKEN || '51561ED6-6CB7-4A7B-9068-C845B5E7AE4F';
+// Token dibaca dari environment (.env atau shell), tidak pernah ditulis di repo
+const DEBUG_TOKEN =
+  process.env.FIREBASE_APPCHECK_DEBUG_TOKEN ?? process.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN;
+if (!DEBUG_TOKEN) {
+  throw new Error(
+    'Set FIREBASE_APPCHECK_DEBUG_TOKEN (atau VITE_FIREBASE_APPCHECK_DEBUG_TOKEN di .env) sebelum menjalankan test:ocr-live'
+  );
+}
 (globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN = DEBUG_TOKEN;
 
 let testUid: string;
@@ -46,9 +52,9 @@ describe('Live OCR Test Suite (App Check Debug Token & Gate Verification)', () =
   });
 
   it('1. App Check Debug Token: properly wired to environment', () => {
-    expect(DEBUG_TOKEN).toBe('51561ED6-6CB7-4A7B-9068-C845B5E7AE4F');
+    expect(DEBUG_TOKEN).toMatch(/^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i);
     expect((globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN)
-      .toBe('51561ED6-6CB7-4A7B-9068-C845B5E7AE4F');
+      .toBe(DEBUG_TOKEN);
     expect(DEFAULT_OCR_MODEL).toBe('gemini-3.5-flash-lite');
   });
 
