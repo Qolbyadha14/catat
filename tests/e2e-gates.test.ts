@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'bun:test';
-import { collection, doc, getDoc, getDocs, updateDoc, setDoc, query, where } from 'firebase/firestore';
-import { signInAnonymously } from 'firebase/auth';
+import { collection, doc, getDoc, getDocs, updateDoc, setDoc } from 'firebase/firestore';
+import { signInAnonymously, signOut } from 'firebase/auth';
 import { db, auth } from '../src/lib/firebase';
 import { ensureUserDefaults } from '../src/features/auth/seedDefaults';
 import {
@@ -937,11 +937,11 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(data?.referenceKey).toBe('tiktok#578129381293812');
     expect(data?.items?.length).toBe(2);
 
-    // 5. Query ledger by invite code (allowed for invite link preview)
-    const inviteQuery = query(collection(db, 'ledgers'), where('inviteCode', '==', 'KATAT8'));
-    const inviteSnap = await getDocs(inviteQuery);
-    expect(inviteSnap.empty).toBe(false);
-    expect(inviteSnap.docs[0].data().name).toBe('Keluarga Qolby');
+    // 5. Kode undangan di-resolve lewat invites/{code}; ledger tidak bisa di-query oleh non-anggota
+    await setDoc(doc(db, 'invites', 'KATAT8'), { ledgerId, createdAt: Date.now() });
+    const inviteSnap = await getDoc(doc(db, 'invites', 'KATAT8'));
+    expect(inviteSnap.exists()).toBe(true);
+    expect(inviteSnap.data()?.ledgerId).toBe(ledgerId);
   });
 
   it('Gate 13: Super Admin Hub, System Config & AI Telemetry Logging Integration', async () => {
@@ -990,6 +990,45 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(summary.successCount).toBe(1);
     expect(summary.avgDurationMs).toBe(850);
     expect(summary.totalTokens).toBe(400);
+  });
+
+  // Harus tetap menjadi test terakhir: gate ini mengganti user yang login.
+  it('Gate 16: Invite join & rotation through invites/{code} with a second user', async () => {
+    const { createAndSaveLedger, rotateInviteCode, joinLedgerByCode, getLedgerById } = await import(
+      '../src/lib/ledgerService'
+    );
+
+    // Owner (testUid) menyiapkan buku kas, lalu mengganti kodenya
+    const ownerLedger = await createAndSaveLedger({ uid: testUid, displayName: 'Owner Gate 16' });
+    const oldCode = ownerLedger.inviteCode;
+    expect((await getDoc(doc(db, 'invites', oldCode))).data()?.ledgerId).toBe(testUid);
+
+    const newCode = await rotateInviteCode(ownerLedger);
+    expect(newCode).not.toBe(oldCode);
+    expect((await getDoc(doc(db, 'invites', oldCode))).exists()).toBe(false);
+    expect((await getDoc(doc(db, 'invites', newCode))).data()?.ledgerId).toBe(testUid);
+
+    // User kedua bergabung (signOut dulu; signInAnonymously mengembalikan user aktif jika masih login)
+    await signOut(auth);
+    const joiner = (await signInAnonymously(auth)).user;
+    expect(joiner.uid).not.toBe(testUid);
+
+    await expect(joinLedgerByCode(oldCode, { uid: joiner.uid, displayName: 'Joiner' })).rejects.toThrow(
+      'Kode undangan tidak ditemukan atau sudah diganti.'
+    );
+    await expect(getLedgerById(testUid)).rejects.toThrow();
+
+    const joined = await joinLedgerByCode(newCode, { uid: joiner.uid, displayName: 'Joiner' });
+    expect(joined.id).toBe(testUid);
+    expect(joined.members[joiner.uid]?.role).toBe('member');
+    expect(joined.members[testUid]?.role).toBe('owner');
+
+    // Bergabung ulang tidak menimpa entry yang sudah ada
+    const rejoined = await joinLedgerByCode(newCode, { uid: joiner.uid, displayName: 'Nama Lain' });
+    expect(rejoined.members[joiner.uid]?.name).toBe('Joiner');
+
+    // Anggota tidak boleh mengganti kode
+    await expect(rotateInviteCode(joined)).rejects.toThrow();
   });
 });
 

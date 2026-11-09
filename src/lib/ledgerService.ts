@@ -1,14 +1,4 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  runTransaction,
-  setDoc,
-  where,
-} from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Ledger, LedgerMember, Transaction } from './schemas';
 import { ensureLedgerDefaults } from '../features/auth/seedDefaults';
@@ -23,10 +13,11 @@ const INVITE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 export function generateInviteCode(length: number = 6, seed?: string): string {
   const charsLen = INVITE_CHARS.length;
   if (!seed) {
+    // 32 karakter membagi 2^32 tanpa sisa, jadi modulo tidak menimbulkan bias
+    const values = crypto.getRandomValues(new Uint32Array(length));
     let result = '';
-    for (let i = 0; i < length; i++) {
-      const randIdx = Math.floor(Math.random() * charsLen);
-      result += INVITE_CHARS[randIdx];
+    for (const value of values) {
+      result += INVITE_CHARS[value % charsLen];
     }
     return result;
   }
@@ -70,12 +61,12 @@ export function formatWhatsAppInviteText(
  */
 export function createInitialLedger(
   owner: { uid: string; displayName?: string | null; email?: string | null; photoURL?: string | null },
-  name?: string
+  name?: string,
+  inviteCode: string = generateInviteCode(6)
 ): Ledger {
   const now = Date.now();
   const ownerName = owner.displayName?.trim() || owner.email?.split('@')[0] || 'Keluarga';
   const ledgerName = name?.trim() || `Keluarga ${ownerName}`;
-  const inviteCode = generateInviteCode(6, owner.uid);
 
   const ownerMember: LedgerMember = {
     uid: owner.uid,
@@ -123,7 +114,7 @@ export function reconcileOrPreserveLedger(
     id: existing.id || owner.uid,
     name: name?.trim() || existing.name || `Keluarga ${ownerName}`,
     ownerUid: existing.ownerUid || owner.uid,
-    inviteCode: existing.inviteCode || generateInviteCode(6, owner.uid),
+    inviteCode: existing.inviteCode || generateInviteCode(6),
     members: {
       ...existing.members,
       [owner.uid]: ownerMember,
@@ -163,77 +154,107 @@ export function findDuplicateReceipt(
   );
 }
 
+const MAX_INVITE_CODE_ATTEMPTS = 5;
+
 /**
- * Fetches a ledger by its document ID.
+ * Fetches a ledger by its document ID. Throws permission-denied for non-members.
  */
 export async function getLedgerById(ledgerId: string): Promise<Ledger | null> {
   const snap = await getDoc(doc(db, 'ledgers', ledgerId));
   if (!snap.exists()) return null;
-  return snap.data() as Ledger;
+  return { ...(snap.data() as Ledger), id: snap.id };
 }
 
 /**
- * Queries a ledger by invite code.
+ * Generates a random invite code that is not yet registered in invites/{code}.
  */
-export async function getLedgerByInviteCode(code: string): Promise<Ledger | null> {
-  const cleanCode = code.trim().toUpperCase();
-  const q = query(collection(db, 'ledgers'), where('inviteCode', '==', cleanCode));
-  const snap = await getDocs(q);
-  if (snap.empty || !snap.docs[0]) return null;
-  const firstDoc = snap.docs[0];
-  return { id: firstDoc.id, ...firstDoc.data() } as Ledger;
+export async function generateUnusedInviteCode(): Promise<string> {
+  for (let attempt = 0; attempt < MAX_INVITE_CODE_ATTEMPTS; attempt++) {
+    const code = generateInviteCode(6);
+    const snap = await getDoc(doc(db, 'invites', code));
+    if (!snap.exists()) return code;
+  }
+  throw new Error('Gagal membuat kode undangan unik. Silakan coba lagi.');
 }
 
 /**
- * Joins an active user into a ledger using the invite code.
+ * Registers invites/{inviteCode} -> ledgerId when it is missing.
+ * Only the ledger owner passes the rules; ledgers created before invites/ existed heal here.
+ */
+export async function ensureInviteIndex(ledgerId: string, inviteCode: string): Promise<void> {
+  const ref = doc(db, 'invites', inviteCode);
+  const snap = await getDoc(ref);
+  if (snap.exists()) return;
+  await setDoc(ref, { ledgerId, createdAt: Date.now() });
+}
+
+/**
+ * Replaces the ledger invite code. The old code stops working immediately.
+ */
+export async function rotateInviteCode(ledger: Ledger): Promise<string> {
+  const newCode = await generateUnusedInviteCode();
+  const oldInviteRef = doc(db, 'invites', ledger.inviteCode);
+  const oldInvite = await getDoc(oldInviteRef);
+  const now = Date.now();
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'ledgers', ledger.id), { inviteCode: newCode, updatedAt: now });
+  batch.set(doc(db, 'invites', newCode), { ledgerId: ledger.id, createdAt: now });
+  // Rules delete membaca resource.data.ledgerId, jadi hanya hapus indeks lama yang memang ada
+  if (oldInvite.exists() && oldInvite.data().ledgerId === ledger.id) {
+    batch.delete(oldInviteRef);
+  }
+  await batch.commit();
+  return newCode;
+}
+
+/**
+ * Joins the current user into a ledger using an invite code.
+ * Non-members cannot read the ledger, so the member entry is written with a field-path update
+ * and the rules verify joinCode against the ledger's current inviteCode.
  */
 export async function joinLedgerByCode(
   code: string,
   user: { uid: string; displayName?: string | null; email?: string | null; photoURL?: string | null }
 ): Promise<Ledger> {
   const cleanCode = code.trim().toUpperCase();
-  const ledger = await getLedgerByInviteCode(cleanCode);
-  if (!ledger) {
-    throw new Error('Kode undangan tidak ditemukan atau sudah kadaluarsa.');
+  const inviteSnap = await getDoc(doc(db, 'invites', cleanCode));
+  if (!inviteSnap.exists()) {
+    throw new Error('Kode undangan tidak ditemukan atau sudah diganti.');
+  }
+  const { ledgerId } = inviteSnap.data() as { ledgerId: string };
+
+  // Owner dan anggota lama bisa membaca ledger; jangan timpa entry mereka (role owner bisa hilang)
+  const existing = await getLedgerById(ledgerId).catch(() => null);
+  if (!existing?.members?.[user.uid]) {
+    const member: Record<string, unknown> = {
+      uid: user.uid,
+      name: user.displayName?.trim() || user.email?.split('@')[0] || 'Anggota',
+      email: user.email || '',
+      role: 'member',
+      joinedAt: Date.now(),
+      joinCode: cleanCode,
+    };
+    // Firestore menolak nilai undefined
+    if (user.photoURL) member.photoURL = user.photoURL;
+
+    try {
+      await updateDoc(doc(db, 'ledgers', ledgerId), {
+        [`members.${user.uid}`]: member,
+        updatedAt: Date.now(),
+      });
+    } catch {
+      throw new Error('Gagal bergabung. Kode undangan mungkin sudah diganti oleh pemilik buku kas.');
+    }
   }
 
-  const member: LedgerMember = {
-    uid: user.uid,
-    name: user.displayName?.trim() || user.email?.split('@')[0] || 'Anggota',
-    email: user.email || '',
-    photoURL: user.photoURL || undefined,
-    role: 'member',
-    joinedAt: Date.now(),
-  };
+  await setDoc(doc(db, 'users', user.uid), { activeLedgerId: ledgerId, familyLedgerId: ledgerId }, { merge: true });
 
-  const ledgerRef = doc(db, 'ledgers', ledger.id);
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ledgerRef);
-    if (!snap.exists()) {
-      throw new Error('Buku kas tidak ditemukan.');
-    }
-    const currentData = snap.data() as Ledger;
-    const updatedMembers = {
-      ...currentData.members,
-      [user.uid]: member,
-    };
-    tx.update(ledgerRef, {
-      members: updatedMembers,
-      updatedAt: Date.now(),
-    });
-  });
-
-  // Update user's activeLedgerId & permanent familyLedgerId
-  const userRef = doc(db, 'users', user.uid);
-  await setDoc(userRef, { activeLedgerId: ledger.id, familyLedgerId: ledger.id }, { merge: true });
-
-  return {
-    ...ledger,
-    members: {
-      ...ledger.members,
-      [user.uid]: member,
-    },
-  };
+  const ledger = await getLedgerById(ledgerId);
+  if (!ledger) {
+    throw new Error('Buku kas tidak ditemukan.');
+  }
+  return ledger;
 }
 
 /**
@@ -251,9 +272,14 @@ export async function createAndSaveLedger(
   if (snap.exists()) {
     targetLedger = reconcileOrPreserveLedger(snap.data() as Ledger, owner, name);
     await setDoc(ledgerRef, targetLedger, { merge: true });
+    await ensureInviteIndex(targetLedger.id, targetLedger.inviteCode);
   } else {
-    targetLedger = createInitialLedger(owner, name);
-    await setDoc(ledgerRef, targetLedger);
+    const inviteCode = await generateUnusedInviteCode();
+    targetLedger = createInitialLedger(owner, name, inviteCode);
+    const batch = writeBatch(db);
+    batch.set(ledgerRef, targetLedger);
+    batch.set(doc(db, 'invites', inviteCode), { ledgerId: targetLedger.id, createdAt: Date.now() });
+    await batch.commit();
   }
 
   await ensureLedgerDefaults(targetLedger.id);

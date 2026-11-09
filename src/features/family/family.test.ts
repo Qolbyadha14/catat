@@ -21,8 +21,9 @@ assert(initial.ownerUid === 'u1', 'sets ownerUid');
 assert(initial.members['u1']?.name === 'Budi Santoso', 'sets owner member');
 assert(initial.members['u1']?.role === 'owner', 'sets owner role');
 
-// Test 4: invite code is stable per user
+// Test 4: invite code is random per ledger creation
 const initialAgain = createInitialLedger({ uid: 'u1', displayName: 'Budi Santoso' });
-assert(initial.inviteCode === initialAgain.inviteCode, 'invite code remains stable across sessions for same user');
+assert(initial.inviteCode !== initialAgain.inviteCode, 'invite code is not derived from uid');
+assert(/^[2-9A-HJ-NP-Z]{6}$/.test(initialAgain.inviteCode), 'random invite code uses the safe charset');
 
 console.log('Family feature unit tests pass');

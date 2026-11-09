@@ -41,9 +41,13 @@ const ledger = createInitialLedger({ uid: 'u1', displayName: 'Qolby', email: 'q@
 assert(ledger.ownerUid === 'u1', 'sets owner');
 assert(ledger.members['u1']?.role === 'owner', 'sets owner role');
 
-// Stable invite code per user across multiple initial ledger creations
+// Kode undangan baru acak, tidak diturunkan dari UID, agar tidak bisa ditebak dari ID ledger
 const ledgerAttempt2 = createInitialLedger({ uid: 'u1', displayName: 'Qolby', email: 'q@test.com' });
-assert(ledger.inviteCode === ledgerAttempt2.inviteCode, 'invite code remains stable for the same user');
+assert(ledger.inviteCode !== ledgerAttempt2.inviteCode, 'invite code is random, not derived from uid');
+assert(
+  createInitialLedger({ uid: 'u1' }, undefined, 'ABC234').inviteCode === 'ABC234',
+  'uses the provided invite code'
+);
 
 const newMember: LedgerMember = {
   uid: 'u2',

@@ -41,6 +41,8 @@ export const ledgerMemberSchema = z.object({
   photoURL: z.string().url().optional(),
   role: z.enum(['owner', 'member']),
   joinedAt: z.number().int(),
+  // Kode yang dipakai saat bergabung; diperiksa oleh Firestore rules
+  joinCode: z.string().trim().max(8).optional(),
 });
 
 export const ledgerSchema = z.object({
