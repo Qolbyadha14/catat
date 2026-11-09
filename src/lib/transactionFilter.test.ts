@@ -132,7 +132,7 @@ const sampleTransactions: Transaction[] = [
     customRange: null,
   };
 
-  const results = filterTransactions(sampleTransactions, criteria, mockAccounts, mockCategories);
+  const results = filterTransactions(sampleTransactions, criteria, mockAccounts, mockCategories, new Date(now));
   assert(results.length === 1 && results[0]?.id === 'tx_1', 'Multi-filter AND logic must narrow to exact single match');
 
   // Mismatch type returns 0
@@ -140,7 +140,8 @@ const sampleTransactions: Transaction[] = [
     sampleTransactions,
     { ...criteria, type: 'income' },
     mockAccounts,
-    mockCategories
+    mockCategories,
+    new Date(now)
   );
   assert(mismatchType.length === 0, 'Conjunction failure must return empty');
 }

@@ -35,14 +35,15 @@ export function filterTransactions(
   transactions: Transaction[],
   criteria: FilterCriteria,
   accountMap: Map<string, { name: string; isArchived?: boolean }>,
-  categoryMap: Map<string, { name: string; icon?: string; isArchived?: boolean }>
+  categoryMap: Map<string, { name: string; icon?: string; isArchived?: boolean }>,
+  now: Date = new Date()
 ): Transaction[] {
   const activeRange =
     criteria.datePreset === 'all'
       ? null
       : criteria.datePreset === 'custom'
       ? criteria.customRange
-      : getPresetRange(criteria.datePreset as PresetRange);
+      : getPresetRange(criteria.datePreset as PresetRange, now);
 
   const query = criteria.keyword.trim().toLowerCase();
 
