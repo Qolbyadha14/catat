@@ -175,30 +175,31 @@ describe('Live OCR Test Suite (App Check Debug Token & Gate Verification)', () =
     expect(snap.data()?.count).toBe(countBefore + 1);
   });
 
-  it('6. Quota Cap: Attempt 21 is blocked before AI invocation and rejected', async () => {
+  it('6. Quota Cap: attempt beyond the limit is blocked before AI invocation and rejected', async () => {
     const usageRef = doc(db, 'scanUsage', `${testUid}_${dateKey}`);
-    // Set to 20
-    await setDoc(usageRef, {
-      uid: testUid,
-      date: dateKey,
-      count: OCR_DAILY_LIMIT,
-      updatedAt: new Date().toISOString(),
-    });
 
-    // Check quota must throw
+    // Rules menolak lompatan count, jadi menulis count = limit secara langsung harus gagal
+    await expect(
+      setDoc(usageRef, { uid: testUid, date: dateKey, count: OCR_DAILY_LIMIT, updatedAt: new Date().toISOString() })
+    ).rejects.toThrow();
+
+    // Isi kuota lewat jalur resmi, lalu turunkan batas lewat limitOverride agar cepat tercapai
+    let used = (await getDoc(usageRef)).data()?.count ?? 0;
+    if (used === 0) used = await incrementScanUsage(testUid, testDate);
+    const limit = used;
+
     let quotaErrorThrown = false;
     try {
-      await checkScanQuota(testUid, testDate);
+      await checkScanQuota(testUid, testDate, limit);
     } catch (err) {
       quotaErrorThrown = true;
       expect((err as Error).message).toContain('Batas kuota harian tercapai');
     }
     expect(quotaErrorThrown).toBe(true);
 
-    // Direct increment attempt must also throw
     let incErrorThrown = false;
     try {
-      await incrementScanUsage(testUid, testDate);
+      await incrementScanUsage(testUid, testDate, limit);
     } catch (err) {
       incErrorThrown = true;
       expect((err as Error).message).toContain('Batas kuota harian tercapai');

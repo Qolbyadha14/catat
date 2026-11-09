@@ -139,19 +139,25 @@ service cloud.firestore {
     }
 
     match /scanUsage/{usageId} {
-      allow read: if isSuperAdmin() || (
-        request.auth != null && (
-          usageId.matches('^' + request.auth.uid + '_.*') ||
-          (resource != null && resource.data.uid == request.auth.uid)
-        )
-      );
-      allow create: if request.auth != null
-        && (usageId.matches('^' + request.auth.uid + '_.*') || request.resource.data.uid == request.auth.uid)
-        && request.resource.data.count <= 20
-        && request.resource.data.count >= 1;
-      allow update: if (request.auth != null
-        && (usageId.matches('^' + request.auth.uid + '_.*') || resource.data.uid == request.auth.uid)
-        && request.resource.data.count <= 20) || isSuperAdmin();
+      function ownsUsage() {
+        return isAuthenticated()
+          && usageId.matches('^' + request.auth.uid + '_[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+      }
+      function dailyOcrLimit() {
+        return exists(/databases/$(database)/documents/system_config/global)
+          ? get(/databases/$(database)/documents/system_config/global).data.get('dailyOcrLimit', 20)
+          : 20;
+      }
+
+      allow read: if isSuperAdmin() || ownsUsage();
+      allow create: if ownsUsage()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.count == 1;
+      allow update: if ownsUsage()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.count == resource.data.count + 1
+        && request.resource.data.count <= dailyOcrLimit();
+      // Reset kuota hanya lewat admin (UsersLedgersTab memakai deleteDoc)
       allow delete: if isSuperAdmin();
     }
   }

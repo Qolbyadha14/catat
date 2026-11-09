@@ -200,32 +200,43 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
   });
 
   describe('scanUsage Quota & Isolation Guard', () => {
-    it('Update count <= 20 diizinkan untuk pemilik sah', async () => {
-      const userA = testEnv.authenticatedContext('user-a');
-      const dbA = userA.firestore();
+    it('Create harus dimulai dari 1, lalu hanya boleh naik +1', async () => {
+      const dbA = testEnv.authenticatedContext('user-a').firestore();
       const usageRef = doc(dbA, 'scanUsage/user-a_2026-10-17');
 
-      // Create awal count 1
+      await assertFails(setDoc(usageRef, { uid: 'user-a', count: 5 }));
       await assertSucceeds(setDoc(usageRef, { uid: 'user-a', count: 1 }));
-
-      // Increment count sampai batas 20
-      await assertSucceeds(updateDoc(usageRef, { count: 20 }));
+      await assertSucceeds(updateDoc(usageRef, { count: 2 }));
+      await assertFails(updateDoc(usageRef, { count: 4 }));
     });
 
-    it('Attempt count ke-21 ditolak (permission denied)', async () => {
-      const userA = testEnv.authenticatedContext('user-a');
-      const dbA = userA.firestore();
+    it('Reset kuota oleh pemilik sendiri ditolak', async () => {
+      const dbA = testEnv.authenticatedContext('user-a').firestore();
       const usageRef = doc(dbA, 'scanUsage/user-a_2026-10-17');
 
-      // Create awal count 20
-      await assertSucceeds(setDoc(usageRef, { uid: 'user-a', count: 20 }));
+      await assertSucceeds(setDoc(usageRef, { uid: 'user-a', count: 1 }));
+      await assertSucceeds(updateDoc(usageRef, { count: 2 }));
+      await assertFails(updateDoc(usageRef, { count: 0 }));
+      await assertFails(updateDoc(usageRef, { count: 1 }));
+      await assertFails(deleteDoc(usageRef));
+    });
 
-      // Increment ke 21 ditolak
-      await assertFails(updateDoc(usageRef, { count: 21 }));
+    it('Kenaikan melewati batas harian ditolak (default 20)', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'scanUsage/user-a_2026-10-17'), { uid: 'user-a', count: 20 });
+      });
+      const dbA = testEnv.authenticatedContext('user-a').firestore();
+      await assertFails(updateDoc(doc(dbA, 'scanUsage/user-a_2026-10-17'), { count: 21 }));
+    });
 
-      // Create langsung dengan count > 20 juga ditolak
-      const overLimitRef = doc(dbA, 'scanUsage/user-a_2026-10-18');
-      await assertFails(setDoc(overLimitRef, { uid: 'user-a', count: 21 }));
+    it('Batas harian mengikuti system_config/global.dailyOcrLimit', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const rootDb = context.firestore();
+        await setDoc(doc(rootDb, 'system_config/global'), { dailyOcrLimit: 30 });
+        await setDoc(doc(rootDb, 'scanUsage/user-a_2026-10-17'), { uid: 'user-a', count: 20 });
+      });
+      const dbA = testEnv.authenticatedContext('user-a').firestore();
+      await assertSucceeds(updateDoc(doc(dbA, 'scanUsage/user-a_2026-10-17'), { count: 21 }));
     });
 
     it('User lain dilarang membaca atau memanipulasi usage milik UID berbeda', async () => {
