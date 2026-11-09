@@ -1715,3 +1715,31 @@ Masuk plan Fase 1 dan Fase 2 (ditulis setelah Fase 0 di-merge karena keduanya be
 - Validasi bentuk data transaksi di rules (C5)
 - Proxy Cloud Function untuk kuota Gemini yang dijamin server
 - Refresh UI, aksesibilitas, dan pembersihan kode (U1 sampai U6, C1 sampai C4)
+
+---
+
+## Catatan implementasi (9 November 2026)
+
+Task 1 sampai 10 selesai di branch `fix/fase-0-security-data`. Task 11 (deploy dan Firebase Console) belum dijalankan dan tetap menjadi tugas pemilik project.
+
+Perbedaan dari plan:
+
+- **`src/lib/transactionRange.test.ts` memakai `assert()` di top level, bukan `bun:test`.** `tsconfig.app.json` meng-include `src/` dan tidak punya tipe `bun:test`, jadi `tsc -b` gagal. Constraint "test baru memakai `bun:test`" hanya berlaku untuk `tests/` sampai tipe Bun ditambahkan (Fase 2, T1).
+- **Gate 16 ditambahkan** di `tests/e2e-gates.test.ts`. Gate ini menguji alur nyata dengan dua user di emulator: buat buku kas, ganti kode, kode lama ditolak, non-anggota tidak bisa membaca ledger, join dengan kode baru, join ulang tidak menimpa entry, dan anggota tidak bisa mengganti kode. Gate ini menggantikan uji manual Task 6 Step 5 untuk bagian service dan rules.
+- **Polyfill e2e diperluas** dengan `window.location` dan `globalThis.localStorage`, karena helper query memanggil `isShowcaseMode()`.
+- **`budgetMonth` di `TransactionFormSheet`** tidak memakai `Date.now()` sebagai fallback. Tanggal kosong atau tidak valid menghasilkan rentang kosong, sehingga satu warning `react(purity)` hilang.
+
+Hasil verifikasi akhir:
+
+| Pemeriksaan | Sebelum | Sesudah |
+|---|---|---|
+| `tsc -b` | 0 error | 0 error |
+| `bun run lint` | 0 error, 32 warning | 0 error, 30 warning |
+| `bun test src/` | 1 file error | 43 file, 0 error |
+| `bun run test:rules` | 12 pass | 24 pass |
+| `bun run test:e2e` | 15 pass | 17 pass |
+| `bun run test:ocr-live` | tidak dijalankan | 6 pass |
+| Debug token di `dist/` | ada | tidak ada |
+| Smoke test browser (`/?demo`) | tidak ada | Beranda, Anggaran, Statistik, navigasi bulan, dan placeholder Search mengikuti bulan; tanpa error console |
+
+Belum diuji: tampilan tombol "Buat kode undangan baru" di browser. Mode showcase tidak memuat buku kas keluarga, dan login Google di emulator tidak diotomasi.
