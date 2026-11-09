@@ -1,53 +1,52 @@
-import { useEffect, useState } from 'react';
-import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { transactionSchema, type Transaction } from '../../lib/schemas';
+import { useEffect, useMemo, useState } from 'react';
+import { onSnapshot } from 'firebase/firestore';
+import type { Transaction } from '../../lib/schemas';
 import { isShowcaseMode, MOCK_SHOWCASE_TRANSACTIONS } from '../../lib/showcaseMockData';
+import { filterTransactionsInRange, type TransactionRange } from '../../lib/transactionRange';
+import { parseTransactionDocs, transactionsInRangeQuery } from './transactionQueries';
 
-export function useTransactions(uid: string, maxItems: number = 50, ledgerId?: string) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface SnapshotState {
+  key: string;
+  transactions: Transaction[];
+  error: string | null;
+}
+
+const EMPTY_STATE: SnapshotState = { key: '', transactions: [], error: null };
+
+/**
+ * Subscribes to every transaction in [range.start, range.end).
+ * Tidak ada batas jumlah: total bulanan, anggaran, statistik, dan export harus melihat seluruh rentang.
+ * Listener dengan query yang sama dibagi oleh Firestore SDK, jadi pemakaian ganda tidak menambah biaya baca.
+ */
+export function useTransactions(uid: string, range: TransactionRange, ledgerId?: string) {
+  const { start, end } = range;
+  const showcase = isShowcaseMode();
+  const key = `${ledgerId ?? `user:${uid}`}|${start}|${end}`;
+  const [state, setState] = useState<SnapshotState>(EMPTY_STATE);
 
   useEffect(() => {
-    if (isShowcaseMode()) {
-      setTransactions(MOCK_SHOWCASE_TRANSACTIONS);
-      setLoading(false);
-      return;
-    }
-
-    if (!uid && !ledgerId) return;
-
-    const colRef = ledgerId
-      ? collection(db, 'ledgers', ledgerId, 'transactions')
-      : collection(db, 'users', uid, 'transactions');
-    const q = query(
-      colRef,
-      orderBy('date', 'desc'),
-      limit(maxItems)
+    if (showcase || (!uid && !ledgerId)) return;
+    return onSnapshot(
+      transactionsInRangeQuery(uid, { start, end }, ledgerId),
+      (snap) => setState({ key, transactions: parseTransactionDocs(snap.docs), error: null }),
+      (err) => setState({ key, transactions: [], error: err.message })
     );
+  }, [showcase, uid, ledgerId, start, end, key]);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snap) => {
-        const list: Transaction[] = [];
-        snap.forEach((doc) => {
-          const parsed = transactionSchema.safeParse(doc.data());
-          if (parsed.success) {
-            list.push(parsed.data);
-          }
-        });
-        setTransactions(list);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
-      }
-    );
+  const showcaseTransactions = useMemo(
+    () => (showcase ? filterTransactionsInRange(MOCK_SHOWCASE_TRANSACTIONS, { start, end }) : EMPTY_STATE.transactions),
+    [showcase, start, end]
+  );
 
-    return () => unsubscribe();
-  }, [uid, maxItems, ledgerId]);
+  if (showcase) {
+    return { transactions: showcaseTransactions, loading: false, error: null };
+  }
 
-  return { transactions, loading, error };
+  // Data bulan sebelumnya tidak ditampilkan saat bulan berganti; loading sampai snapshot bulan baru tiba
+  const isCurrent = state.key === key;
+  return {
+    transactions: isCurrent ? state.transactions : EMPTY_STATE.transactions,
+    loading: !isCurrent,
+    error: isCurrent ? state.error : null,
+  };
 }

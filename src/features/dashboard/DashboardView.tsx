@@ -73,10 +73,32 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   const [joinCodeFromUrl, setJoinCodeFromUrl] = useState('');
   const [isCreatingLedger, setIsCreatingLedger] = useState(false);
 
+  // Month summary & navigation state (dipakai oleh query transaksi, jadi harus di atas hook data)
+  const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
+  const { startOfMonth, endOfMonth } = useMemo(
+    () => getMonthRange(selectedMonth),
+    [selectedMonth]
+  );
+  const monthRange = useMemo(() => ({ start: startOfMonth, end: endOfMonth }), [startOfMonth, endOfMonth]);
+
+  const monthLabel = useMemo(() => formatMonthYear(selectedMonth), [selectedMonth]);
+
+  const handlePrevMonth = () => {
+    setSelectedMonth((prev) => shiftMonth(prev, -1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth((prev) => shiftMonth(prev, 1));
+  };
+
   // Firestore Data Hooks
   const { accounts, loading: accLoading } = useAccounts(user.uid, activeLedgerId || undefined);
   const { categories, loading: catLoading } = useCategories(user.uid, activeLedgerId || undefined);
-  const { transactions, loading: txLoading } = useTransactions(user.uid, 50, activeLedgerId || undefined);
+  const { transactions, loading: txLoading } = useTransactions(user.uid, monthRange, activeLedgerId || undefined);
 
   const userProfileCreator = useMemo(() => ({
     uid: user.uid,
@@ -303,27 +325,6 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       note: `Cicilan ${targetAccount.name}`,
     });
     setIsSheetOpen(true);
-  };
-
-  // Month summary & navigation state
-  const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
-
-  const { startOfMonth, endOfMonth } = useMemo(
-    () => getMonthRange(selectedMonth),
-    [selectedMonth]
-  );
-
-  const monthLabel = useMemo(() => formatMonthYear(selectedMonth), [selectedMonth]);
-
-  const handlePrevMonth = () => {
-    setSelectedMonth((prev) => shiftMonth(prev, -1));
-  };
-
-  const handleNextMonth = () => {
-    setSelectedMonth((prev) => shiftMonth(prev, 1));
   };
 
   const { monthIncome, monthExpense, netCashflow } = useMemo(() => {
