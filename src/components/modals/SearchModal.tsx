@@ -3,6 +3,7 @@ import { Search, X, Wallet, ArrowRightLeft } from 'lucide-react';
 import type { Account, Category, Transaction } from '../../lib/schemas';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 export interface SearchModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   scopeLabel,
 }) => {
   const [query, setQuery] = useState('');
+
+  useEscapeKey(isOpen, onClose);
 
   const accountMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -66,30 +69,42 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-xs animate-in fade-in">
-      <div className="w-full max-w-md bg-white rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-200 mt-8 max-h-[85vh] flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-xs"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cari transaksi"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-3xl p-5 shadow-2xl mt-8 max-h-[85vh] flex flex-col"
+      >
         {/* Search Input Bar */}
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="relative flex-1">
             <Search
               size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400"
             />
             <input
-              type="text"
+              type="search"
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={scopeLabel ? `Cari transaksi ${scopeLabel}...` : 'Cari transaksi, nominal, akun, kategori...'}
-              className="w-full pl-9 pr-8 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Kata kunci pencarian"
+              className="w-full pl-9 pr-10 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                aria-label="Hapus kata kunci"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-10 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
               >
-                <X size={14} />
+                <X size={14} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -100,17 +115,20 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               playHapticSound('click');
               onClose();
             }}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors cursor-pointer shrink-0"
+            aria-label="Tutup pencarian"
+            className="w-11 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
           >
-            <X size={16} />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto no-scrollbar py-3 space-y-2">
           {filtered.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 text-xs">
-              Tidak ada transaksi yang cocok dengan "{query}".
+            <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-xs">
+              {query.trim()
+                ? `Tidak ada transaksi yang cocok dengan "${query}".`
+                : `Belum ada transaksi${scopeLabel ? ` di ${scopeLabel}` : ''}.`}
             </div>
           ) : (
             filtered.map((tx) => {
@@ -134,38 +152,39 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               }
 
               return (
-                <div
+                <button
                   key={tx.id}
+                  type="button"
                   onClick={() => {
                     playHapticSound('tap');
                     if (onSelectTransaction) onSelectTransaction(tx);
                     onClose();
                   }}
-                  className="bg-slate-50 hover:bg-blue-50/60 rounded-2xl p-3 border border-slate-100/80 flex items-center justify-between cursor-pointer transition-colors"
+                  className="w-full text-left bg-slate-50 hover:bg-blue-50/60 dark:bg-slate-800/70 dark:hover:bg-slate-800 rounded-2xl p-3 border border-slate-100/80 dark:border-slate-700/60 flex items-center justify-between cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/60 flex items-center justify-center text-slate-600 font-bold shrink-0">
-                      {isTransfer ? <ArrowRightLeft size={16} /> : <Wallet size={16} />}
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold shrink-0">
+                      {isTransfer ? <ArrowRightLeft size={16} aria-hidden="true" /> : <Wallet size={16} aria-hidden="true" />}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate">{title}</div>
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{subtitle}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{title}</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{subtitle}</div>
                     </div>
                   </div>
 
                   <span
-                    className={`text-xs font-extrabold shrink-0 ${
+                    className={`text-sm font-extrabold shrink-0 ${
                       isIncome
-                        ? 'text-emerald-600'
+                        ? 'text-emerald-700 dark:text-emerald-400'
                         : isExpense
-                        ? 'text-slate-900'
-                        : 'text-cyan-700'
+                        ? 'text-slate-900 dark:text-slate-100'
+                        : 'text-cyan-700 dark:text-cyan-400'
                     }`}
                   >
                     {isIncome ? '+' : isExpense ? '-' : ''}
                     {formatIdr(tx.amount)}
                   </span>
-                </div>
+                </button>
               );
             })
           )}

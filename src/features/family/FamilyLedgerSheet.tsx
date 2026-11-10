@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Ledger } from '../../lib/schemas';
 import { formatWhatsAppInviteText } from '../../lib/ledgerService';
 import { formatDate } from '../../lib/formatters';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface FamilyLedgerSheetProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export function FamilyLedgerSheet({
   const [isConfirmingRotate, setIsConfirmingRotate] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [rotateError, setRotateError] = useState<string | null>(null);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -77,15 +80,21 @@ export function FamilyLedgerSheet({
   const membersList = displayLedger ? Object.values(displayLedger.members) : [];
 
   return (
-    <div className="sheet-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="bottom-sheet family-ledger-sheet" onClick={(e) => e.stopPropagation()}>
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div
+        className="bottom-sheet family-ledger-sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="family-sheet-title"
+      >
         <div className="sheet-handle-bar">
           <div className="sheet-handle" />
         </div>
 
         <div className="sheet-header">
           <div>
-            <h3>👥 Buku Kas Keluarga</h3>
+            <h3 id="family-sheet-title">👥 Buku Kas Keluarga</h3>
             <p className="sheet-subtitle">
               {displayLedger ? displayLedger.name : 'Kelola keuangan bersama keluarga'}
             </p>

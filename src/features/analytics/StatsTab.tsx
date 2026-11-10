@@ -99,12 +99,12 @@ export const StatsTab: React.FC<StatsTabProps> = ({
   };
 
   return (
-    <div className="px-5 space-y-5 mb-8 animate-in fade-in duration-200">
+    <div className="px-5 space-y-5 mb-8">
       {/* Top Header with Export Action */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-slate-900 tracking-tight">Statistik & Analisis</h2>
-          <div className="text-[11px] font-medium text-slate-400 mt-0.5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Statistik & Analisis</h2>
+          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
             Periode: {monthLabel}
           </div>
         </div>
@@ -112,29 +112,29 @@ export const StatsTab: React.FC<StatsTabProps> = ({
         <button
           type="button"
           onClick={handleExportCsv}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+          className="flex items-center gap-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs transition-colors cursor-pointer shadow-xs"
         >
-          <Download size={13} />
+          <Download size={13} aria-hidden="true" />
           <span>Ekspor CSV</span>
         </button>
       </div>
 
       {/* Donut Chart Card */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs">
+      <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <PieChart size={16} />
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold">
+              <PieChart size={16} aria-hidden="true" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Distribusi Pengeluaran</h3>
-              <p className="text-[10px] text-slate-400">Berdasarkan proporsi kategori</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Distribusi Pengeluaran</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Berdasarkan proporsi kategori</p>
             </div>
           </div>
         </div>
 
         {totalExpense === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-xs">
+          <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
             Belum ada pengeluaran di {monthLabel}.
           </div>
         ) : (
@@ -153,7 +153,7 @@ export const StatsTab: React.FC<StatsTabProps> = ({
       {/* Ranked Category Spending List */}
       {donutData.length > 0 && (
         <section className="space-y-2.5">
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+          <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
             Peringkat Pengeluaran Kategori
           </h3>
 
@@ -161,7 +161,7 @@ export const StatsTab: React.FC<StatsTabProps> = ({
             {donutData.map((item, idx) => (
               <div
                 key={item.id}
-                className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between"
+                className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -171,15 +171,15 @@ export const StatsTab: React.FC<StatsTabProps> = ({
                     #{idx + 1}
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900">{item.name}</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.name}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
                       {item.percentage.toFixed(1)}% dari total pengeluaran
                     </div>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-xs font-black text-slate-900">
+                  <div className="text-sm font-black text-slate-900 dark:text-slate-100">
                     {formatIdr(item.amount)}
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import { updateAccount, createAccount, adjustAccountBalance } from '../accounts/
 import { updateCategory, createCategory } from '../categories/categoryService';
 import { ensureUserDefaults, ensureLedgerDefaults } from '../auth/seedDefaults';
 import { formatIdr } from '../../lib/formatters';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface ManageSheetProps {
   uid: string;
@@ -265,17 +266,25 @@ export function ManageSheet({
     }
   };
 
+  useEscapeKey(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bottom-sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-sheet-title"
+      >
         <div className="sheet-handle-bar">
           <div className="sheet-handle" />
         </div>
 
         <div className="sheet-header">
-          <h3>Kelola Akun & Kategori</h3>
+          <h3 id="manage-sheet-title">Kelola Akun & Kategori</h3>
           <button
             type="button"
             className="btn-close-sheet"

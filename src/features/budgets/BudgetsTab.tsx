@@ -59,13 +59,13 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
   const totalPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
   return (
-    <div className="px-5 space-y-5 mb-8 animate-in fade-in duration-200">
-      {/* Header Overview Card */}
+    <div className="px-5 space-y-5 mb-8">
+      {/* Header Overview Card (selalu gelap di kedua tema) */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-md border border-slate-700/60 relative overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-cyan-300 flex items-center justify-center font-bold">
-              <Target size={16} />
+              <Target size={16} aria-hidden="true" />
             </div>
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
               {`Anggaran ${monthLabel}`}
@@ -73,7 +73,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
           </div>
 
           <span
-            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+            className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${
               totalPercentage > 100
                 ? 'bg-rose-500/20 text-rose-300'
                 : totalPercentage > 80
@@ -104,7 +104,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
           />
         </div>
 
-        <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium">
+        <div className="flex justify-between items-center text-[11px] text-slate-400 font-medium">
           <span>{budgetedCategories.length} Kategori Memiliki Limit</span>
           <span>Sisa: {formatIdr(Math.max(0, totalBudget - totalSpent))}</span>
         </div>
@@ -112,37 +112,41 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
 
       {/* Budgeted Categories List */}
       <section className="space-y-3">
-        <h2 className="text-base font-bold text-slate-900 tracking-tight">Rincian Anggaran Kategori</h2>
+        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          Rincian Anggaran Kategori
+        </h2>
 
         {budgetedCategories.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border border-slate-100 shadow-xs">
-            <div className="text-3xl mb-2">🎯</div>
-            <h3 className="text-sm font-bold text-slate-800">Belum Ada Target Anggaran</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto">
+          <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-6 text-center border border-slate-100 dark:border-slate-800 shadow-xs">
+            <div className="text-3xl mb-2" aria-hidden="true">🎯</div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Belum Ada Target Anggaran</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[240px] mx-auto">
               Pasang limit bulanan pada kategori pengeluaranmu agar keuangan lebih terkontrol.
             </p>
           </div>
         ) : (
           <div className="space-y-2.5">
             {budgetedCategories.map((cat) => (
-              <div
+              <button
                 key={cat.id}
+                type="button"
                 onClick={() => {
                   playHapticSound('tap');
                   onOpenBudgetModal(cat);
                 }}
-                className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs hover:shadow-md transition-all cursor-pointer group"
+                aria-label={`Atur anggaran ${cat.name}: ${formatIdr(cat.spent)} dari ${formatIdr(cat.limit)}`}
+                className="w-full text-left bg-white dark:bg-slate-800/80 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all cursor-pointer group"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-sm">
                       {cat.icon || '🏷️'}
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
                         {cat.name}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
                         {formatIdr(cat.spent)} dari {formatIdr(cat.limit)}
                       </div>
                     </div>
@@ -150,27 +154,27 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
 
                   {/* Status Badge */}
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                       cat.isOver
-                        ? 'bg-rose-50 text-rose-700'
+                        ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
                         : cat.isOnTrack
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-amber-50 text-amber-700'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                        : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
                     }`}
                   >
                     {cat.isOver ? (
                       <>
-                        <AlertTriangle size={11} />
+                        <AlertTriangle size={11} aria-hidden="true" />
                         <span>Melebihi</span>
                       </>
                     ) : cat.isOnTrack ? (
                       <>
-                        <CheckCircle2 size={11} />
+                        <CheckCircle2 size={11} aria-hidden="true" />
                         <span>On Track</span>
                       </>
                     ) : (
                       <>
-                        <AlertTriangle size={11} />
+                        <AlertTriangle size={11} aria-hidden="true" />
                         <span>Waspada</span>
                       </>
                     )}
@@ -178,7 +182,7 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1 mb-1.5">
+                <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden mt-1 mb-1.5">
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       cat.isOver
@@ -191,13 +195,13 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                   <span>{cat.percentage.toFixed(0)}% terpakai</span>
-                  <span className="font-semibold text-slate-600">
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
                     Sisa: {formatIdr(cat.remaining)}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -207,10 +211,10 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
       {unbudgetedCategories.length > 0 && (
         <section className="space-y-2.5 pt-1">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
               Kategori Tanpa Limit
             </h3>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
               {unbudgetedCategories.length} Kategori
             </span>
           </div>
@@ -224,13 +228,14 @@ export const BudgetsTab: React.FC<BudgetsTabProps> = ({
                   playHapticSound('tap');
                   onOpenBudgetModal(cat);
                 }}
-                className="bg-white rounded-xl p-2.5 border border-slate-100 shadow-2xs hover:border-blue-200 text-left flex items-center justify-between transition-all cursor-pointer"
+                aria-label={`Pasang anggaran untuk ${cat.name}`}
+                className="bg-white dark:bg-slate-800/80 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800 shadow-2xs hover:border-blue-200 dark:hover:border-blue-800 text-left flex items-center justify-between transition-all cursor-pointer"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm shrink-0">{cat.icon || '🏷️'}</span>
-                  <span className="text-xs font-bold text-slate-800 truncate">{cat.name}</span>
+                  <span className="text-sm shrink-0" aria-hidden="true">{cat.icon || '🏷️'}</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{cat.name}</span>
                 </div>
-                <Plus size={13} className="text-blue-600 shrink-0" />
+                <Plus size={13} className="text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true" />
               </button>
             ))}
           </div>

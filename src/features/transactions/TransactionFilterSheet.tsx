@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { Account, Category, Transaction } from '../../lib/schemas';
-import type { FilterCriteria, FilterType, FilterDatePreset } from '../../lib/transactionFilter';
+import type { FilterCriteria, FilterType } from '../../lib/transactionFilter';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface TransactionFilterSheetProps {
   isOpen: boolean;
@@ -26,9 +27,8 @@ export function TransactionFilterSheet({
   const [draftType, setDraftType] = useState<FilterType>(criteria.type);
   const [draftAccountIds, setDraftAccountIds] = useState<string[]>(criteria.accountIds);
   const [draftCategoryIds, setDraftCategoryIds] = useState<string[]>(criteria.categoryIds);
-  const [draftDatePreset, setDraftDatePreset] = useState<FilterDatePreset>(criteria.datePreset);
-  const [draftCustomFrom, setDraftCustomFrom] = useState<string>(criteria.customRange?.from ?? '');
-  const [draftCustomTo, setDraftCustomTo] = useState<string>(criteria.customRange?.to ?? '');
+
+  useEscapeKey(isOpen, onClose);
 
   // Accounts list: active + archived that exist in transaction snapshot
   const filterAccounts = useMemo(() => {
@@ -54,6 +54,8 @@ export function TransactionFilterSheet({
       }
     });
 
+    // Transfer tidak punya kategori
+    if (draftType === 'transfer') return [];
     let list = categories.filter((cat) => !cat.isArchived || txCategoryIds.has(cat.id));
     if (draftType === 'expense') list = list.filter((c) => c.type === 'expense');
     if (draftType === 'income') list = list.filter((c) => c.type === 'income');
@@ -76,18 +78,14 @@ export function TransactionFilterSheet({
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault();
-    const customRange =
-      draftDatePreset === 'custom' && draftCustomFrom && draftCustomTo
-        ? { from: draftCustomFrom, to: draftCustomTo }
-        : null;
-
+    // Rentang tanggal mengikuti navigator bulan, jadi filter tanggal di sini selalu 'all'
     onApply({
       ...criteria,
       type: draftType,
       accountIds: draftAccountIds,
-      categoryIds: draftCategoryIds,
-      datePreset: draftDatePreset,
-      customRange,
+      categoryIds: draftType === 'transfer' ? [] : draftCategoryIds,
+      datePreset: 'all',
+      customRange: null,
     });
     onClose();
   };
@@ -99,13 +97,19 @@ export function TransactionFilterSheet({
 
   return (
     <div className="sheet-backdrop" onClick={onClose}>
-      <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bottom-sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filter-sheet-title"
+      >
         <div className="sheet-handle-bar">
           <div className="sheet-handle" />
         </div>
 
         <div className="sheet-header">
-          <h3>Filter Transaksi</h3>
+          <h3 id="filter-sheet-title">Filter Transaksi</h3>
           <button
             type="button"
             className="btn-close-sheet"
@@ -118,66 +122,6 @@ export function TransactionFilterSheet({
         </div>
 
         <form className="transaction-form" onSubmit={handleApply}>
-          {/* Rentang Tanggal */}
-          <div className="form-group">
-            <span className="filter-section-title">Rentang Tanggal</span>
-            <div className="filter-chip-wrap">
-              <button
-                type="button"
-                className={`filter-chip ${draftDatePreset === 'all' ? 'active' : ''}`}
-                onClick={() => setDraftDatePreset('all')}
-              >
-                Semua
-              </button>
-              <button
-                type="button"
-                className={`filter-chip ${draftDatePreset === 'this_month' ? 'active' : ''}`}
-                onClick={() => setDraftDatePreset('this_month')}
-              >
-                Bulan Ini
-              </button>
-              <button
-                type="button"
-                className={`filter-chip ${draftDatePreset === 'last_month' ? 'active' : ''}`}
-                onClick={() => setDraftDatePreset('last_month')}
-              >
-                Bulan Lalu
-              </button>
-              <button
-                type="button"
-                className={`filter-chip ${draftDatePreset === 'custom' ? 'active' : ''}`}
-                onClick={() => setDraftDatePreset('custom')}
-              >
-                Kustom
-              </button>
-            </div>
-
-            {draftDatePreset === 'custom' && (
-              <div className="custom-date-inputs" style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <label className="form-label" style={{ fontSize: 12 }}>Dari</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={draftCustomFrom}
-                    onChange={(e) => setDraftCustomFrom(e.target.value)}
-                    required
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label className="form-label" style={{ fontSize: 12 }}>Sampai</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={draftCustomTo}
-                    onChange={(e) => setDraftCustomTo(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Tipe Transaksi */}
           <div className="form-group">
             <span className="filter-section-title">Tipe Transaksi</span>
@@ -202,6 +146,13 @@ export function TransactionFilterSheet({
                 onClick={() => setDraftType('income')}
               >
                 Pemasukan
+              </button>
+              <button
+                type="button"
+                className={`type-btn ${draftType === 'transfer' ? 'active' : ''}`}
+                onClick={() => setDraftType('transfer')}
+              >
+                Transfer
               </button>
             </div>
           </div>

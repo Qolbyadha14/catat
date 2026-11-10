@@ -1,7 +1,7 @@
 import type { Transaction } from './schemas';
 import { isInRange, getPresetRange, type PresetRange } from './dateRange';
 
-export type FilterType = 'all' | 'expense' | 'income';
+export type FilterType = 'all' | 'expense' | 'income' | 'transfer';
 export type FilterDatePreset = 'all' | 'this_month' | 'last_month' | 'custom';
 
 export interface FilterCriteria {

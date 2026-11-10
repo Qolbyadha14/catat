@@ -50,6 +50,7 @@ import { BudgetsTab } from '../budgets/BudgetsTab';
 import { BudgetModal } from '../budgets/BudgetModal';
 import { StatsTab } from '../analytics/StatsTab';
 import { SearchModal } from '../../components/modals/SearchModal';
+import { useToast } from '../../components/feedback/useToast';
 
 interface DashboardViewProps {
   user: User;
@@ -58,6 +59,7 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewProps) {
+  const showToast = useToast();
 
   const { theme, setTheme } = useTheme();
 
@@ -110,8 +112,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
 
-  // Search & Filter state
-  const [searchInput, setSearchInput] = useState<string>('');
+  // Filter state (pencarian teks ada di SearchModal)
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(DEFAULT_FILTER_CRITERIA);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
@@ -222,7 +223,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       setActiveLedger(newLedger);
       setSavedFamilyLedger(newLedger);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal membuat buku kas keluarga');
+      showToast(err instanceof Error ? err.message : 'Gagal membuat buku kas keluarga');
     } finally {
       setIsCreatingLedger(false);
     }
@@ -284,7 +285,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     const primaryAsset =
       accountSummary.assetAccounts.find((a) => a.balance > 0) || accountSummary.assetAccounts[0];
     if (!primaryAsset) {
-      alert('Tidak ada akun kas/bank untuk membayar tagihan. Tambahkan akun kas/bank terlebih dahulu.');
+      showToast('Tidak ada akun kas/bank untuk membayar tagihan. Tambahkan akun kas/bank terlebih dahulu.');
       return;
     }
     setEditingTx(null);
@@ -313,7 +314,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       accountSummary.assetAccounts.find((a) => a.balance > 0) ||
       accountSummary.assetAccounts[0];
     if (!primaryAsset) {
-      alert('Tidak ada akun kas/bank untuk membayar cicilan. Tambahkan akun kas/bank terlebih dahulu.');
+      showToast('Tidak ada akun kas/bank untuk membayar cicilan. Tambahkan akun kas/bank terlebih dahulu.');
       return;
     }
     setEditingTx(null);
@@ -348,7 +349,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     [filterCriteria]
   );
 
-  const isFiltered = activeFilterCount > 0 || searchInput.trim() !== '';
+  const isFiltered = activeFilterCount > 0;
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
@@ -356,7 +357,6 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   }, [transactions, filterCriteria, accountMap, categoryMap]);
 
   const handleResetFilters = () => {
-    setSearchInput('');
     setFilterCriteria(DEFAULT_FILTER_CRITERIA);
   };
 
@@ -377,7 +377,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       await deleteTransaction(user.uid, txToDelete.id, activeLedgerId || undefined);
       closeDeleteModal();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus');
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus transaksi');
     } finally {
       setDeletingId(null);
     }
@@ -427,14 +427,14 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
             selectedMonthLabel={monthLabel}
             onPrevMonth={handlePrevMonth}
             onNextMonth={handleNextMonth}
-            transactions={transactions}
             filteredTransactions={filteredTransactions}
             accountMap={accountMap}
             categoryMap={categoryMap}
-            categories={categories}
             accounts={accounts}
             isLoading={isLoading}
             isFiltered={isFiltered}
+            activeFilterCount={activeFilterCount}
+            onOpenFilter={() => setIsFilterSheetOpen(true)}
             onResetFilters={handleResetFilters}
             onOpenAddModal={() => {
               setEditingTx(null);
@@ -451,7 +451,6 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
             onDuplicateTransaction={handleDuplicate}
             onDeleteTransaction={openDeleteModal}
             onPayUpcomingBill={handlePayUpcomingBill}
-            onOpenBudgetsTab={() => setCurrentTab('budgets')}
           />
         )}
 

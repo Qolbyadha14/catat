@@ -11,6 +11,7 @@ import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { formatTelemetryDateKey } from '../../lib/telemetry/telemetryService';
 import { isShowcaseMode, MOCK_SHOWCASE_USER } from '../../lib/showcaseMockData';
+import { useToast } from '../../components/feedback/useToast';
 
 interface UserRecord {
   uid: string;
@@ -39,6 +40,9 @@ export const UsersLedgersTab: React.FC<UsersLedgersTabProps> = ({ dailyLimit }) 
   const [loading, setLoading] = useState<boolean>(true);
   const [userSearch, setUserSearch] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // Konfirmasi dua langkah di baris pengguna, menggantikan window.confirm()
+  const [pendingResetUid, setPendingResetUid] = useState<string | null>(null);
+  const showToast = useToast();
 
   const todayKey = formatTelemetryDateKey(new Date());
 
@@ -133,10 +137,11 @@ export const UsersLedgersTab: React.FC<UsersLedgersTabProps> = ({ dailyLimit }) 
   }, []);
 
   const handleResetQuota = async (targetUid: string, userIdentifier: string) => {
-    const confirmReset = window.confirm(
-      `Apakah Anda yakin ingin mereset kuota scan hari ini untuk ${userIdentifier}?`
-    );
-    if (!confirmReset) return;
+    if (pendingResetUid !== targetUid) {
+      setPendingResetUid(targetUid);
+      return;
+    }
+    setPendingResetUid(null);
 
     try {
       const usageRef = doc(db, 'scanUsage', `${targetUid}_${todayKey}`);
@@ -150,7 +155,7 @@ export const UsersLedgersTab: React.FC<UsersLedgersTabProps> = ({ dailyLimit }) 
       setStatusMessage(`Kuota hari ini untuk ${userIdentifier} berhasil direset ke 0.`);
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: unknown) {
-      alert(`Gagal mereset kuota: ${err instanceof Error ? err.message : String(err)}`);
+      showToast(`Gagal mereset kuota: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -252,14 +257,33 @@ export const UsersLedgersTab: React.FC<UsersLedgersTabProps> = ({ dailyLimit }) 
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleResetQuota(u.uid, u.displayName || u.email || u.uid)}
-                            title="Reset kuota scan hari ini"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 active:scale-95 transition-all cursor-pointer"
-                          >
-                            <RotateCcw size={12} /> Reset Kuota
-                          </button>
+                          {pendingResetUid === u.uid ? (
+                            <div className="inline-flex items-center gap-1.5" role="group" aria-label="Konfirmasi reset kuota">
+                              <button
+                                type="button"
+                                onClick={() => setPendingResetUid(null)}
+                                className="px-2.5 rounded-lg text-[11px] font-semibold text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 transition-all cursor-pointer"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleResetQuota(u.uid, u.displayName || u.email || u.uid)}
+                                className="px-2.5 rounded-lg text-[11px] font-semibold text-white bg-rose-700 hover:bg-rose-600 transition-all cursor-pointer"
+                              >
+                                Ya, reset
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleResetQuota(u.uid, u.displayName || u.email || u.uid)}
+                              title="Reset kuota scan hari ini"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 active:scale-95 transition-all cursor-pointer"
+                            >
+                              <RotateCcw size={12} aria-hidden="true" /> Reset Kuota
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

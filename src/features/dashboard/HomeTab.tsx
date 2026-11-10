@@ -6,13 +6,15 @@ import {
   Pencil,
   Trash2,
   Plus,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { BalanceHeroCard } from './BalanceHeroCard';
 import { UpcomingBillsCard } from './UpcomingBillsCard';
-import type { Account, Category, Transaction } from '../../lib/schemas';
+import type { Account, Transaction } from '../../lib/schemas';
 import type { UpcomingBill } from '../../lib/bills';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
+import { getCategoryTone, TRANSFER_TONE } from '../../lib/categoryTone';
 
 export interface HomeTabProps {
   netBalance: number;
@@ -25,22 +27,24 @@ export interface HomeTabProps {
   selectedMonthLabel: string;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  transactions: Transaction[];
   filteredTransactions: Transaction[];
   accountMap: Map<string, { name: string; isArchived?: boolean }>;
   categoryMap: Map<string, { name: string; icon?: string; isArchived?: boolean; monthlyBudget?: number }>;
-  categories: Category[];
   accounts: Account[];
   isLoading: boolean;
   isFiltered: boolean;
+  activeFilterCount: number;
+  onOpenFilter: () => void;
   onResetFilters: () => void;
   onOpenAddModal: () => void;
   onEditTransaction: (tx: Transaction) => void;
   onDuplicateTransaction: (tx: Transaction) => void;
   onDeleteTransaction: (tx: Transaction) => void;
   onPayUpcomingBill: (bill: UpcomingBill) => void;
-  onOpenBudgetsTab: () => void;
 }
+
+const ACTION_BUTTON_CLASS =
+  'p-2 rounded-lg text-slate-500 dark:text-slate-400 transition-colors cursor-pointer';
 
 export const HomeTab: React.FC<HomeTabProps> = ({
   netBalance,
@@ -56,38 +60,20 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   filteredTransactions,
   accountMap,
   categoryMap,
-  categories: _categories,
   accounts,
   isLoading,
   isFiltered,
+  activeFilterCount,
+  onOpenFilter,
   onResetFilters,
   onOpenAddModal,
   onEditTransaction,
   onDuplicateTransaction,
   onDeleteTransaction,
   onPayUpcomingBill,
-  onOpenBudgetsTab: _onOpenBudgetsTab,
 }) => {
-  // Helper for category squircle icons & colors
-  const getCategoryDetails = (catId?: string) => {
-    const cat = catId ? categoryMap.get(catId) : undefined;
-    const name = cat?.name || 'Lainnya';
-    const iconName = cat?.icon || 'Wallet';
-
-    // Pastel styling map
-    let bg = 'bg-blue-100 text-blue-600';
-    if (name.includes('Makan') || name.includes('Food')) bg = 'bg-orange-100 text-orange-600';
-    else if (name.includes('Gaji') || name.includes('Income')) bg = 'bg-emerald-100 text-emerald-600';
-    else if (name.includes('Belanja') || name.includes('Shop')) bg = 'bg-purple-100 text-purple-600';
-    else if (name.includes('Transport') || name.includes('Kendaraan')) bg = 'bg-amber-100 text-amber-600';
-    else if (name.includes('Tagihan') || name.includes('Listrik')) bg = 'bg-blue-100 text-blue-600';
-    else if (name.includes('Kesehatan') || name.includes('Health')) bg = 'bg-rose-100 text-rose-600';
-
-    return { name, bg, iconName };
-  };
-
   return (
-    <div className="space-y-4 animate-in fade-in duration-200 flex-1 flex flex-col">
+    <div className="space-y-4 flex-1 flex flex-col">
       {/* 1. Hero Balance Card */}
       <BalanceHeroCard
         netBalance={netBalance}
@@ -108,110 +94,159 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       </div>
 
       {/* 3. Transaction History Section */}
-      <section className="px-5 flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Pelacakan Transaksi Harian</h2>
-            <div className="text-[11px] font-medium text-slate-400 dark:text-slate-400">
+      <section className="px-5 flex-1 flex flex-col" aria-labelledby="home-history-title">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="min-w-0">
+            <h2
+              id="home-history-title"
+              className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight"
+            >
+              Pelacakan Transaksi Harian
+            </h2>
+            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
               {filteredTransactions.length} Transaksi Tercatat
             </div>
           </div>
 
-          {isFiltered && (
+          <div className="flex items-center gap-1 shrink-0">
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={() => {
+                  playHapticSound('click');
+                  onResetFilters();
+                }}
+                className="px-2 text-xs text-blue-700 dark:text-blue-300 font-bold hover:underline cursor-pointer"
+              >
+                Reset Filter
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
                 playHapticSound('click');
-                onResetFilters();
+                onOpenFilter();
               }}
-              className="text-xs text-blue-600 font-bold hover:underline cursor-pointer"
+              className={`relative flex items-center gap-1.5 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                activeFilterCount > 0
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+              aria-label={activeFilterCount > 0 ? `Filter transaksi (${activeFilterCount} aktif)` : 'Filter transaksi'}
             >
-              Reset Filter
+              <SlidersHorizontal size={14} aria-hidden="true" />
+              <span>Filter</span>
+              {activeFilterCount > 0 && (
+                <span
+                  className="min-w-5 h-5 px-1 rounded-full bg-blue-600 text-white text-[11px] leading-5 text-center"
+                  aria-hidden="true"
+                >
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          )}
+          </div>
         </div>
 
         {/* Transactions List */}
         {isLoading ? (
-          <div className="text-center py-12 text-slate-400 text-xs flex-1 flex items-center justify-center">
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-xs flex-1 flex items-center justify-center">
             Memuat data transaksi...
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <div className="bg-slate-50/70 rounded-3xl py-12 px-6 flex-1 min-h-[220px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200/90 shadow-2xs my-2">
-            <div className="w-14 h-14 rounded-2xl bg-white text-blue-600 flex items-center justify-center shadow-xs border border-slate-100 mb-3 text-2xl">
-              📝
+          <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-3xl py-12 px-6 flex-1 min-h-[220px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200/90 dark:border-slate-700 shadow-2xs my-2">
+            <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 text-blue-600 flex items-center justify-center shadow-xs border border-slate-100 dark:border-slate-700 mb-3 text-2xl">
+              {isFiltered ? '🔍' : '📝'}
             </div>
-            <h3 className="text-base font-bold text-slate-800 tracking-tight">
-              Belum ada transaksi di {selectedMonthLabel}
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+              {isFiltered ? 'Tidak ada transaksi yang cocok' : `Belum ada transaksi di ${selectedMonthLabel}`}
             </h3>
-            <p className="text-xs text-slate-500 mt-1.5 max-w-xs text-center leading-relaxed">
-              Mulai catat transaksi pemasukan atau pengeluaran pertamamu.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-xs text-center leading-relaxed">
+              {isFiltered
+                ? `Tidak ada transaksi ${selectedMonthLabel} yang sesuai dengan filter yang dipilih.`
+                : 'Mulai catat transaksi pemasukan atau pengeluaran pertamamu.'}
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                playHapticSound('success');
-                onOpenAddModal();
-              }}
-              className="mt-4 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer inline-flex items-center justify-center gap-2"
-            >
-              <Plus size={15} />
-              <span>Catat Transaksi Sekarang</span>
-            </button>
+            {isFiltered ? (
+              <button
+                type="button"
+                onClick={() => {
+                  playHapticSound('click');
+                  onResetFilters();
+                }}
+                className="mt-4 px-5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+              >
+                Reset Filter
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  playHapticSound('success');
+                  onOpenAddModal();
+                }}
+                className="mt-4 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer inline-flex items-center justify-center gap-2"
+              >
+                <Plus size={15} />
+                <span>Catat Transaksi Sekarang</span>
+              </button>
+            )}
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <ul className="space-y-2.5">
             {filteredTransactions.map((tx) => {
               const isIncome = tx.type === 'income';
               const isExpense = tx.type === 'expense';
-              const isTransfer = tx.type === 'transfer';
 
-              let title = tx.note || 'Transaksi';
-              let subtitle = formatDate(tx.date);
-              let iconContent = <Wallet size={18} />;
-              let badgeColor = 'bg-blue-100 text-blue-600';
+              let title: string;
+              let subtitle: string;
+              let iconContent: React.ReactNode;
+              let toneClass: string;
 
-              if (isTransfer) {
+              if (tx.type === 'transfer') {
                 const fromAcc = accountMap.get(tx.fromAccountId)?.name || 'Akun';
                 const toAcc = accountMap.get(tx.toAccountId)?.name || 'Akun';
                 title = `${fromAcc} ➔ ${toAcc}`;
                 subtitle = `${formatDate(tx.date)}${tx.note ? ` • ${tx.note}` : ''}`;
-                badgeColor = 'bg-cyan-100 text-cyan-700';
-                iconContent = <ArrowRightLeft size={18} />;
+                toneClass = TRANSFER_TONE;
+                iconContent = <ArrowRightLeft size={18} aria-hidden="true" />;
               } else {
-                const details = getCategoryDetails(tx.categoryId);
+                const cat = categoryMap.get(tx.categoryId);
+                const catName = cat?.name || 'Lainnya';
                 const accName = accountMap.get(tx.accountId)?.name || 'Akun';
-                title = details.name;
+                title = catName;
                 subtitle = `${formatDate(tx.date)} • ${accName}${tx.note ? ` • ${tx.note}` : ''}`;
-                badgeColor = details.bg;
+                toneClass = getCategoryTone(tx.categoryId, catName);
+                iconContent = cat?.icon ? (
+                  <span className="text-lg leading-none" aria-hidden="true">{cat.icon}</span>
+                ) : (
+                  <Wallet size={18} aria-hidden="true" />
+                );
               }
 
               return (
-                <div
+                <li
                   key={tx.id}
                   className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between hover:shadow-md transition-shadow group"
                 >
                   {/* Left: Squircle Icon & Title/Subtitle */}
                   <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div
-                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold ${badgeColor}`}
-                    >
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold ${toneClass}`}>
                       {iconContent}
                     </div>
 
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                         {title}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
                         <span>{subtitle}</span>
                         {tx.createdBy?.name && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[9px]">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
                             👤 {tx.createdBy.name}
                           </span>
                         )}
                         {tx.items && tx.items.length > 0 && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold text-[9px]">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold text-[10px]">
                             🛒 {tx.items.length} item
                           </span>
                         )}
@@ -222,9 +257,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   {/* Right: Nominal & Action Buttons */}
                   <div className="flex flex-col items-end shrink-0 pl-1">
                     <span
-                      className={`text-xs font-extrabold tracking-tight ${
+                      className={`text-sm font-extrabold tracking-tight ${
                         isIncome
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-emerald-700 dark:text-emerald-400'
                           : isExpense
                           ? 'text-slate-900 dark:text-slate-100'
                           : 'text-cyan-700 dark:text-cyan-400'
@@ -235,18 +270,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                     </span>
 
                     {/* Quick actions row */}
-                    <div className="flex items-center gap-1 mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 mt-0.5 -mr-2">
                       <button
                         type="button"
                         onClick={() => {
                           playHapticSound('tap');
                           onDuplicateTransaction(tx);
                         }}
-                        className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        className={`${ACTION_BUTTON_CLASS} hover:text-blue-700 hover:bg-blue-50 dark:hover:text-blue-300 dark:hover:bg-blue-950/40`}
                         title="Duplikat Transaksi"
-                        aria-label="Duplikat Transaksi"
+                        aria-label={`Duplikat transaksi ${title}`}
                       >
-                        <Copy size={12} />
+                        <Copy size={14} aria-hidden="true" />
                       </button>
                       <button
                         type="button"
@@ -254,11 +289,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                           playHapticSound('tap');
                           onEditTransaction(tx);
                         }}
-                        className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        className={`${ACTION_BUTTON_CLASS} hover:text-blue-700 hover:bg-blue-50 dark:hover:text-blue-300 dark:hover:bg-blue-950/40`}
                         title="Ubah Transaksi"
-                        aria-label="Ubah Transaksi"
+                        aria-label={`Ubah transaksi ${title}`}
                       >
-                        <Pencil size={12} />
+                        <Pencil size={14} aria-hidden="true" />
                       </button>
                       <button
                         type="button"
@@ -266,18 +301,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                           playHapticSound('delete');
                           onDeleteTransaction(tx);
                         }}
-                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        className={`${ACTION_BUTTON_CLASS} ml-1.5 hover:text-rose-700 hover:bg-rose-50 dark:hover:text-rose-300 dark:hover:bg-rose-950/40`}
                         title="Hapus Transaksi"
-                        aria-label="Hapus Transaksi"
+                        aria-label={`Hapus transaksi ${title}`}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
                     </div>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </section>
     </div>

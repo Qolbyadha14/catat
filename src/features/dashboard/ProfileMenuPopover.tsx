@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import type { User } from 'firebase/auth';
 import type { ThemeMode } from '../../lib/theme';
 import { useSuperAdmin } from '../auth/useSuperAdmin';
+import { isTapSoundEnabled, playHapticSound, setTapSoundEnabled } from '../../lib/haptic';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 
 interface ProfileMenuPopoverProps {
   user: User;
@@ -25,17 +27,18 @@ export function ProfileMenuPopover({
   onThemeChange,
 }: ProfileMenuPopoverProps) {
   const { isSuperAdmin } = useSuperAdmin(user?.uid, user?.email);
+  const [tapSoundOn, setTapSoundOn] = useState<boolean>(isTapSoundEnabled);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
+
+  const handleToggleTapSound = () => {
+    const next = !tapSoundOn;
+    setTapSoundEnabled(next);
+    setTapSoundOn(next);
+    if (next) playHapticSound('success');
+  };
 
   const displayName = user.displayName || user.email?.split('@')[0] || 'Pengguna';
   const initial = displayName.slice(0, 2).toUpperCase();
@@ -144,6 +147,37 @@ export function ProfileMenuPopover({
 
         <div className="profile-popover-divider" />
 
+        {/* Tap Sound Toggle */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={tapSoundOn}
+          className="profile-menu-row-btn"
+          onClick={handleToggleTapSound}
+        >
+          <span className="profile-menu-icon" aria-hidden="true">{tapSoundOn ? '🔔' : '🔕'}</span>
+          <div className="profile-menu-text">
+            <span className="profile-menu-title">Bunyi ketuk</span>
+            <span className="profile-menu-desc">
+              {tapSoundOn ? 'Aktif: bunyi pelan saat tombol ditekan' : 'Mati: hanya getar di perangkat yang mendukung'}
+            </span>
+          </div>
+          <span
+            aria-hidden="true"
+            className={`relative inline-flex w-10 h-6 shrink-0 rounded-full transition-colors ${
+              tapSoundOn ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                tapSoundOn ? 'translate-x-4' : ''
+              }`}
+            />
+          </span>
+        </button>
+
+        <div className="profile-popover-divider" />
+
         {/* Sign Out Button */}
         <button
           type="button"
@@ -167,7 +201,7 @@ export function ProfileMenuPopover({
               className="h-5 w-auto"
             />
           </picture>
-          <span className="text-[10px] text-slate-400 mt-1 font-medium">v2.0 • Catat keuangan, hidup lebih tenang</span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">v2.0 • Catat keuangan, hidup lebih tenang</span>
         </div>
       </div>
     </div>

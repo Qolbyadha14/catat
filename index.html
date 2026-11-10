@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -21,7 +21,9 @@
         try {
           var p = new URLSearchParams(window.location.search);
           var t = p.get('theme') || localStorage.getItem('theme');
-          var isDark = t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          // 'system' berarti ikut OS, sama seperti belum memilih
+          var followsSystem = !t || t === 'system';
+          var isDark = t === 'dark' || (followsSystem && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
           if (isDark) {
             document.documentElement.setAttribute('data-theme', 'dark');
             document.documentElement.classList.add('dark');

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/*
+ * Varian dark: mengikuti class .dark di <html> (dipasang oleh lib/theme.ts dan skrip awal di index.html),
+ * bukan prefers-color-scheme. Tanpa ini, pilihan tema "Gelap"/"Terang" di aplikasi tidak memengaruhi kelas dark:.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   * {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

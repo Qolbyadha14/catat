@@ -13,6 +13,7 @@ import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
 import { getMonthRange } from '../../lib/monthNavigator';
+import { useEscapeKey } from '../../lib/useEscapeKey';
 import { useTransactions } from './useTransactions';
 import { findTransactionByReferenceKey } from './transactionQueries';
 import { formatLiveAmount, calculateNewCursorPosition } from '../../lib/currencyInputFormatter';
@@ -658,23 +659,30 @@ export function TransactionFormSheet({
     }
   };
 
+  const handleDismiss = () => {
+    if (batchQueue) setBatchQueue(null);
+    onClose();
+  };
+
+  useEscapeKey(isOpen, handleDismiss);
+
   if (!isOpen) return null;
 
   return (
-    <div
-      className="sheet-backdrop"
-      onClick={() => {
-        if (batchQueue) setBatchQueue(null);
-        onClose();
-      }}
-    >
-      <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+    <div className="sheet-backdrop" onClick={handleDismiss}>
+      <div
+        className="bottom-sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${amountInputId}-title`}
+      >
         <div className="sheet-handle-bar">
           <div className="sheet-handle" />
         </div>
 
         <div className="sheet-header">
-          <h3>
+          <h3 id={`${amountInputId}-title`}>
             {batchQueue && batchQueue.length > 0
               ? `Review Struk (${batchQueue.length} Transaksi)`
               : initialTx

@@ -42,6 +42,16 @@ button, a[role="button"], input[type="button"], input[type="submit"] {
   outline-offset: 2px;
 }
 
+/* Hormati pengguna yang mengurangi animasi di pengaturan sistem */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Utility: visually hidden */
 .sr-only {
   position: absolute;
