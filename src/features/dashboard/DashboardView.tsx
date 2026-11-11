@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { User } from 'firebase/auth';
-import type { Transaction, Account, Category, Ledger } from '../../lib/schemas';
+import type { Transaction, Account, Category } from '../../lib/schemas';
 import { calculateAccountSummary, getAccountDebt } from '../../lib/accountCalculations';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
@@ -9,10 +9,10 @@ import { deleteTransaction } from '../transactions/transactionService';
 import { updateCategory } from '../categories/categoryService';
 import { TransactionFormSheet, type InitialTransferData } from '../transactions/TransactionFormSheet';
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
+import { DeleteTransactionDialog } from '../transactions/DeleteTransactionDialog';
 import { ManageSheet } from '../manage/ManageSheet';
-import { ensureLedgerDefaults, ensureUserDefaults } from '../auth/seedDefaults';
+import { ensureUserDefaults } from '../auth/seedDefaults';
 import type { UpcomingBill } from '../../lib/bills';
-import { formatIdr, formatDate } from '../../lib/formatters';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
 import { calculateNetCashflow } from '../../lib/cashflow';
 import { useTheme } from '../../lib/theme';
@@ -29,16 +29,8 @@ import {
 } from '../../lib/transactionDuplicate';
 import { FamilyLedgerSheet } from '../family/FamilyLedgerSheet';
 import { JoinLedgerDialog } from '../family/JoinLedgerDialog';
+import { useFamilyLedger } from '../family/useFamilyLedger';
 import { ProfileMenuPopover } from './ProfileMenuPopover';
-import {
-  getUserActiveLedgerId,
-  setUserActiveLedgerId,
-  subscribeToLedger,
-  createAndSaveLedger,
-  getUserFamilyLedger,
-  ensureInviteIndex,
-  rotateInviteCode,
-} from '../../lib/ledgerService';
 
 // Modern Components
 import { MobileFrame } from '../../components/layout/MobileFrame';
@@ -58,22 +50,34 @@ interface DashboardViewProps {
   onOpenAdmin?: () => void;
 }
 
+/** Mode form transaksi; null berarti form tertutup. */
+type TransactionSheetState =
+  | { mode: 'new' }
+  | { mode: 'edit'; tx: Transaction }
+  | { mode: 'duplicate'; data: DuplicateFormValues }
+  | { mode: 'transfer'; prefill: InitialTransferData };
+
+function readInviteCodeFromUrl(): string {
+  if (typeof window === 'undefined') return '';
+  const params = new URLSearchParams(window.location.search);
+  return (params.get('code') || params.get('join') || '').toUpperCase();
+}
+
 export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewProps) {
   const showToast = useToast();
-
   const { theme, setTheme } = useTheme();
 
   // Navigation Tab State
   const [currentTab, setCurrentTab] = useState<NavTabType>('dashboard');
 
-  // Family Ledger State
-  const [activeLedgerId, setActiveLedgerId] = useState<string | null>(null);
-  const [activeLedger, setActiveLedger] = useState<Ledger | null>(null);
-  const [savedFamilyLedger, setSavedFamilyLedger] = useState<Ledger | null>(null);
+  // Family Ledger
+  const family = useFamilyLedger(user);
+  const { activeLedger, savedFamilyLedger } = family;
+  const ledgerId = family.activeLedgerId || undefined;
   const [isFamilySheetOpen, setIsFamilySheetOpen] = useState(false);
-  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
-  const [joinCodeFromUrl, setJoinCodeFromUrl] = useState('');
-  const [isCreatingLedger, setIsCreatingLedger] = useState(false);
+  // Link undangan (?code=ABC234) langsung membuka dialog gabung
+  const [joinCodeFromUrl] = useState(readInviteCodeFromUrl);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(() => joinCodeFromUrl !== '');
 
   // Month summary & navigation state (dipakai oleh query transaksi, jadi harus di atas hook data)
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
@@ -98,9 +102,9 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   };
 
   // Firestore Data Hooks
-  const { accounts, loading: accLoading } = useAccounts(user.uid, activeLedgerId || undefined);
-  const { categories, loading: catLoading } = useCategories(user.uid, activeLedgerId || undefined);
-  const { transactions, loading: txLoading } = useTransactions(user.uid, monthRange, activeLedgerId || undefined);
+  const { accounts, loading: accLoading } = useAccounts(user.uid, ledgerId);
+  const { categories, loading: catLoading } = useCategories(user.uid, ledgerId);
+  const { transactions, loading: txLoading } = useTransactions(user.uid, monthRange, ledgerId);
 
   const userProfileCreator = useMemo(() => ({
     uid: user.uid,
@@ -118,26 +122,21 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
   // Budget Modal State
-  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState<boolean>(false);
   const [selectedBudgetCat, setSelectedBudgetCat] = useState<Category | null>(null);
 
   // Sheets & Dialogs State
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [transactionSheet, setTransactionSheet] = useState<TransactionSheetState | null>(null);
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
-  const [duplicateData, setDuplicateData] = useState<DuplicateFormValues | null>(null);
-  const [transferPrefill, setTransferPrefill] = useState<InitialTransferData | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
-  const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const openNewTransaction = () => setTransactionSheet({ mode: 'new' });
+  const openEditTransaction = (tx: Transaction) => setTransactionSheet({ mode: 'edit', tx });
+  const openTransferPrefill = (prefill: InitialTransferData) => setTransactionSheet({ mode: 'transfer', prefill });
 
   const handleDuplicate = (tx: Transaction) => {
-    const dup = prepareTransactionDuplicate(tx, accounts, categories);
-    setEditingTx(null);
-    setDuplicateData(dup);
-    setTransferPrefill(null);
-    setIsSheetOpen(true);
+    setTransactionSheet({ mode: 'duplicate', data: prepareTransactionDuplicate(tx, accounts, categories) });
   };
 
   useEffect(() => {
@@ -153,35 +152,6 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     };
   }, []);
 
-  // Listen for invite code in URL
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code') || params.get('join');
-      if (code) {
-        setJoinCodeFromUrl(code.toUpperCase());
-        setIsJoinDialogOpen(true);
-      }
-    }
-  }, []);
-
-  // Fetch active ledger and saved family ledger on mount
-  useEffect(() => {
-    if (!user?.uid || isShowcaseMode()) return;
-
-    getUserActiveLedgerId(user.uid).then((storedLedgerId) => {
-      if (storedLedgerId) {
-        setActiveLedgerId(storedLedgerId);
-      }
-    });
-
-    getUserFamilyLedger(user.uid).then((famLedger) => {
-      if (famLedger) {
-        setSavedFamilyLedger(famLedger);
-      }
-    });
-  }, [user?.uid]);
-
   // Ensure default accounts exist for personal user on mount
   useEffect(() => {
     if (user?.uid && !isShowcaseMode()) {
@@ -189,73 +159,12 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     }
   }, [user?.uid]);
 
-  // Subscribe to real-time updates for active ledger
-  useEffect(() => {
-    if (!activeLedgerId) {
-      setActiveLedger(null);
-      return;
-    }
-    ensureLedgerDefaults(activeLedgerId).catch(console.error);
-
-    const unsub = subscribeToLedger(activeLedgerId, (ledger) => {
-      setActiveLedger(ledger);
-      if (ledger) {
-        setSavedFamilyLedger(ledger);
-      }
-    });
-    return () => unsub();
-  }, [activeLedgerId]);
-
-  // Ledger yang dibuat sebelum koleksi invites/ ada belum punya indeks kode.
-  // Owner membuatnya saat membuka aplikasi; rules hanya mengizinkan owner.
-  const ownedLedgerId = savedFamilyLedger?.ownerUid === user.uid ? savedFamilyLedger.id : null;
-  const ownedInviteCode = ownedLedgerId ? savedFamilyLedger?.inviteCode ?? null : null;
-  useEffect(() => {
-    if (!ownedLedgerId || !ownedInviteCode || isShowcaseMode()) return;
-    ensureInviteIndex(ownedLedgerId, ownedInviteCode).catch(console.error);
-  }, [ownedLedgerId, ownedInviteCode]);
-
   const handleCreateLedger = async () => {
     try {
-      setIsCreatingLedger(true);
-      const newLedger = await createAndSaveLedger(userProfileCreator);
-      setActiveLedgerId(newLedger.id);
-      setActiveLedger(newLedger);
-      setSavedFamilyLedger(newLedger);
+      await family.createLedger();
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Gagal membuat buku kas keluarga');
-    } finally {
-      setIsCreatingLedger(false);
     }
-  };
-
-  const handleSwitchToFamily = async () => {
-    const targetId = savedFamilyLedger?.id;
-    if (targetId) {
-      await setUserActiveLedgerId(user.uid, targetId);
-      setActiveLedgerId(targetId);
-      setActiveLedger(savedFamilyLedger);
-    }
-  };
-
-  const handleSwitchToPersonal = async () => {
-    await setUserActiveLedgerId(user.uid, null);
-    setActiveLedgerId(null);
-    setActiveLedger(null);
-  };
-
-  const handleJoinSuccess = (joinedLedger: Ledger) => {
-    setActiveLedgerId(joinedLedger.id);
-    setActiveLedger(joinedLedger);
-    setSavedFamilyLedger(joinedLedger);
-  };
-
-  const handleRotateInviteCode = async () => {
-    const ledger = savedFamilyLedger;
-    if (!ledger || ledger.ownerUid !== user.uid) return;
-    const newCode = await rotateInviteCode(ledger);
-    // Jika ledger sedang aktif, subscribeToLedger juga akan mengirim kode baru
-    setSavedFamilyLedger({ ...ledger, inviteCode: newCode });
   };
 
   const activeAccounts = useMemo(() => accounts.filter((a) => !a.isArchived), [accounts]);
@@ -288,15 +197,12 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       showToast('Tidak ada akun kas/bank untuk membayar tagihan. Tambahkan akun kas/bank terlebih dahulu.');
       return;
     }
-    setEditingTx(null);
-    setDuplicateData(null);
-    setTransferPrefill({
+    openTransferPrefill({
       fromAccountId: primaryAsset.id,
       toAccountId: liabilityAccount.id,
       amount: debt,
       note: `Pelunasan ${liabilityAccount.name}`,
     });
-    setIsSheetOpen(true);
   };
 
   const handlePayUpcomingBill = (bill: UpcomingBill) => {
@@ -317,15 +223,12 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       showToast('Tidak ada akun kas/bank untuk membayar cicilan. Tambahkan akun kas/bank terlebih dahulu.');
       return;
     }
-    setEditingTx(null);
-    setDuplicateData(null);
-    setTransferPrefill({
+    openTransferPrefill({
       fromAccountId: primaryAsset.id,
       toAccountId: targetAccount.id,
       amount: suggestedAmount,
       note: `Cicilan ${targetAccount.name}`,
     });
-    setIsSheetOpen(true);
   };
 
   const { monthIncome, monthExpense, netCashflow } = useMemo(() => {
@@ -360,31 +263,21 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     setFilterCriteria(DEFAULT_FILTER_CRITERIA);
   };
 
-  const openDeleteModal = (tx: Transaction) => {
-    setTxToDelete(tx);
-    deleteDialogRef.current?.showModal();
-  };
-
-  const closeDeleteModal = () => {
-    deleteDialogRef.current?.close();
-    setTxToDelete(null);
-  };
-
   const handleConfirmDelete = async () => {
     if (!txToDelete) return;
     try {
-      setDeletingId(txToDelete.id);
-      await deleteTransaction(user.uid, txToDelete.id, activeLedgerId || undefined);
-      closeDeleteModal();
+      setIsDeleting(true);
+      await deleteTransaction(user.uid, txToDelete.id, ledgerId);
+      setTxToDelete(null);
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Gagal menghapus transaksi');
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
   const handleSaveBudget = async (categoryId: string, limit: number) => {
-    await updateCategory(user.uid, categoryId, { monthlyBudget: limit }, activeLedgerId || undefined);
+    await updateCategory(user.uid, categoryId, { monthlyBudget: limit }, ledgerId);
   };
 
   const isLoading = accLoading || catLoading || txLoading;
@@ -392,11 +285,17 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
     ? user.displayName.slice(0, 2).toUpperCase()
     : (user.email ? user.email.slice(0, 2).toUpperCase() : 'U');
 
+  const sheetKey = !transactionSheet
+    ? 'closed'
+    : transactionSheet.mode === 'edit'
+    ? transactionSheet.tx.id
+    : transactionSheet.mode;
+
   return (
     <MobileFrame activeTab={currentTab}>
       {/* Offline Banner */}
       {!isOnline && (
-        <div className="bg-amber-500 text-slate-950 font-bold text-xs py-1.5 px-4 text-center">
+        <div className="bg-amber-500 text-slate-950 font-bold text-xs py-1.5 px-4 text-center" role="status">
           <span>⚠️ Mode offline — data disimpan di perangkat & disinkronkan saat terhubung</span>
         </div>
       )}
@@ -436,20 +335,10 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
             activeFilterCount={activeFilterCount}
             onOpenFilter={() => setIsFilterSheetOpen(true)}
             onResetFilters={handleResetFilters}
-            onOpenAddModal={() => {
-              setEditingTx(null);
-              setDuplicateData(null);
-              setTransferPrefill(null);
-              setIsSheetOpen(true);
-            }}
-            onEditTransaction={(tx) => {
-              setEditingTx(tx);
-              setDuplicateData(null);
-              setTransferPrefill(null);
-              setIsSheetOpen(true);
-            }}
+            onOpenAddModal={openNewTransaction}
+            onEditTransaction={openEditTransaction}
             onDuplicateTransaction={handleDuplicate}
-            onDeleteTransaction={openDeleteModal}
+            onDeleteTransaction={setTxToDelete}
             onPayUpcomingBill={handlePayUpcomingBill}
           />
         )}
@@ -468,10 +357,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
             categories={categories}
             transactions={transactions}
             selectedMonth={selectedMonth}
-            onOpenBudgetModal={(cat) => {
-              setSelectedBudgetCat(cat);
-              setIsBudgetModalOpen(true);
-            }}
+            onOpenBudgetModal={setSelectedBudgetCat}
           />
         )}
 
@@ -489,12 +375,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       <BottomNav
         currentTab={currentTab}
         onChangeTab={setCurrentTab}
-        onOpenAddModal={() => {
-          setEditingTx(null);
-          setDuplicateData(null);
-          setTransferPrefill(null);
-          setIsSheetOpen(true);
-        }}
+        onOpenAddModal={openNewTransaction}
       />
 
       {/* Search Modal */}
@@ -505,21 +386,14 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         categories={categories}
         accounts={accounts}
         scopeLabel={monthLabel}
-        onSelectTransaction={(tx) => {
-          setEditingTx(tx);
-          setDuplicateData(null);
-          setTransferPrefill(null);
-          setIsSheetOpen(true);
-        }}
+        onSelectTransaction={openEditTransaction}
       />
 
-      {/* Budget Limit Setting Modal */}
+      {/* Budget Limit Setting Modal (key: nilai awal dibaca ulang untuk tiap kategori) */}
       <BudgetModal
-        isOpen={isBudgetModalOpen}
-        onClose={() => {
-          setIsBudgetModalOpen(false);
-          setSelectedBudgetCat(null);
-        }}
+        key={selectedBudgetCat?.id ?? 'none'}
+        isOpen={selectedBudgetCat !== null}
+        onClose={() => setSelectedBudgetCat(null)}
         category={selectedBudgetCat}
         onSaveBudget={handleSaveBudget}
       />
@@ -539,31 +413,26 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       )}
 
       {/* Transaction Form Bottom Sheet */}
-      {isSheetOpen && (
+      {transactionSheet && (
         <TransactionFormSheet
-          key={editingTx?.id ?? (duplicateData ? 'dup' : (transferPrefill ? 'pay' : 'new'))}
+          key={sheetKey}
           uid={user.uid}
-          isOpen={isSheetOpen}
-          onClose={() => {
-            setIsSheetOpen(false);
-            setEditingTx(null);
-            setDuplicateData(null);
-            setTransferPrefill(null);
-          }}
+          isOpen
+          onClose={() => setTransactionSheet(null)}
           accounts={activeAccounts}
           categories={activeCategories}
-          initialTx={editingTx}
-          duplicateData={duplicateData}
-          initialTransfer={transferPrefill}
+          initialTx={transactionSheet.mode === 'edit' ? transactionSheet.tx : null}
+          duplicateData={transactionSheet.mode === 'duplicate' ? transactionSheet.data : null}
+          initialTransfer={transactionSheet.mode === 'transfer' ? transactionSheet.prefill : null}
           createdBy={userProfileCreator}
-          ledgerId={activeLedgerId || undefined}
+          ledgerId={ledgerId}
         />
       )}
 
       {/* Manage Accounts & Categories Sheet */}
       <ManageSheet
         uid={user.uid}
-        ledgerId={activeLedgerId || undefined}
+        ledgerId={ledgerId}
         isOpen={isManageOpen}
         onClose={() => setIsManageOpen(false)}
         accounts={accounts}
@@ -585,56 +454,14 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         onThemeChange={setTheme}
       />
 
-
-      {/* Native Delete Confirmation Dialog */}
-      <dialog
-        ref={deleteDialogRef}
-        className="delete-dialog"
-        onCancel={closeDeleteModal}
-        onClick={(e) => {
-          if (e.target === deleteDialogRef.current) {
-            closeDeleteModal();
-          }
-        }}
-      >
-        {txToDelete && (
-          <div className="delete-dialog-content">
-            <h3 className="delete-dialog-title">Konfirmasi Hapus</h3>
-            <p className="delete-dialog-desc">
-              Hapus transaksi{' '}
-              <strong>{formatIdr(txToDelete.amount)}</strong> (
-              {txToDelete.type === 'transfer'
-                ? `${accountMap.get(txToDelete.fromAccountId)?.name ?? 'Akun'} ➔ ${accountMap.get(txToDelete.toAccountId)?.name ?? 'Akun'}`
-                : (categoryMap.get(txToDelete.categoryId)?.name ?? 'Kategori')}
-              , {formatDate(txToDelete.date)})?
-            </p>
-            {txToDelete.type === 'transfer' && (
-              <div className="delete-dialog-warning">
-                ⚠️ Transaksi transfer: kedua sisi transfer (rekening asal dan tujuan) akan ikut terhapus secara atomik dan saldo masing-masing dikembalikan.
-              </div>
-            )}
-            <div className="delete-dialog-actions">
-              <button
-                type="button"
-                className="btn-dialog-cancel"
-                onClick={closeDeleteModal}
-                disabled={deletingId !== null}
-                autoFocus
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                className="btn-dialog-delete"
-                onClick={handleConfirmDelete}
-                disabled={deletingId !== null}
-              >
-                {deletingId !== null ? 'Menghapus...' : 'Hapus'}
-              </button>
-            </div>
-          </div>
-        )}
-      </dialog>
+      <DeleteTransactionDialog
+        transaction={txToDelete}
+        accountMap={accountMap}
+        categoryMap={categoryMap}
+        isDeleting={isDeleting}
+        onCancel={() => setTxToDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
 
       {/* Family Ledger Sheet */}
       <FamilyLedgerSheet
@@ -643,22 +470,25 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         currentUserId={user.uid}
         activeLedger={activeLedger}
         savedLedger={savedFamilyLedger}
-        onSwitchToFamily={handleSwitchToFamily}
+        onSwitchToFamily={family.switchToFamily}
         onOpenJoinDialog={() => setIsJoinDialogOpen(true)}
-        onSwitchToPersonal={activeLedger ? handleSwitchToPersonal : undefined}
+        onSwitchToPersonal={activeLedger ? family.switchToPersonal : undefined}
         onCreateLedger={handleCreateLedger}
-        isCreating={isCreatingLedger}
-        onRotateInviteCode={handleRotateInviteCode}
+        isCreating={family.isCreatingLedger}
+        onRotateInviteCode={family.rotateInviteCode}
       />
 
-      {/* Join Ledger Dialog */}
-      <JoinLedgerDialog
-        isOpen={isJoinDialogOpen}
-        onClose={() => setIsJoinDialogOpen(false)}
-        initialCode={joinCodeFromUrl}
-        currentUser={userProfileCreator}
-        onJoinSuccess={handleJoinSuccess}
-      />
+      {/* Join Ledger Dialog (di-mount hanya saat dibuka agar state-nya selalu bersih) */}
+      {isJoinDialogOpen && (
+        <JoinLedgerDialog
+          key={joinCodeFromUrl}
+          isOpen
+          onClose={() => setIsJoinDialogOpen(false)}
+          initialCode={joinCodeFromUrl}
+          currentUser={family.ledgerProfile}
+          onJoinSuccess={family.handleJoinSuccess}
+        />
+      )}
     </MobileFrame>
   );
 }

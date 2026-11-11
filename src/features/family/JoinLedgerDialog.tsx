@@ -22,17 +22,13 @@ export function JoinLedgerDialog({
   currentUser,
   onJoinSuccess,
 }: JoinLedgerDialogProps) {
-  const [code, setCode] = useState(initialCode);
+  // Pemanggil me-mount dialog hanya saat dibuka (dengan key = kode dari URL),
+  // jadi state awal cukup dibaca dari props dan error otomatis bersih di setiap pembukaan.
+  const [code, setCode] = useState(() => initialCode.toUpperCase().trim());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (initialCode) {
-      setCode(initialCode.toUpperCase().trim());
-    }
-  }, [initialCode]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -43,11 +39,8 @@ export function JoinLedgerDialog({
         dialog.showModal();
         inputRef.current?.focus();
       }
-    } else {
-      if (dialog.open) {
-        dialog.close();
-      }
-      setError(null);
+    } else if (dialog.open) {
+      dialog.close();
     }
   }, [isOpen]);
 

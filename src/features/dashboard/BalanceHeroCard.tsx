@@ -139,7 +139,10 @@ export const BalanceHeroCard: React.FC<BalanceHeroCardProps> = ({
           {highlightedData && (
             <div
               className="absolute z-20 -top-2 transition-all duration-200 pointer-events-none -translate-x-1/2 flex flex-col items-center"
-              style={{ left: `${(highlightedData.x / width) * 100}%` }}
+              style={{
+                // Dibatasi 20%-80% agar tooltip titik pertama/terakhir tidak terpotong tepi kartu
+                left: `${Math.min(80, Math.max(20, (highlightedData.x / width) * 100))}%`,
+              }}
             >
               <div className="bg-slate-900/95 border border-white/25 backdrop-blur-md px-2.5 py-1 rounded-xl text-center shadow-lg">
                 <span className="text-[10px] text-cyan-200 font-medium block leading-none mb-0.5">
@@ -199,33 +202,36 @@ export const BalanceHeroCard: React.FC<BalanceHeroCardProps> = ({
           </svg>
         </div>
 
-        {/* Sub-bar Statistics */}
-        <div className="relative z-10 grid grid-cols-3 gap-2 border-t border-white/15 pt-3">
-          <div className="flex flex-col">
-            <span className="text-[10px] text-blue-200/80 font-medium leading-none mb-1">Pemasukan</span>
-            <span className="text-xs font-extrabold text-emerald-300 flex items-center gap-0.5">
-              <ArrowDownLeft size={11} strokeWidth={3} />
-              +{formatIdr(monthIncome)}
-            </span>
+        {/* Sub-bar Statistics: dua kolom + baris arus kas, agar nominal jutaan tidak meluap di layar sempit.
+            Tiap nominal satu node teks agar tanda +/- tidak terpisah baris. */}
+        <div className="relative z-10 border-t border-white/15 pt-3 space-y-2.5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] text-blue-100/90 font-medium leading-none mb-1">Pemasukan</span>
+              <span className="text-sm font-extrabold text-emerald-300 flex items-center gap-1">
+                <ArrowDownLeft size={12} strokeWidth={3} aria-hidden="true" className="shrink-0" />
+                <span className="whitespace-nowrap tabular-nums">{`+${formatIdr(monthIncome)}`}</span>
+              </span>
+            </div>
+
+            <div className="flex flex-col min-w-0 border-l border-white/10 pl-3">
+              <span className="text-[11px] text-blue-100/90 font-medium leading-none mb-1">Pengeluaran</span>
+              <span className="text-sm font-extrabold text-rose-300 flex items-center gap-1">
+                <ArrowUpRight size={12} strokeWidth={3} aria-hidden="true" className="shrink-0" />
+                <span className="whitespace-nowrap tabular-nums">{`-${formatIdr(monthExpense)}`}</span>
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-col border-x border-white/10 px-2">
-            <span className="text-[10px] text-blue-200/80 font-medium leading-none mb-1">Pengeluaran</span>
-            <span className="text-xs font-extrabold text-rose-300 flex items-center gap-0.5">
-              <ArrowUpRight size={11} strokeWidth={3} />
-              -{formatIdr(monthExpense)}
-            </span>
-          </div>
-
-          <div className="flex flex-col text-right">
-            <span className="text-[10px] text-blue-200/80 font-medium leading-none mb-1">Arus Kas</span>
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-white/10 px-3 py-2">
+            <span className="text-[11px] text-blue-100/90 font-medium">Arus Kas Bulan Ini</span>
             <span
-              className={`text-xs font-extrabold flex items-center justify-end gap-0.5 ${
+              className={`text-sm font-extrabold flex items-center gap-1 ${
                 netCashflow.isSurplus ? 'text-cyan-200' : 'text-amber-300'
               }`}
             >
-              <ArrowUpDown size={11} strokeWidth={2.5} />
-              {netCashflow.formatted}
+              <ArrowUpDown size={12} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />
+              <span className="whitespace-nowrap tabular-nums">{netCashflow.formatted}</span>
             </span>
           </div>
         </div>

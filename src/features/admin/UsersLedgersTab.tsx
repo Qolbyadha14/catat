@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useEffectEvent } from 'react';
 import {
   Users,
   BookOpen,
@@ -44,7 +44,8 @@ export const UsersLedgersTab: React.FC<UsersLedgersTabProps> = ({ dailyLimit }) 
   const [pendingResetUid, setPendingResetUid] = useState<string | null>(null);
   const showToast = useToast();
 
-  const todayKey = formatTelemetryDateKey(new Date());
+  // Tanggal dibaca sekali saat tab dibuka, bukan di setiap render
+  const [todayKey] = useState(() => formatTelemetryDateKey(new Date()));
 
   const loadData = async () => {
     setLoading(true);
@@ -132,8 +133,12 @@ export const UsersLedgersTab: React.FC<UsersLedgersTabProps> = ({ dailyLimit }) 
     }
   };
 
+  // Muat sekali saat tab dibuka; useEffectEvent memakai loadData terbaru tanpa memasang ulang effect
+  const loadOnMount = useEffectEvent(() => {
+    void loadData();
+  });
   useEffect(() => {
-    loadData();
+    loadOnMount();
   }, []);
 
   const handleResetQuota = async (targetUid: string, userIdentifier: string) => {

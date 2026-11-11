@@ -8,7 +8,8 @@ import type { ParsedTransactionResult } from '../../lib/nlp/textAssistantService
 import { BatchReviewQueue, type BatchReviewItem } from './BatchReviewQueue';
 import { CategoryChipGrid } from './CategoryChipGrid';
 import { AccountPillSelector } from './AccountPillSelector';
-import { OcrReviewCard, formatReviewNote } from './OcrReviewCard';
+import { OcrReviewCard } from './OcrReviewCard';
+import { formatReviewNote } from './ocrReview';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
@@ -204,9 +205,9 @@ export function TransactionFormSheet({
     const cat = categories.find((c) => c.id === currentCategoryId);
     if (!cat || !cat.monthlyBudget || cat.monthlyBudget <= 0) return null;
 
-    const d = new Date(dateStr || Date.now());
-    const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-    const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+    // Rentang bulan sama dengan query budgetMonth (tanggal kosong/tidak valid = tidak ada peringatan)
+    const { start: startOfMonth, end: endOfMonth } = budgetMonth;
+    if (endOfMonth === 0) return null;
 
     let currentSpent = 0;
     for (const tx of budgetMonthTransactions) {
@@ -233,7 +234,7 @@ export function TransactionFormSheet({
       };
     }
     return null;
-  }, [type, currentCategoryId, categories, dateStr, budgetMonthTransactions, initialTx, rawAmount]);
+  }, [type, currentCategoryId, categories, budgetMonth, budgetMonthTransactions, initialTx, rawAmount]);
 
   const handleAmountChange = (val: string) => {
     const currentCursor = amountInputRef.current?.selectionStart ?? val.length;

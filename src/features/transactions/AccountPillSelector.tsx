@@ -1,5 +1,6 @@
 import type { Account } from '../../lib/schemas';
 import { formatIdr } from '../../lib/formatters';
+import { filterSelectableAccounts, getAccountKindBadge } from './accountPills';
 
 export interface AccountPillSelectorProps {
   accounts: Account[];
@@ -7,19 +8,6 @@ export interface AccountPillSelectorProps {
   onSelect: (id: string) => void;
   label?: string;
   excludeId?: string;
-}
-
-export function filterSelectableAccounts(
-  accounts: Account[],
-  excludeId?: string
-): Account[] {
-  return accounts.filter((a) => !a.isArchived && (!excludeId || a.id !== excludeId));
-}
-
-export function getAccountKindBadge(kind: 'asset' | 'liability'): { label: string; className: string } {
-  return kind === 'asset'
-    ? { label: 'Kas', className: 'account-pill-badge-asset' }
-    : { label: 'PayLater', className: 'account-pill-badge-liability' };
 }
 
 export function AccountPillSelector({

@@ -1,4 +1,4 @@
-import { filterCategoriesByType, getRecommendedCategory } from './CategoryChipGrid';
+import { filterCategoriesByType, getRecommendedCategory } from './categoryChips';
 import type { Category } from '../../lib/schemas';
 
 function assert(condition: boolean, msg: string) {

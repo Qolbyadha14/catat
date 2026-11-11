@@ -951,7 +951,6 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
   it('Gate 13: Super Admin Hub, System Config & AI Telemetry Logging Integration', async () => {
     const { getSystemConfig } = await import('../src/lib/config/systemConfigService');
     const { logAiUsage, calculateTelemetrySummary } = await import('../src/lib/telemetry/telemetryService');
-    const { isSuperAdminEmail } = await import('../src/features/auth/useSuperAdmin');
 
     // 1. Verify system config defaults & getter
     const config = await getSystemConfig();
@@ -959,9 +958,8 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(config.defaultOcrModel).toBe('gemini-3.5-flash-lite');
     expect(config.aiKillSwitch).toBe(false);
 
-    // 2. Verify isSuperAdminEmail
-    expect(isSuperAdminEmail('admin@catat.com')).toBe(true);
-    expect(isSuperAdminEmail('random@gmail.com')).toBe(false);
+    // 2. Status admin hanya dari system_admins/{uid}; user biasa bisa memeriksa dokumennya sendiri (tidak ada)
+    expect((await getDoc(doc(db, 'system_admins', testUid))).exists()).toBe(false);
 
     // 3. Log an AI telemetry event fire-and-forget
     await logAiUsage({

@@ -1,4 +1,4 @@
-import { filterSelectableAccounts, getAccountKindBadge } from './AccountPillSelector';
+import { filterSelectableAccounts, getAccountKindBadge } from './accountPills';
 import type { Account } from '../../lib/schemas';
 
 function assert(condition: boolean, msg: string) {

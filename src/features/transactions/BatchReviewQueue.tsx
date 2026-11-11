@@ -1,21 +1,10 @@
 import { useState } from 'react';
 import type { Category, Account } from '../../lib/schemas';
-import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import { formatIdr } from '../../lib/formatters';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
+import { calculateBatchTotal, type BatchReviewItem } from './batchReview';
 
-export interface BatchReviewItem {
-  id: string;
-  previewUrl: string;
-  result: OcrReceiptResult;
-  nominal: number;
-  nominalInput: string;
-  categoryId: string;
-  accountId: string;
-  merchant: string;
-  date: string;
-  isExcluded: boolean;
-}
+export type { BatchReviewItem } from './batchReview';
 
 export interface BatchReviewQueueProps {
   items: BatchReviewItem[];
@@ -26,10 +15,6 @@ export interface BatchReviewQueueProps {
   onSaveAll: () => Promise<void>;
   onCancel: () => void;
   isSaving: boolean;
-}
-
-export function calculateBatchTotal(items: BatchReviewItem[]): number {
-  return items.reduce((sum, item) => (item.isExcluded ? sum : sum + (item.nominal || 0)), 0);
 }
 
 export function BatchReviewQueue({

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useRef, useEffect, useEffectEvent, type ChangeEvent, type DragEvent } from 'react';
 import { validateReceiptFile } from '../../lib/ocrService';
 import { resizeImage } from '../../lib/ocr/imageProcessor';
 import { scanReceiptWithGemini } from '../../lib/ocr/geminiService';
@@ -10,8 +10,12 @@ import {
 } from '../../lib/ocr/rateLimiter';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { Category, Account } from '../../lib/schemas';
-
-export const MAX_BATCH_FILES = 10;
+import {
+  MAX_BATCH_FILES,
+  checkBatchQuota,
+  extractImageFilesFromClipboard,
+  validateBatchFiles,
+} from './receiptFiles';
 
 export interface ReceiptScanTabProps {
   uid: string;
@@ -20,75 +24,6 @@ export interface ReceiptScanTabProps {
   onScanSuccess: (result: OcrReceiptResult, previewUrl: string | null) => void;
   onBatchComplete?: (results: Array<{ result: OcrReceiptResult; previewUrl: string }>) => void;
   onCancelToManual: () => void;
-}
-
-export function validateBatchFiles(files: File[]): { valid: boolean; error?: string } {
-  if (!files || files.length === 0) {
-    return { valid: false, error: 'Pilih minimal 1 file gambar struk.' };
-  }
-  if (files.length > MAX_BATCH_FILES) {
-    return {
-      valid: false,
-      error: `Maksimal ${MAX_BATCH_FILES} struk sekaligus per upload (Anda memilih ${files.length} file).`,
-    };
-  }
-  for (const file of files) {
-    const res = validateReceiptFile(file);
-    if (!res.valid) {
-      return {
-        valid: false,
-        error: `File "${file.name}": ${res.error ?? 'tidak valid.'}`,
-      };
-    }
-  }
-  return { valid: true };
-}
-
-export function checkBatchQuota(
-  remaining: number,
-  fileCount: number,
-  mode: 'combine' | 'bulk'
-): { allowed: boolean; error?: string } {
-  const needed = mode === 'combine' ? 1 : fileCount;
-  if (remaining < needed) {
-    const error =
-      mode === 'combine'
-        ? 'Batas kuota harian tercapai. Silakan input transaksi manual.'
-        : `Sisa kuota harian (${remaining}) tidak mencukupi untuk memindai ${fileCount} struk sekaligus.`;
-    return { allowed: false, error };
-  }
-  return { allowed: true };
-}
-
-export function extractImageFilesFromClipboard(clipboardData: DataTransfer | null): File[] {
-  if (!clipboardData) return [];
-  const files: File[] = [];
-
-  if (clipboardData.files && clipboardData.files.length > 0) {
-    for (let i = 0; i < clipboardData.files.length; i++) {
-      const file = clipboardData.files[i];
-      if (file && file.type.startsWith('image/')) {
-        files.push(file);
-      }
-    }
-  }
-
-  if (files.length === 0 && clipboardData.items) {
-    for (let i = 0; i < clipboardData.items.length; i++) {
-      const item = clipboardData.items[i];
-      if (item && item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) files.push(file);
-      }
-    }
-  }
-
-  return files;
-}
-
-export function extractImageFileFromClipboard(clipboardData: DataTransfer | null): File | null {
-  const files = extractImageFilesFromClipboard(clipboardData);
-  return files[0] ?? null;
 }
 
 function cleanErrorMessage(err: unknown): string {
@@ -167,23 +102,6 @@ export function ReceiptScanTab({
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
   }, [stagedFiles]);
-
-  // Global paste handler for clipboard screenshot
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (isProcessing) return;
-      const files = extractImageFilesFromClipboard(e.clipboardData);
-      if (files.length > 0) {
-        e.preventDefault();
-        handleFilesSelected(files);
-      }
-    };
-
-    window.addEventListener('paste', handlePaste);
-    return () => {
-      window.removeEventListener('paste', handlePaste);
-    };
-  }, [isProcessing, hasConsent, stagedFiles]);
 
   const handleConsent = () => {
     acceptDisclosure(uid);
@@ -618,6 +536,24 @@ export function ReceiptScanTab({
       handleFilesSelected(files);
     }
   };
+
+  // Paste screenshot dari clipboard. Dideklarasikan setelah semua handler agar tidak mengakses
+  // fungsi yang belum diinisialisasi. useEffectEvent selalu membaca state terbaru
+  // (isProcessing, stagedFiles, kuota) tanpa memasang ulang listener di setiap render.
+  const handlePaste = useEffectEvent((e: ClipboardEvent) => {
+    if (isProcessing) return;
+    const files = extractImageFilesFromClipboard(e.clipboardData);
+    if (files.length > 0) {
+      e.preventDefault();
+      handleFilesSelected(files);
+    }
+  });
+
+  useEffect(() => {
+    const listener = (e: ClipboardEvent) => handlePaste(e);
+    window.addEventListener('paste', listener);
+    return () => window.removeEventListener('paste', listener);
+  }, []);
 
   if (!hasConsent) {
     return (

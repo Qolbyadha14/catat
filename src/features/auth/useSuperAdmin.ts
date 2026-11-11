@@ -8,60 +8,32 @@ export interface SuperAdminState {
   loading: boolean;
 }
 
-const KNOWN_ADMIN_EMAILS = new Set([
-  'admin@catat.com',
-  'qolby@coreboylabs.com',
-  'qolbyadha04@gmail.com',
-]);
-
-
-export function isSuperAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  return KNOWN_ADMIN_EMAILS.has(email.toLowerCase().trim());
+interface AdminSnapshot {
+  uid: string | null;
+  isSuperAdmin: boolean;
 }
 
-export function useSuperAdmin(uid?: string | null, email?: string | null): SuperAdminState {
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+/**
+ * Satu-satunya sumber status admin adalah dokumen system_admins/{uid},
+ * sama dengan yang diperiksa isSuperAdmin() di firestore.rules.
+ * Rules hanya mengizinkan tiap user membaca dokumen miliknya sendiri.
+ */
+export function useSuperAdmin(uid?: string | null): SuperAdminState {
+  const showcase = isShowcaseMode();
+  const [snapshot, setSnapshot] = useState<AdminSnapshot>({ uid: null, isSuperAdmin: false });
 
   useEffect(() => {
-    if (isShowcaseMode()) {
-      setIsSuperAdmin(true);
-      setLoading(false);
-      return;
-    }
-
-    if (!uid) {
-      setIsSuperAdmin(false);
-      setLoading(false);
-      return;
-    }
-
-    // Fast-path email check
-    if (isSuperAdminEmail(email)) {
-      setIsSuperAdmin(true);
-      setLoading(false);
-      return;
-    }
-
-    // Check system_admins/{uid} in Firestore
-    const adminRef = doc(db, 'system_admins', uid);
-    const unsubscribe = onSnapshot(
-      adminRef,
-      (snap) => {
-        setIsSuperAdmin(snap.exists());
-        setLoading(false);
-      },
-      (_error) => {
-        // Fallback to email check if Firestore listener errors
-        setIsSuperAdmin(isSuperAdminEmail(email));
-        setLoading(false);
-      }
+    if (showcase || !uid) return;
+    return onSnapshot(
+      doc(db, 'system_admins', uid),
+      (snap) => setSnapshot({ uid, isSuperAdmin: snap.exists() }),
+      () => setSnapshot({ uid, isSuperAdmin: false })
     );
+  }, [showcase, uid]);
 
-    return () => unsubscribe();
-  }, [uid, email]);
+  if (showcase) return { isSuperAdmin: true, loading: false };
+  if (!uid) return { isSuperAdmin: false, loading: false };
 
-  return { isSuperAdmin, loading };
+  const isCurrent = snapshot.uid === uid;
+  return { isSuperAdmin: isCurrent && snapshot.isSuperAdmin, loading: !isCurrent };
 }
-

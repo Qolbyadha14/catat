@@ -5,7 +5,7 @@ import { formatIdr } from '../../lib/formatters';
 import { formatMonthYear } from '../../lib/monthNavigator';
 import { playHapticSound } from '../../lib/haptic';
 import { DonutChart, type DonutSlice } from './DonutChart';
-import { generateCsvContent, downloadCsv } from './exportCsv';
+import { exportTransactionsCSV, downloadCSV } from '../../lib/exportTransactionsCSV';
 import { WeeklyCashflowChart } from '../dashboard/WeeklyCashflowChart';
 
 export interface StatsTabProps {
@@ -77,25 +77,14 @@ export const StatsTab: React.FC<StatsTabProps> = ({
     return slices.sort((a, b) => b.amount - a.amount);
   }, [monthExpenses, categories, totalExpense]);
 
-  // Account and Category maps for CSV export
-  const accountMap = useMemo(() => {
-    const map = new Map<string, { name: string }>();
-    accounts.forEach((a) => map.set(a.id, { name: a.name }));
-    return map;
-  }, [accounts]);
-
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, { name: string }>();
-    categories.forEach((c) => map.set(c.id, { name: c.name }));
-    return map;
-  }, [categories]);
-
   const handleExportCsv = () => {
     playHapticSound('success');
-    // `transactions` sudah berisi seluruh transaksi bulan terpilih
-    const content = generateCsvContent(transactions, accountMap, categoryMap);
+    // `transactions` sudah berisi seluruh transaksi bulan terpilih.
+    // exportTransactionsCSV (Gate 8): tanggal terbaca, BOM untuk Excel, escaping RFC 4180,
+    // dan pencegahan CSV formula injection pada nama akun/kategori/catatan.
+    const content = exportTransactionsCSV(transactions, accounts, categories);
     const monthKey = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
-    downloadCsv(`catat_laporan_keuangan_${monthKey}.csv`, content);
+    downloadCSV(`catat_laporan_keuangan_${monthKey}.csv`, content);
   };
 
   return (

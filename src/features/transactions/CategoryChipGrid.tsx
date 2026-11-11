@@ -1,4 +1,5 @@
 import type { Category } from '../../lib/schemas';
+import { filterCategoriesByType } from './categoryChips';
 
 export interface CategoryChipGridProps {
   categories: Category[];
@@ -6,21 +7,6 @@ export interface CategoryChipGridProps {
   selectedId: string;
   onSelect: (id: string) => void;
   recommendedId?: string | null;
-}
-
-export function filterCategoriesByType(
-  categories: Category[],
-  type: 'expense' | 'income'
-): Category[] {
-  return categories.filter((c) => !c.isArchived && c.type === type);
-}
-
-export function getRecommendedCategory(
-  categories: Category[],
-  recommendedId?: string | null
-): Category | null {
-  if (!recommendedId) return null;
-  return categories.find((c) => c.id === recommendedId) ?? null;
 }
 
 export function CategoryChipGrid({

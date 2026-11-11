@@ -26,7 +26,7 @@ export function ProfileMenuPopover({
   theme,
   onThemeChange,
 }: ProfileMenuPopoverProps) {
-  const { isSuperAdmin } = useSuperAdmin(user?.uid, user?.email);
+  const { isSuperAdmin } = useSuperAdmin(user?.uid);
   const [tapSoundOn, setTapSoundOn] = useState<boolean>(isTapSoundEnabled);
 
   useEscapeKey(isOpen, onClose);

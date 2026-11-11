@@ -9,7 +9,7 @@ import { useTheme } from './lib/theme';
 export default function App() {
   useTheme();
   const { user, loading, error, signInWithGoogle, signOut } = useAuth();
-  const { isSuperAdmin } = useSuperAdmin(user?.uid, user?.email);
+  const { isSuperAdmin } = useSuperAdmin(user?.uid);
   const [currentView, setCurrentView] = useState<'app' | 'admin'>('app');
 
   return (

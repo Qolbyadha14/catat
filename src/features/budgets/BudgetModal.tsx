@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import type { Category } from '../../lib/schemas';
 import { formatIdr } from '../../lib/formatters';
@@ -19,19 +19,14 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   category,
   onSaveBudget,
 }) => {
-  const [limitStr, setLimitStr] = useState<string>('');
+  // Pemanggil memasang key={category.id}, jadi nilai awal cukup dibaca sekali dari props
+  const [limitStr, setLimitStr] = useState<string>(() =>
+    category?.monthlyBudget ? category.monthlyBudget.toString() : ''
+  );
   const [isSaving, setIsSaving] = useState(false);
   const showToast = useToast();
 
   useEscapeKey(isOpen, onClose);
-
-  useEffect(() => {
-    if (category?.monthlyBudget) {
-      setLimitStr(category.monthlyBudget.toString());
-    } else {
-      setLimitStr('');
-    }
-  }, [category]);
 
   const quickAmounts = [500000, 1000000, 2000000, 3500000, 5000000];
 

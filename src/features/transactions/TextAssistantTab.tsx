@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useEffectEvent, useRef } from 'react';
 import type { Category, Account } from '../../lib/schemas';
 import {
   parseTransactionText,
@@ -37,7 +37,7 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
+  const [speechSupported] = useState(() => isSpeechRecognitionSupported());
   const recognizerRef = useRef<SpeechRecognizerController | null>(null);
 
   const categoryContexts: TextCategoryContext[] = categories.map((c) => ({
@@ -85,10 +85,14 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
     }
   };
 
+  // Recognizer dibuat sekali, tapi hasil suara harus diproses dengan kategori/akun terbaru.
+  // useEffectEvent selalu memanggil handleProcess dari render terakhir (tanpa stale closure).
+  const processFinalTranscript = useEffectEvent((text: string) => {
+    void handleProcess(text);
+  });
+
   useEffect(() => {
-    const supported = isSpeechRecognitionSupported();
-    setSpeechSupported(supported);
-    if (!supported) return;
+    if (!speechSupported) return;
 
     const controller = createSpeechRecognizer({
       lang: 'id-ID',
@@ -100,7 +104,7 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
         setInputText(text);
         if (isFinal) {
           setIsRecording(false);
-          void handleProcess(text);
+          processFinalTranscript(text);
         }
       },
       onError: (err) => {
@@ -123,7 +127,7 @@ export const TextAssistantTab: React.FC<TextAssistantTabProps> = ({
     return () => {
       controller?.abort();
     };
-  }, []);
+  }, [speechSupported]);
 
   const toggleRecording = () => {
     if (!recognizerRef.current) return;

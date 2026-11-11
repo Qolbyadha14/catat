@@ -103,7 +103,7 @@ function assert(condition: boolean, msg: string) {
 }
 
 // 4. Clipboard Image Extraction Gate
-import { extractImageFileFromClipboard } from './ReceiptScanTab';
+import { extractImageFileFromClipboard } from './receiptFiles';
 
 {
   const imgBlob = new Blob(['img-bytes'], { type: 'image/png' });
@@ -142,7 +142,7 @@ import { extractImageFileFromClipboard } from './ReceiptScanTab';
 }
 
 // 5. Multi-File Batch Validation & Quota Checks Gate
-import { validateBatchFiles, checkBatchQuota } from './ReceiptScanTab';
+import { validateBatchFiles, checkBatchQuota } from './receiptFiles';
 
 {
   // Test empty file list

@@ -20,16 +20,13 @@ export interface AuthState {
 }
 
 export function useAuth(): AuthState {
+  const showcase = isShowcaseMode();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!showcase);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isShowcaseMode()) {
-      setUser(MOCK_SHOWCASE_USER);
-      setLoading(false);
-      return;
-    }
+    if (showcase) return;
 
     const unsubscribe = onAuthStateChanged(
       auth,
@@ -54,7 +51,7 @@ export function useAuth(): AuthState {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [showcase]);
 
   const signInWithGoogle = async () => {
     setError(null);
@@ -66,7 +63,6 @@ export function useAuth(): AuthState {
       const msg = err instanceof Error ? err.message : 'Gagal masuk dengan Google';
       setError(msg);
       throw err;
-
     }
   };
 
@@ -82,5 +78,5 @@ export function useAuth(): AuthState {
     }
   };
 
-  return { user, loading, error, signInWithGoogle, signOut };
+  return { user: showcase ? MOCK_SHOWCASE_USER : user, loading, error, signInWithGoogle, signOut };
 }

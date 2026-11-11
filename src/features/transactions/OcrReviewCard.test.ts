@@ -1,4 +1,4 @@
-import { formatPlatformBadge, formatReviewNote } from './OcrReviewCard';
+import { formatPlatformBadge, formatReviewNote } from './ocrReview';
 
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);

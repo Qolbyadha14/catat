@@ -226,51 +226,50 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               return (
                 <li
                   key={tx.id}
-                  className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between hover:shadow-md transition-shadow group"
+                  className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center gap-3 hover:shadow-md transition-shadow group"
                 >
-                  {/* Left: Squircle Icon & Title/Subtitle */}
-                  <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold ${toneClass}`}>
-                      {iconContent}
-                    </div>
+                  {/* Squircle Icon */}
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold ${toneClass}`}>
+                    {iconContent}
+                  </div>
 
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                  <div className="flex-1 min-w-0">
+                    {/* Baris 1: judul memakai lebar penuh, nominal di kanan */}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate min-w-0">
                         {title}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`text-sm font-extrabold tracking-tight whitespace-nowrap tabular-nums shrink-0 ${
+                          isIncome
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : isExpense
+                            ? 'text-slate-900 dark:text-slate-100'
+                            : 'text-cyan-700 dark:text-cyan-400'
+                        }`}
+                      >
+                        {`${isIncome ? '+' : isExpense ? '-' : ''}${formatIdr(tx.amount)}`}
+                      </span>
+                    </div>
+
+                    {/* Baris 2: keterangan dan tombol aksi */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 min-w-0 truncate">
                         <span>{subtitle}</span>
                         {tx.createdBy?.name && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
                             👤 {tx.createdBy.name}
                           </span>
                         )}
                         {tx.items && tx.items.length > 0 && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold text-[10px]">
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold text-[10px]">
                             🛒 {tx.items.length} item
                           </span>
                         )}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Nominal & Action Buttons */}
-                  <div className="flex flex-col items-end shrink-0 pl-1">
-                    <span
-                      className={`text-sm font-extrabold tracking-tight ${
-                        isIncome
-                          ? 'text-emerald-700 dark:text-emerald-400'
-                          : isExpense
-                          ? 'text-slate-900 dark:text-slate-100'
-                          : 'text-cyan-700 dark:text-cyan-400'
-                      }`}
-                    >
-                      {isIncome ? '+' : isExpense ? '-' : ''}
-                      {formatIdr(tx.amount)}
-                    </span>
 
                     {/* Quick actions row */}
-                    <div className="flex items-center gap-0.5 mt-0.5 -mr-2">
+                    <div className="flex items-center gap-0.5 shrink-0 -mr-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -307,6 +306,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                       >
                         <Trash2 size={14} aria-hidden="true" />
                       </button>
+                    </div>
                     </div>
                   </div>
                 </li>
