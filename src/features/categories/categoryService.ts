@@ -1,4 +1,4 @@
-import { doc, updateDoc, setDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, collection, deleteField } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Category } from '../../lib/schemas';
 
@@ -48,7 +48,10 @@ export async function updateCategory(
   const ref = ledgerId
     ? doc(db, 'ledgers', ledgerId, 'categories', categoryId)
     : doc(db, 'users', uid, 'categories', categoryId);
-  await updateDoc(ref, payload);
+  // monthlyBudget null berarti "hapus anggaran". Menyimpan null membuat categorySchema gagal parse
+  // dan kategori hilang dari aplikasi, jadi field-nya dihapus.
+  const { monthlyBudget, ...rest } = payload;
+  await updateDoc(ref, monthlyBudget === null ? { ...rest, monthlyBudget: deleteField() } : payload);
   return payload;
 }
 
@@ -66,11 +69,13 @@ export async function createCategory(
     id: newRef.id,
     name: input.name.trim(),
     type: input.type,
-    icon: input.icon?.trim() || undefined,
-    monthlyBudget: input.monthlyBudget && input.monthlyBudget > 0 ? Math.round(input.monthlyBudget) : undefined,
     isArchived: false,
     createdAt: now,
   };
+  // Firestore menolak nilai undefined, jadi field opsional hanya ditulis bila terisi
+  const icon = input.icon?.trim();
+  if (icon) cat.icon = icon;
+  if (input.monthlyBudget && input.monthlyBudget > 0) cat.monthlyBudget = Math.round(input.monthlyBudget);
   await setDoc(newRef, cat);
   return cat;
 }

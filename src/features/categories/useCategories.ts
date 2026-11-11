@@ -1,49 +1,49 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { categorySchema, type Category } from '../../lib/schemas';
+import { parseCategoryDoc, type Category } from '../../lib/schemas';
 import { isShowcaseMode, MOCK_SHOWCASE_CATEGORIES } from '../../lib/showcaseMockData';
 
+interface SnapshotState {
+  key: string;
+  categories: Category[];
+  error: string | null;
+}
+
+const EMPTY: Category[] = [];
+
 export function useCategories(uid: string, ledgerId?: string) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const showcase = isShowcaseMode();
+  const key = ledgerId ?? `user:${uid}`;
+  const [state, setState] = useState<SnapshotState>({ key: '', categories: EMPTY, error: null });
 
   useEffect(() => {
-    if (isShowcaseMode()) {
-      setCategories(MOCK_SHOWCASE_CATEGORIES);
-      setLoading(false);
-      return;
-    }
-
-    if (!uid && !ledgerId) return;
-
+    if (showcase || (!uid && !ledgerId)) return;
     const colRef = ledgerId
       ? collection(db, 'ledgers', ledgerId, 'categories')
       : collection(db, 'users', uid, 'categories');
-    const q = query(colRef);
 
-    const unsubscribe = onSnapshot(
-      q,
+    return onSnapshot(
+      query(colRef),
       (snap) => {
         const list: Category[] = [];
-        snap.forEach((doc) => {
-          const parsed = categorySchema.safeParse(doc.data());
-          if (parsed.success) {
-            list.push(parsed.data);
-          }
+        snap.forEach((docSnap) => {
+          const parsed = parseCategoryDoc(docSnap.data());
+          if (parsed.success) list.push(parsed.data);
         });
-        setCategories(list);
-        setLoading(false);
+        setState({ key, categories: list, error: null });
       },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
-      }
+      (err) => setState({ key, categories: EMPTY, error: err.message })
     );
+  }, [showcase, uid, ledgerId, key]);
 
-    return () => unsubscribe();
-  }, [uid, ledgerId]);
+  if (showcase) return { categories: MOCK_SHOWCASE_CATEGORIES, loading: false, error: null };
 
-  return { categories, loading, error };
+  // Saat berpindah buku kas, data buku kas sebelumnya tidak ditampilkan
+  const isCurrent = state.key === key;
+  return {
+    categories: isCurrent ? state.categories : EMPTY,
+    loading: !isCurrent,
+    error: isCurrent ? state.error : null,
+  };
 }

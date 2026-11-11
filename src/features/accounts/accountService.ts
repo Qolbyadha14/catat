@@ -65,12 +65,16 @@ export async function createAccount(
     id: newRef.id,
     name: input.name.trim(),
     kind: input.kind || 'asset',
-    balance: input.balance || 0,
-    icon: input.icon?.trim() || undefined,
-    dueDay: typeof input.dueDay === 'number' && input.dueDay >= 1 && input.dueDay <= 31 ? input.dueDay : undefined,
+    balance: Math.round(input.balance || 0),
     isArchived: false,
     createdAt: now,
   };
+  // Firestore menolak nilai undefined, jadi field opsional hanya ditulis bila terisi
+  const icon = input.icon?.trim();
+  if (icon) acc.icon = icon;
+  if (typeof input.dueDay === 'number' && Number.isInteger(input.dueDay) && input.dueDay >= 1 && input.dueDay <= 31) {
+    acc.dueDay = input.dueDay;
+  }
   await setDoc(newRef, acc);
   return acc;
 }

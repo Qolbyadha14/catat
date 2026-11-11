@@ -18,6 +18,62 @@ service cloud.firestore {
       );
     }
 
+    // ---- Validasi bentuk data (cermin dari src/lib/schemas.ts) ----
+
+    // Nominal rupiah: bilangan bulat positif, maksimal 1 triliun
+    function isValidAmount(v) {
+      return v is int && v > 0 && v <= 1000000000000;
+    }
+
+    function isValidTransaction(d, transactionId) {
+      return d.id == transactionId
+        && d.type in ['income', 'expense', 'transfer']
+        && isValidAmount(d.amount)
+        && d.date is int
+        && d.createdAt is int
+        && d.updatedAt is int
+        && (d.type == 'transfer'
+              ? (d.fromAccountId is string && d.toAccountId is string && d.fromAccountId != d.toAccountId)
+              : (d.accountId is string && d.categoryId is string))
+        && d.get('note', '') is string
+        && d.get('note', '').size() <= 140;
+    }
+
+    // Saat membuat: createdBy (bila ada) harus penulisnya sendiri
+    function createdByIsAuthor(d) {
+      return !('createdBy' in d) || d.createdBy.uid == request.auth.uid;
+    }
+
+    // Saat mengedit: atribusi lama boleh dipertahankan, atau diganti menjadi penulis sendiri
+    function createdByKeptOrAuthor(d, old) {
+      return !('createdBy' in d)
+        || ('createdBy' in old && d.createdBy == old.createdBy)
+        || d.createdBy.uid == request.auth.uid;
+    }
+
+    function canCreateTransaction(transactionId) {
+      return isValidTransaction(request.resource.data, transactionId)
+        && createdByIsAuthor(request.resource.data);
+    }
+
+    function canUpdateTransaction(transactionId) {
+      return isValidTransaction(request.resource.data, transactionId)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && createdByKeptOrAuthor(request.resource.data, resource.data);
+    }
+
+    function isValidAccount(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 40
+        && d.kind in ['asset', 'liability']
+        && d.balance is int;
+    }
+
+    function isValidCategory(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 32
+        && d.type in ['income', 'expense']
+        && (!('monthlyBudget' in d) || d.monthlyBudget == null || (d.monthlyBudget is int && d.monthlyBudget >= 0));
+    }
+
     // System Admins: tiap user hanya bisa memeriksa dokumen miliknya sendiri
     match /system_admins/{adminUid} {
       allow get: if isAuthenticated() && request.auth.uid == adminUid;
@@ -82,19 +138,25 @@ service cloud.firestore {
       allow delete: if isLedgerOwner();
 
       match /accounts/{accountId} {
-        allow read, create: if isLedgerMember(ledgerId);
-        allow update: if isLedgerMember(ledgerId) && request.resource.data.kind == resource.data.kind;
+        allow read: if isLedgerMember(ledgerId);
+        allow create: if isLedgerMember(ledgerId) && isValidAccount(request.resource.data);
+        allow update: if isLedgerMember(ledgerId) && isValidAccount(request.resource.data)
+          && request.resource.data.kind == resource.data.kind;
         allow delete: if false;
       }
 
       match /categories/{categoryId} {
-        allow read, create: if isLedgerMember(ledgerId);
-        allow update: if isLedgerMember(ledgerId) && request.resource.data.type == resource.data.type;
+        allow read: if isLedgerMember(ledgerId);
+        allow create: if isLedgerMember(ledgerId) && isValidCategory(request.resource.data);
+        allow update: if isLedgerMember(ledgerId) && isValidCategory(request.resource.data)
+          && request.resource.data.type == resource.data.type;
         allow delete: if false;
       }
 
       match /transactions/{transactionId} {
-        allow read, write: if isLedgerMember(ledgerId);
+        allow read, delete: if isLedgerMember(ledgerId);
+        allow create: if isLedgerMember(ledgerId) && canCreateTransaction(transactionId);
+        allow update: if isLedgerMember(ledgerId) && canUpdateTransaction(transactionId);
       }
     }
 
@@ -119,22 +181,30 @@ service cloud.firestore {
       allow read: if isSuperAdmin() || (request.auth != null && request.auth.uid == uid);
       allow write: if request.auth != null && request.auth.uid == uid;
 
+      function isOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
       match /accounts/{accountId} {
-        allow read, create: if request.auth != null && request.auth.uid == uid;
-        allow update: if request.auth != null && request.auth.uid == uid
+        allow read: if isOwner();
+        allow create: if isOwner() && isValidAccount(request.resource.data);
+        allow update: if isOwner() && isValidAccount(request.resource.data)
           && request.resource.data.kind == resource.data.kind;
         allow delete: if false;
       }
 
       match /categories/{categoryId} {
-        allow read, create: if request.auth != null && request.auth.uid == uid;
-        allow update: if request.auth != null && request.auth.uid == uid
+        allow read: if isOwner();
+        allow create: if isOwner() && isValidCategory(request.resource.data);
+        allow update: if isOwner() && isValidCategory(request.resource.data)
           && request.resource.data.type == resource.data.type;
         allow delete: if false;
       }
 
       match /transactions/{transactionId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+        allow read, delete: if isOwner();
+        allow create: if isOwner() && canCreateTransaction(transactionId);
+        allow update: if isOwner() && canUpdateTransaction(transactionId);
       }
     }
 

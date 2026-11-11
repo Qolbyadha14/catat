@@ -4,46 +4,46 @@ import { db } from '../../lib/firebase';
 import { accountSchema, type Account } from '../../lib/schemas';
 import { isShowcaseMode, MOCK_SHOWCASE_ACCOUNTS } from '../../lib/showcaseMockData';
 
+interface SnapshotState {
+  key: string;
+  accounts: Account[];
+  error: string | null;
+}
+
+const EMPTY: Account[] = [];
+
 export function useAccounts(uid: string, ledgerId?: string) {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const showcase = isShowcaseMode();
+  const key = ledgerId ?? `user:${uid}`;
+  const [state, setState] = useState<SnapshotState>({ key: '', accounts: EMPTY, error: null });
 
   useEffect(() => {
-    if (isShowcaseMode()) {
-      setAccounts(MOCK_SHOWCASE_ACCOUNTS);
-      setLoading(false);
-      return;
-    }
-
-    if (!uid && !ledgerId) return;
-
+    if (showcase || (!uid && !ledgerId)) return;
     const colRef = ledgerId
       ? collection(db, 'ledgers', ledgerId, 'accounts')
       : collection(db, 'users', uid, 'accounts');
-    const q = query(colRef);
 
-    const unsubscribe = onSnapshot(
-      q,
+    return onSnapshot(
+      query(colRef),
       (snap) => {
         const list: Account[] = [];
-        snap.forEach((doc) => {
-          const parsed = accountSchema.safeParse(doc.data());
-          if (parsed.success) {
-            list.push(parsed.data);
-          }
+        snap.forEach((docSnap) => {
+          const parsed = accountSchema.safeParse(docSnap.data());
+          if (parsed.success) list.push(parsed.data);
         });
-        setAccounts(list);
-        setLoading(false);
+        setState({ key, accounts: list, error: null });
       },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
-      }
+      (err) => setState({ key, accounts: EMPTY, error: err.message })
     );
+  }, [showcase, uid, ledgerId, key]);
 
-    return () => unsubscribe();
-  }, [uid, ledgerId]);
+  if (showcase) return { accounts: MOCK_SHOWCASE_ACCOUNTS, loading: false, error: null };
 
-  return { accounts, loading, error };
+  // Saat berpindah buku kas, saldo buku kas sebelumnya tidak ditampilkan
+  const isCurrent = state.key === key;
+  return {
+    accounts: isCurrent ? state.accounts : EMPTY,
+    loading: !isCurrent,
+    error: isCurrent ? state.error : null,
+  };
 }

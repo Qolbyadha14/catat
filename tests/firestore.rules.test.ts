@@ -126,8 +126,15 @@ describe('Firestore Security Rules: User Isolation & Auth Guard', () => {
     await assertSucceeds(getDoc(doc(userADb, 'users/user-a/accounts/acc_cash')));
     await assertSucceeds(
       setDoc(doc(userADb, 'users/user-a/transactions/tx_1'), {
-        amount: 25000,
+        id: 'tx_1',
         type: 'expense',
+        amount: 25000,
+        accountId: 'acc_cash',
+        categoryId: 'cat_food',
+        date: 1_700_000_000_000,
+        note: '',
+        createdAt: 1,
+        updatedAt: 1,
       }),
     );
     await assertSucceeds(getDoc(doc(userADb, 'users/user-a/transactions/tx_1')));
@@ -500,5 +507,135 @@ describe('Family Ledger & Invite Guard', () => {
 
     const outsiderDb = testEnv.authenticatedContext(OUTSIDER).firestore();
     await assertFails(deleteDoc(doc(outsiderDb, 'invites/NEW234')));
+  });
+});
+
+describe('Transaction, Account & Category Shape Guard', () => {
+  const UID = 'user-shape';
+  const expense = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    type: 'expense',
+    amount: 25000,
+    accountId: 'acc_cash',
+    categoryId: 'cat_food',
+    date: 1_700_000_000_000,
+    note: 'Makan siang',
+    createdAt: 1,
+    updatedAt: 1,
+    ...extra,
+  });
+  const transfer = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    type: 'transfer',
+    amount: 50000,
+    fromAccountId: 'acc_bank',
+    toAccountId: 'acc_cash',
+    date: 1_700_000_000_000,
+    note: '',
+    createdAt: 1,
+    updatedAt: 1,
+    ...extra,
+  });
+
+  it('Transaksi dengan bentuk valid diterima', async () => {
+    const db = testEnv.authenticatedContext(UID).firestore();
+    await assertSucceeds(setDoc(doc(db, `users/${UID}/transactions/tx_ok`), expense('tx_ok')));
+    await assertSucceeds(setDoc(doc(db, `users/${UID}/transactions/tx_tf`), transfer('tx_tf')));
+    await assertSucceeds(
+      setDoc(doc(db, `users/${UID}/transactions/tx_by`), expense('tx_by', { createdBy: { uid: UID, name: 'Saya' } }))
+    );
+  });
+
+  it('Nominal, tipe, id, transfer, dan catatan yang tidak valid ditolak', async () => {
+    const db = testEnv.authenticatedContext(UID).firestore();
+    const put = (id: string, data: Record<string, unknown>) => setDoc(doc(db, `users/${UID}/transactions/${id}`), data);
+
+    await assertFails(put('t1', expense('t1', { amount: 0 })));
+    await assertFails(put('t2', expense('t2', { amount: -5000 })));
+    await assertFails(put('t3', expense('t3', { amount: 1500.5 })));
+    await assertFails(put('t4', expense('t4', { amount: '25000' })));
+    await assertFails(put('t5', expense('t5', { type: 'gift' })));
+    await assertFails(put('t6', expense('other-id')));
+    await assertFails(put('t7', transfer('t7', { toAccountId: 'acc_bank' })));
+    await assertFails(put('t8', expense('t8', { note: 'x'.repeat(141) })));
+    const { accountId: _accountId, ...withoutAccount } = expense('t9');
+    await assertFails(put('t9', withoutAccount));
+  });
+
+  it('createdBy harus milik penulis saat membuat, dan createdAt tidak boleh diubah', async () => {
+    const db = testEnv.authenticatedContext(UID).firestore();
+    const ref = doc(db, `users/${UID}/transactions/tx_meta`);
+
+    await assertFails(setDoc(ref, expense('tx_meta', { createdBy: { uid: 'orang-lain', name: 'Palsu' } })));
+    await assertSucceeds(setDoc(ref, expense('tx_meta')));
+    await assertSucceeds(updateDoc(ref, { amount: 30000, updatedAt: 2 }));
+    await assertFails(updateDoc(ref, { createdAt: 99 }));
+  });
+
+  it('Anggota ledger boleh mengedit transaksi anggota lain tanpa memalsukan createdBy', async () => {
+    const OWNER = 'shape-owner';
+    const MEMBER = 'shape-member';
+    const ownerBy = { uid: OWNER, name: 'Owner' };
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const rootDb = context.firestore();
+      await setDoc(doc(rootDb, `ledgers/${OWNER}`), {
+        id: OWNER,
+        name: 'Keluarga',
+        ownerUid: OWNER,
+        inviteCode: 'SHP234',
+        members: {
+          [OWNER]: { uid: OWNER, name: 'Owner', role: 'owner', joinedAt: 1 },
+          [MEMBER]: { uid: MEMBER, name: 'Member', role: 'member', joinedAt: 1 },
+        },
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      await setDoc(doc(rootDb, `ledgers/${OWNER}/transactions/tx_owner`), expense('tx_owner', { createdBy: ownerBy }));
+    });
+
+    const memberDb = testEnv.authenticatedContext(MEMBER).firestore();
+    const ownerTx = doc(memberDb, `ledgers/${OWNER}/transactions/tx_owner`);
+    await assertSucceeds(updateDoc(ownerTx, { amount: 40000, updatedAt: 2 }));
+    await assertFails(updateDoc(ownerTx, { 'createdBy.uid': 'orang-lain' }));
+    await assertFails(
+      setDoc(doc(memberDb, `ledgers/${OWNER}/transactions/tx_fake`), expense('tx_fake', { createdBy: ownerBy }))
+    );
+  });
+
+  it('Akun dan kategori harus berbentuk valid; anggaran null lama tetap bisa diedit', async () => {
+    const db = testEnv.authenticatedContext(UID).firestore();
+    const account = (extra: Record<string, unknown> = {}) => ({
+      id: 'acc_x',
+      name: 'Dompet',
+      kind: 'asset',
+      balance: 1000,
+      isArchived: false,
+      createdAt: 1,
+      ...extra,
+    });
+
+    await assertFails(setDoc(doc(db, `users/${UID}/accounts/acc_x`), account({ balance: 10.5 })));
+    await assertFails(setDoc(doc(db, `users/${UID}/accounts/acc_x`), account({ kind: 'cash' })));
+    await assertFails(setDoc(doc(db, `users/${UID}/accounts/acc_x`), account({ name: '' })));
+    await assertSucceeds(setDoc(doc(db, `users/${UID}/accounts/acc_x`), account()));
+    await assertFails(updateDoc(doc(db, `users/${UID}/accounts/acc_x`), { balance: '5000' }));
+    await assertSucceeds(updateDoc(doc(db, `users/${UID}/accounts/acc_x`), { balance: -2500 }));
+
+    const category = (extra: Record<string, unknown> = {}) => ({
+      id: 'cat_x',
+      name: 'Hobi',
+      type: 'expense',
+      isArchived: false,
+      createdAt: 1,
+      ...extra,
+    });
+    await assertFails(setDoc(doc(db, `users/${UID}/categories/cat_x`), category({ type: 'transfer' })));
+    await assertFails(setDoc(doc(db, `users/${UID}/categories/cat_x`), category({ monthlyBudget: -1 })));
+    await assertSucceeds(setDoc(doc(db, `users/${UID}/categories/cat_x`), category({ monthlyBudget: 100000 })));
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), `users/${UID}/categories/cat_legacy`), category({ id: 'cat_legacy', monthlyBudget: null }));
+    });
+    await assertSucceeds(updateDoc(doc(db, `users/${UID}/categories/cat_legacy`), { name: 'Hobi Baru' }));
   });
 });

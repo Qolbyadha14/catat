@@ -14,7 +14,7 @@ import { isNameUnique } from '../src/lib/manageValidation';
 import { exportTransactionsCSV, escapeCsvField } from '../src/lib/exportTransactionsCSV';
 import { evaluateMathExpression } from '../src/lib/mathEvaluator';
 import { calculateNetCashflow } from '../src/lib/cashflow';
-import { transactionSchema, type Transaction, type Account } from '../src/lib/schemas';
+import { transactionSchema, categorySchema, parseCategoryDoc, type Transaction, type Account } from '../src/lib/schemas';
 import { auditColorPairs, getContrastRatio } from '../src/lib/contrastChecker';
 import { RECEIPT_FIXTURES } from '../src/lib/ocr/fixtures';
 import { parseReceipt } from '../src/lib/receiptParser';
@@ -924,9 +924,10 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
         { name: 'Apel Fuji', qty: 2, price: 15000, subtotal: 30000 },
         { name: 'Wortel 1kg', qty: 1, price: 15000, subtotal: 15000 },
       ],
+      // Rules mewajibkan createdBy = penulis, jadi transaksi dicatat atas nama user yang login
       createdBy: {
-        uid: spouseUid,
-        name: 'Sarah',
+        uid: testUid,
+        name: 'Qolby',
       },
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -936,7 +937,7 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     const snap = await getDoc(txDocRef);
     expect(snap.exists()).toBe(true);
     const data = snap.data();
-    expect(data?.createdBy?.name).toBe('Sarah');
+    expect(data?.createdBy?.name).toBe('Qolby');
     expect(data?.referenceKey).toBe('tiktok#578129381293812');
     expect(data?.items?.length).toBe(2);
 
@@ -1050,6 +1051,30 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
 
     expect((await findTransactionByReferenceKey(testUid, 'shopee#GATE15-REF'))?.id).toBe('tx_feb2030_0');
     expect(await findTransactionByReferenceKey(testUid, 'shopee#TIDAK-ADA')).toBeNull();
+  });
+
+  it('Gate 17: Manage writes never send undefined fields and cleared budgets keep categories visible', async () => {
+    const { createAccount } = await import('../src/features/accounts/accountService');
+    const { createCategory, updateCategory } = await import('../src/features/categories/categoryService');
+
+    // Tanpa ikon: field opsional tidak boleh dikirim sebagai undefined
+    const acc = await createAccount(testUid, { name: 'Akun Tanpa Ikon', kind: 'asset', balance: 1000 });
+    const accSnap = await getDoc(doc(db, 'users', testUid, 'accounts', acc.id));
+    expect(accSnap.exists()).toBe(true);
+    expect('icon' in (accSnap.data() ?? {})).toBe(false);
+
+    const cat = await createCategory(testUid, { name: 'Kategori Tanpa Ikon', type: 'expense', monthlyBudget: 500000 });
+    expect((await getDoc(doc(db, 'users', testUid, 'categories', cat.id))).exists()).toBe(true);
+
+    // Menghapus anggaran tidak boleh membuat kategori gagal di-parse (lalu hilang dari aplikasi)
+    await updateCategory(testUid, cat.id, { monthlyBudget: null });
+    const catSnap = await getDoc(doc(db, 'users', testUid, 'categories', cat.id));
+    const parsed = categorySchema.safeParse(catSnap.data());
+    expect(parsed.success).toBe(true);
+    expect(parsed.success ? parsed.data.monthlyBudget : 'gagal').toBeUndefined();
+
+    // Dokumen lama yang sudah terlanjur berisi null tetap terbaca
+    expect(parseCategoryDoc({ ...catSnap.data(), monthlyBudget: null }).success).toBe(true);
   });
 
   // Harus tetap menjadi test terakhir: gate ini mengganti user yang login.

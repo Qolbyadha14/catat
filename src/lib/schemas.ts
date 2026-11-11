@@ -85,6 +85,18 @@ export const transactionSchema = z.discriminatedUnion('type', [
   }).refine(t => t.fromAccountId !== t.toAccountId, { path: ['toAccountId'], message: 'Akun tujuan harus berbeda' }),
 ]);
 
+/**
+ * Versi sebelumnya menyimpan `monthlyBudget: null` saat anggaran dihapus, sehingga categorySchema
+ * gagal parse dan kategori hilang dari aplikasi. Null diperlakukan sama dengan "tanpa anggaran".
+ */
+export function parseCategoryDoc(data: unknown) {
+  if (data && typeof data === 'object' && (data as { monthlyBudget?: unknown }).monthlyBudget === null) {
+    const { monthlyBudget: _legacyNull, ...rest } = data as Record<string, unknown>;
+    return categorySchema.safeParse(rest);
+  }
+  return categorySchema.safeParse(data);
+}
+
 export type Account = z.infer<typeof accountSchema>;
 export type Category = z.infer<typeof categorySchema>;
 export type Transaction = z.infer<typeof transactionSchema>;
