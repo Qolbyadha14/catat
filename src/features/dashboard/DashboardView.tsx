@@ -382,6 +382,8 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        uid={user.uid}
+        ledgerId={ledgerId}
         transactions={transactions}
         categories={categories}
         accounts={accounts}

@@ -1121,6 +1121,44 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(transfer.type).toBe('transfer');
   });
 
+  it('Gate 19: Cross-month history fetch returns the newest transactions and flags truncation', async () => {
+    const { fetchRecentTransactions } = await import('../src/features/transactions/transactionQueries');
+
+    // Tiga bulan berbeda di tahun 2031, jauh di depan data gate lain
+    const col = collection(db, 'users', testUid, 'transactions');
+    const now = Date.now();
+    const months = [0, 1, 2];
+    await Promise.all(
+      months.flatMap((m) =>
+        [0, 1].map((i) => {
+          const id = `tx_hist_${m}_${i}`;
+          return setDoc(doc(col, id), {
+            id,
+            type: 'expense',
+            amount: 1000 + m * 10 + i,
+            accountId: 'acc_hist',
+            categoryId: 'cat_hist',
+            date: new Date(2031, m, 5 + i).getTime(),
+            note: `riwayat-${m}-${i}`,
+            createdAt: now,
+            updatedAt: now,
+          });
+        })
+      )
+    );
+
+    // Terbaru dulu, melintasi bulan
+    const top = await fetchRecentTransactions(testUid, 4);
+    expect(top.truncated).toBe(true);
+    expect(top.transactions.map((t) => t.note)).toEqual(['riwayat-2-1', 'riwayat-2-0', 'riwayat-1-1', 'riwayat-1-0']);
+
+    // Batas pas dengan jumlah dokumen: tidak ditandai terpotong
+    const all = await fetchRecentTransactions(testUid, 5000);
+    expect(all.truncated).toBe(false);
+    expect(all.transactions.length).toBeGreaterThanOrEqual(6);
+    expect(all.transactions.filter((t) => t.note.startsWith('riwayat-')).length).toBe(6);
+  });
+
   // Harus tetap menjadi test terakhir: gate ini mengganti user yang login.
   it('Gate 16: Invite join & rotation through invites/{code} with a second user', async () => {
     const { createAndSaveLedger, rotateInviteCode, joinLedgerByCode, getLedgerById } = await import(

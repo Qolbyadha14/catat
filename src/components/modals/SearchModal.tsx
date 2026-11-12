@@ -4,21 +4,35 @@ import type { Account, Category, Transaction } from '../../lib/schemas';
 import { formatIdr, formatDate } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
 import { useEscapeKey } from '../../lib/useEscapeKey';
+import { searchTransactions } from '../../lib/transactionSearch';
+import { MAX_SEARCH_TRANSACTIONS, useAllTransactions } from '../../features/transactions/useAllTransactions';
+
+/** Jumlah hasil maksimum yang dirender sekaligus agar daftar tetap ringan. */
+const MAX_RESULTS = 100;
+const NUMBER_FORMAT = new Intl.NumberFormat('id-ID');
+
+type SearchScope = 'month' | 'all';
 
 export interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
+  uid: string;
+  /** Buku kas keluarga aktif; kosong berarti buku kas pribadi. */
+  ledgerId?: string;
+  /** Transaksi bulan yang sedang dibuka di dashboard (cakupan "bulan ini"). */
   transactions: Transaction[];
   categories: Category[];
   accounts: Account[];
   onSelectTransaction?: (tx: Transaction) => void;
-  /** Label cakupan data yang dicari, misalnya "November 2026" */
+  /** Label bulan yang sedang dibuka, misalnya "November 2026" */
   scopeLabel?: string;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,
   onClose,
+  uid,
+  ledgerId,
   transactions,
   categories,
   accounts,
@@ -26,47 +40,51 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   scopeLabel,
 }) => {
   const [query, setQuery] = useState('');
+  const [scope, setScope] = useState<SearchScope>('month');
 
   useEscapeKey(isOpen, onClose);
 
-  const accountMap = useMemo(() => {
-    const map = new Map<string, string>();
-    accounts.forEach((a) => map.set(a.id, a.name));
-    return map;
-  }, [accounts]);
+  // Riwayat lintas bulan hanya diambil saat pencarian terbuka dan cakupan "semua riwayat" dipilih
+  const history = useAllTransactions(uid, ledgerId, isOpen && scope === 'all');
+  const source = scope === 'all' ? history.transactions : transactions;
 
-  const categoryMap = useMemo(() => {
-    const map = new Map<string, string>();
-    categories.forEach((c) => map.set(c.id, c.name));
-    return map;
-  }, [categories]);
+  const lookups = useMemo(
+    () => ({
+      accountNames: new Map(accounts.map((a) => [a.id, a.name] as const)),
+      categoryNames: new Map(categories.map((c) => [c.id, c.name] as const)),
+    }),
+    [accounts, categories]
+  );
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return transactions.slice(0, 20);
-    const q = query.toLowerCase().trim();
-
-    return transactions.filter((t) => {
-      const catName = ('categoryId' in t && t.categoryId ? (categoryMap.get(t.categoryId) || '') : '').toLowerCase();
-      const accName = ('accountId' in t && t.accountId ? (accountMap.get(t.accountId) || '') : '').toLowerCase();
-      const fromName = ('fromAccountId' in t && t.fromAccountId ? (accountMap.get(t.fromAccountId) || '') : '').toLowerCase();
-      const toName = ('toAccountId' in t && t.toAccountId ? (accountMap.get(t.toAccountId) || '') : '').toLowerCase();
-      const note = (t.note || '').toLowerCase();
-      const amt = t.amount.toString();
-      const dateText = formatDate(t.date).toLowerCase();
-
-      return (
-        note.includes(q) ||
-        catName.includes(q) ||
-        accName.includes(q) ||
-        fromName.includes(q) ||
-        toName.includes(q) ||
-        amt.includes(q) ||
-        dateText.includes(q)
-      );
-    });
-  }, [query, transactions, categoryMap, accountMap]);
+  const matches = useMemo(() => {
+    if (!query.trim()) return source.slice(0, 20);
+    return searchTransactions(source, query, lookups);
+  }, [query, source, lookups]);
+  const visible = matches.slice(0, MAX_RESULTS);
 
   if (!isOpen) return null;
+
+  const placeholder =
+    scope === 'all'
+      ? 'Cari di semua riwayat...'
+      : scopeLabel
+      ? `Cari transaksi ${scopeLabel}...`
+      : 'Cari transaksi, nominal, akun, kategori...';
+
+  const scopeButtonClass = (active: boolean) =>
+    `flex-1 px-3 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+      active
+        ? 'bg-blue-600 text-white'
+        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+    }`;
+
+  const emptyMessage = () => {
+    if (scope === 'all' && history.loading) return 'Memuat riwayat...';
+    if (scope === 'all' && history.error) return `Gagal memuat riwayat: ${history.error}`;
+    if (query.trim()) return `Tidak ada transaksi yang cocok dengan "${query}".`;
+    if (scope === 'all') return 'Belum ada transaksi.';
+    return `Belum ada transaksi${scopeLabel ? ` di ${scopeLabel}` : ''}.`;
+  };
 
   return (
     <div
@@ -93,16 +111,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={scopeLabel ? `Cari transaksi ${scopeLabel}...` : 'Cari transaksi, nominal, akun, kategori...'}
+              placeholder={placeholder}
               aria-label="Kata kunci pencarian"
-              className="w-full pl-9 pr-10 py-2.5 rounded-2xl bg-soft border border-edge text-strong placeholder:text-slate-500 dark:placeholder:text-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-10 py-2.5 rounded-2xl bg-soft border border-edge text-strong placeholder:text-subtle text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-search-cancel-button]:appearance-none"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery('')}
                 aria-label="Hapus kata kunci"
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-10 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-10 flex items-center justify-center text-subtle hover:text-strong cursor-pointer"
               >
                 <X size={14} aria-hidden="true" />
               </button>
@@ -122,16 +140,43 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           </button>
         </div>
 
+        {/* Cakupan pencarian */}
+        <div className="flex gap-2 pt-3" role="group" aria-label="Cakupan pencarian">
+          <button
+            type="button"
+            aria-pressed={scope === 'month'}
+            onClick={() => setScope('month')}
+            className={scopeButtonClass(scope === 'month')}
+          >
+            {scopeLabel ?? 'Bulan ini'}
+          </button>
+          <button
+            type="button"
+            aria-pressed={scope === 'all'}
+            onClick={() => setScope('all')}
+            className={scopeButtonClass(scope === 'all')}
+          >
+            Semua riwayat
+          </button>
+        </div>
+
+        {/* Ringkasan hasil */}
+        <div className="pt-2 text-[11px] text-subtle" role="status" aria-live="polite">
+          {scope === 'all' && history.loading
+            ? 'Memuat riwayat...'
+            : query.trim()
+            ? `${NUMBER_FORMAT.format(matches.length)} hasil${matches.length > MAX_RESULTS ? `, menampilkan ${MAX_RESULTS} teratas` : ''}`
+            : scope === 'all' && history.truncated
+            ? `Riwayat terbaru dimuat (maksimal ${NUMBER_FORMAT.format(MAX_SEARCH_TRANSACTIONS)} transaksi)`
+            : '\u00A0'}
+        </div>
+
         {/* Results List */}
-        <div className="flex-1 overflow-y-auto no-scrollbar py-3 space-y-2">
-          {filtered.length === 0 ? (
-            <div className="text-center py-10 text-subtle text-xs">
-              {query.trim()
-                ? `Tidak ada transaksi yang cocok dengan "${query}".`
-                : `Belum ada transaksi${scopeLabel ? ` di ${scopeLabel}` : ''}.`}
-            </div>
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-3 pt-1 space-y-2">
+          {visible.length === 0 ? (
+            <div className="text-center py-10 text-subtle text-xs">{emptyMessage()}</div>
           ) : (
-            filtered.map((tx) => {
+            visible.map((tx) => {
               const isIncome = tx.type === 'income';
               const isExpense = tx.type === 'expense';
               const isTransfer = tx.type === 'transfer';
@@ -140,13 +185,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               let subtitle = formatDate(tx.date);
 
               if (isTransfer) {
-                const from = accountMap.get(tx.fromAccountId) || 'Akun';
-                const to = accountMap.get(tx.toAccountId) || 'Akun';
+                const from = lookups.accountNames.get(tx.fromAccountId) || 'Akun';
+                const to = lookups.accountNames.get(tx.toAccountId) || 'Akun';
                 title = `${from} ➔ ${to}`;
                 subtitle = `${formatDate(tx.date)}${tx.note ? ` • ${tx.note}` : ''}`;
               } else {
-                const cat = categoryMap.get(tx.categoryId) || 'Lainnya';
-                const acc = accountMap.get(tx.accountId) || 'Akun';
+                const cat = lookups.categoryNames.get(tx.categoryId) || 'Lainnya';
+                const acc = lookups.accountNames.get(tx.accountId) || 'Akun';
                 title = cat;
                 subtitle = `${formatDate(tx.date)} • ${acc}${tx.note ? ` • ${tx.note}` : ''}`;
               }
@@ -160,10 +205,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     if (onSelectTransaction) onSelectTransaction(tx);
                     onClose();
                   }}
-                  className="w-full text-left bg-slate-50 hover:bg-blue-50/60 dark:bg-slate-800/70 dark:hover:bg-slate-800 rounded-2xl p-3 border border-slate-100/80 dark:border-slate-700/60 flex items-center justify-between cursor-pointer transition-colors"
+                  className="w-full text-left bg-soft hover:bg-blue-50/60 dark:hover:bg-slate-800 rounded-2xl p-3 border border-line flex items-center justify-between cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="w-9 h-9 rounded-xl bg-frame border border-slate-200/60 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-frame border border-edge flex items-center justify-center text-subtle font-bold shrink-0">
                       {isTransfer ? <ArrowRightLeft size={16} aria-hidden="true" /> : <Wallet size={16} aria-hidden="true" />}
                     </div>
                     <div className="min-w-0">
@@ -173,7 +218,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   </div>
 
                   <span
-                    className={`text-sm font-extrabold shrink-0 ${
+                    className={`text-sm font-extrabold shrink-0 whitespace-nowrap tabular-nums ${
                       isIncome
                         ? 'text-emerald-700 dark:text-emerald-400'
                         : isExpense
@@ -181,8 +226,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         : 'text-cyan-700 dark:text-cyan-400'
                     }`}
                   >
-                    {isIncome ? '+' : isExpense ? '-' : ''}
-                    {formatIdr(tx.amount)}
+                    {`${isIncome ? '+' : isExpense ? '-' : ''}${formatIdr(tx.amount)}`}
                   </span>
                 </button>
               );

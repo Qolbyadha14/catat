@@ -41,6 +41,23 @@ export function parseTransactionDocs(docs: QueryDocumentSnapshot[]): Transaction
 }
 
 /**
+ * Transaksi terbaru lintas bulan, maksimal `max`. Dipakai pencarian "Semua riwayat".
+ * Mengambil satu dokumen ekstra untuk mengetahui apakah hasilnya terpotong.
+ * Tanpa filter, hanya orderBy('date'), jadi cukup single-field index otomatis.
+ */
+export async function fetchRecentTransactions(
+  uid: string,
+  max: number,
+  ledgerId?: string
+): Promise<{ transactions: Transaction[]; truncated: boolean }> {
+  const snap = await getDocs(
+    query(transactionsCollection(uid, ledgerId), orderBy('date', 'desc'), limit(max + 1))
+  );
+  const truncated = snap.size > max;
+  return { transactions: parseTransactionDocs(truncated ? snap.docs.slice(0, max) : snap.docs), truncated };
+}
+
+/**
  * Mencari struk yang sudah pernah dicatat di seluruh riwayat, bukan hanya bulan yang sedang dimuat.
  */
 export async function findTransactionByReferenceKey(
