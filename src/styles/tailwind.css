@@ -6,6 +6,21 @@
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Token warna semantik. Nilainya hidup di theme.css (terang + gelap), jadi komponen cukup menulis
+ * `bg-card text-strong border-line` tanpa varian dark:. `inline` membuat utilitas membaca variabel
+ * saat runtime sehingga ikut berubah ketika tema berganti.
+ */
+@theme inline {
+  --color-frame: var(--app-frame);
+  --color-card: var(--app-card);
+  --color-soft: var(--app-soft);
+  --color-line: var(--app-line);
+  --color-edge: var(--app-edge);
+  --color-strong: var(--app-text-strong);
+  --color-subtle: var(--app-text-subtle);
+}
+
 @layer base {
   * {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

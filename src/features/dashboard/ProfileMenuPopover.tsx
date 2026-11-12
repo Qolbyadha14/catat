@@ -201,7 +201,7 @@ export function ProfileMenuPopover({
               className="h-5 w-auto"
             />
           </picture>
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">v2.0 • Catat keuangan, hidup lebih tenang</span>
+          <span className="text-[11px] text-subtle mt-1 font-medium">v2.0 • Catat keuangan, hidup lebih tenang</span>
         </div>
       </div>
     </div>

@@ -38,7 +38,7 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
       </picture>
 
       {/* Slogan */}
-      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium tracking-tight mb-8 max-w-xs mx-auto">
+      <p className="text-xs sm:text-sm text-subtle font-medium tracking-tight mb-8 max-w-xs mx-auto">
         Catat keuangan, hidup lebih tenang.
       </p>
 
@@ -88,7 +88,7 @@ export function LoginView({ onSignIn, loading, error }: LoginViewProps) {
 
       {/* Security Trust Signals & Attribution */}
       <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80 w-full flex flex-col items-center justify-center text-center">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-subtle">
           <Lock size={12} className="text-emerald-500 shrink-0" />
           <span>Data terenkripsi & tersimpan aman</span>
         </div>

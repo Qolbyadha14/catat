@@ -83,6 +83,15 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 
+  /* App surface tokens (dipetakan ke utilitas Tailwind lewat @theme di tailwind.css) */
+  --app-frame: #ffffff;
+  --app-card: #ffffff;
+  --app-soft: #f8fafc;
+  --app-line: #f1f5f9;
+  --app-edge: #e2e8f0;
+  --app-text-strong: #0f172a;
+  --app-text-subtle: #64748b;
+
   /* Spacing (8pt grid) */
   --space-0-5: 4px;
   --space-1: 8px;
@@ -197,6 +206,15 @@
   --primary-foreground: #ffffff;
   --destructive: var(--error);
 
+  /* App surface tokens (dipetakan ke utilitas Tailwind lewat @theme di tailwind.css) */
+  --app-frame: #0f172a;
+  --app-card: rgba(30, 41, 59, 0.8);
+  --app-soft: #1e293b;
+  --app-line: #1e293b;
+  --app-edge: #334155;
+  --app-text-strong: #f1f5f9;
+  --app-text-subtle: #94a3b8;
+
   --avatar-bg: #312e81;
   --avatar-fg: #c7d2fe;
   --offline-bg: #450a0a;
@@ -266,6 +284,15 @@
     --primary: var(--accent-primary);
     --primary-foreground: #ffffff;
     --destructive: var(--error);
+
+    /* App surface tokens (dipetakan ke utilitas Tailwind lewat @theme di tailwind.css) */
+    --app-frame: #0f172a;
+    --app-card: rgba(30, 41, 59, 0.8);
+    --app-soft: #1e293b;
+    --app-line: #1e293b;
+    --app-edge: #334155;
+    --app-text-strong: #f1f5f9;
+    --app-text-subtle: #94a3b8;
 
     --avatar-bg: #312e81;
     --avatar-fg: #c7d2fe;

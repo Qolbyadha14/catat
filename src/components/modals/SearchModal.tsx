@@ -78,15 +78,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         aria-modal="true"
         aria-label="Cari transaksi"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-3xl p-5 shadow-2xl mt-8 max-h-[85vh] flex flex-col"
+        className="w-full max-w-md bg-frame border border-transparent dark:border-slate-800 rounded-3xl p-5 shadow-2xl mt-8 max-h-[85vh] flex flex-col"
       >
         {/* Search Input Bar */}
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2 pb-3 border-b border-line">
           <div className="relative flex-1">
             <Search
               size={18}
               aria-hidden="true"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle"
             />
             <input
               type="search"
@@ -95,7 +95,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={scopeLabel ? `Cari transaksi ${scopeLabel}...` : 'Cari transaksi, nominal, akun, kategori...'}
               aria-label="Kata kunci pencarian"
-              className="w-full pl-9 pr-10 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-10 py-2.5 rounded-2xl bg-soft border border-edge text-strong placeholder:text-slate-500 dark:placeholder:text-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {query && (
               <button
@@ -125,7 +125,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         {/* Results List */}
         <div className="flex-1 overflow-y-auto no-scrollbar py-3 space-y-2">
           {filtered.length === 0 ? (
-            <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-xs">
+            <div className="text-center py-10 text-subtle text-xs">
               {query.trim()
                 ? `Tidak ada transaksi yang cocok dengan "${query}".`
                 : `Belum ada transaksi${scopeLabel ? ` di ${scopeLabel}` : ''}.`}
@@ -163,12 +163,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   className="w-full text-left bg-slate-50 hover:bg-blue-50/60 dark:bg-slate-800/70 dark:hover:bg-slate-800 rounded-2xl p-3 border border-slate-100/80 dark:border-slate-700/60 flex items-center justify-between cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0 pr-2">
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-frame border border-slate-200/60 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold shrink-0">
                       {isTransfer ? <ArrowRightLeft size={16} aria-hidden="true" /> : <Wallet size={16} aria-hidden="true" />}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{title}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{subtitle}</div>
+                      <div className="text-sm font-bold text-strong truncate">{title}</div>
+                      <div className="text-[11px] text-subtle truncate mt-0.5">{subtitle}</div>
                     </div>
                   </div>
 
@@ -177,7 +177,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       isIncome
                         ? 'text-emerald-700 dark:text-emerald-400'
                         : isExpense
-                        ? 'text-slate-900 dark:text-slate-100'
+                        ? 'text-strong'
                         : 'text-cyan-700 dark:text-cyan-400'
                     }`}
                   >

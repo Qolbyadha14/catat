@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-tight">
               Halo,
             </div>
-            <div className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate max-w-[120px] sm:max-w-[160px] flex items-center gap-1">
+            <div className="text-sm font-bold text-strong tracking-tight truncate max-w-[120px] sm:max-w-[160px] flex items-center gap-1">
               <span>{userName}</span>
               <ChevronDown
                 size={13}
@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={activeLedgerName ? `Buku Kas: ${activeLedgerName}` : 'Buku Kas Keluarga'}
             aria-label="Buku Kas Keluarga"
           >
-            <Users size={14} className={activeLedgerName ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'} />
+            <Users size={14} className={activeLedgerName ? 'text-blue-600 dark:text-blue-400' : 'text-subtle'} />
             <span className="text-[11px] font-bold max-w-[95px] truncate">
               {activeLedgerName || 'Keluarga'}
             </span>

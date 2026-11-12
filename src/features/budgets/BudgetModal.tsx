@@ -64,18 +64,18 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
         aria-modal="true"
         aria-labelledby="budget-modal-title"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-white dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-t-[36px] sm:rounded-3xl p-6 shadow-2xl"
+        className="w-full max-w-sm bg-frame border border-transparent dark:border-slate-800 rounded-t-[36px] sm:rounded-3xl p-6 shadow-2xl"
       >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-3 border-b border-line">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 flex items-center justify-center text-sm font-bold">
               {category.icon || '🎯'}
             </div>
             <div>
-              <h3 id="budget-modal-title" className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+              <h3 id="budget-modal-title" className="text-base font-extrabold text-strong">
                 Atur Limit Anggaran
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Kategori: {category.name}</p>
+              <p className="text-xs text-subtle">Kategori: {category.name}</p>
             </div>
           </div>
 
@@ -101,7 +101,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               Batas Belanja Bulanan (Rupiah)
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500 dark:text-slate-400">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-subtle">
                 Rp
               </span>
               <input
@@ -111,7 +111,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                 value={limitStr}
                 onChange={(e) => setLimitStr(e.target.value)}
                 placeholder="0 (tanpa limit)"
-                className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-soft border border-edge text-strong placeholder:text-slate-500 dark:placeholder:text-slate-400 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 min="0"
                 step="10000"
               />
@@ -120,7 +120,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
           {/* Quick Amount Chips */}
           <div>
-            <span className="text-[11px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-subtle block mb-1.5">
               Pilihan Cepat
             </span>
             <div className="flex flex-wrap gap-1.5">

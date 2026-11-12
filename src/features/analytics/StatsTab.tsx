@@ -92,8 +92,8 @@ export const StatsTab: React.FC<StatsTabProps> = ({
       {/* Top Header with Export Action */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Statistik & Analisis</h2>
-          <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+          <h2 className="text-base font-bold text-strong tracking-tight">Statistik & Analisis</h2>
+          <div className="text-xs font-medium text-subtle mt-0.5">
             Periode: {monthLabel}
           </div>
         </div>
@@ -109,21 +109,21 @@ export const StatsTab: React.FC<StatsTabProps> = ({
       </div>
 
       {/* Donut Chart Card */}
-      <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-xs">
+      <div className="bg-card rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold">
               <PieChart size={16} aria-hidden="true" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Distribusi Pengeluaran</h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Berdasarkan proporsi kategori</p>
+              <h3 className="text-sm font-bold text-strong">Distribusi Pengeluaran</h3>
+              <p className="text-[11px] text-subtle">Berdasarkan proporsi kategori</p>
             </div>
           </div>
         </div>
 
         {totalExpense === 0 ? (
-          <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-xs">
+          <div className="text-center py-8 text-subtle text-xs">
             Belum ada pengeluaran di {monthLabel}.
           </div>
         ) : (
@@ -142,7 +142,7 @@ export const StatsTab: React.FC<StatsTabProps> = ({
       {/* Ranked Category Spending List */}
       {donutData.length > 0 && (
         <section className="space-y-2.5">
-          <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+          <h3 className="text-xs font-bold text-strong uppercase tracking-wide">
             Peringkat Pengeluaran Kategori
           </h3>
 
@@ -150,7 +150,7 @@ export const StatsTab: React.FC<StatsTabProps> = ({
             {donutData.map((item, idx) => (
               <div
                 key={item.id}
-                className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center justify-between"
+                className="bg-card rounded-2xl p-3.5 border border-line shadow-xs flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -160,15 +160,15 @@ export const StatsTab: React.FC<StatsTabProps> = ({
                     #{idx + 1}
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.name}</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="text-sm font-bold text-strong">{item.name}</div>
+                    <div className="text-[11px] text-subtle">
                       {item.percentage.toFixed(1)}% dari total pengeluaran
                     </div>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  <div className="text-sm font-black text-strong">
                     {formatIdr(item.amount)}
                   </div>
                 </div>

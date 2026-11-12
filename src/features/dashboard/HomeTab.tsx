@@ -44,7 +44,7 @@ export interface HomeTabProps {
 }
 
 const ACTION_BUTTON_CLASS =
-  'p-2 rounded-lg text-slate-500 dark:text-slate-400 transition-colors cursor-pointer';
+  'p-2 rounded-lg text-subtle transition-colors cursor-pointer';
 
 export const HomeTab: React.FC<HomeTabProps> = ({
   netBalance,
@@ -99,11 +99,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           <div className="min-w-0">
             <h2
               id="home-history-title"
-              className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight"
+              className="text-base font-bold text-strong tracking-tight"
             >
               Pelacakan Transaksi Harian
             </h2>
-            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <div className="text-xs font-medium text-subtle">
               {filteredTransactions.length} Transaksi Tercatat
             </div>
           </div>
@@ -130,7 +130,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               className={`relative flex items-center gap-1.5 px-3 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                 activeFilterCount > 0
                   ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  : 'bg-soft text-slate-700 dark:text-slate-200 border-edge hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
               aria-label={activeFilterCount > 0 ? `Filter transaksi (${activeFilterCount} aktif)` : 'Filter transaksi'}
             >
@@ -150,7 +150,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
         {/* Transactions List */}
         {isLoading ? (
-          <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-xs flex-1 flex items-center justify-center">
+          <div className="text-center py-12 text-subtle text-xs flex-1 flex items-center justify-center">
             Memuat data transaksi...
           </div>
         ) : filteredTransactions.length === 0 ? (
@@ -158,10 +158,10 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 text-blue-600 flex items-center justify-center shadow-xs border border-slate-100 dark:border-slate-700 mb-3 text-2xl">
               {isFiltered ? '🔍' : '📝'}
             </div>
-            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            <h3 className="text-base font-bold text-strong tracking-tight">
               {isFiltered ? 'Tidak ada transaksi yang cocok' : `Belum ada transaksi di ${selectedMonthLabel}`}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-xs text-center leading-relaxed">
+            <p className="text-xs text-subtle mt-1.5 max-w-xs text-center leading-relaxed">
               {isFiltered
                 ? `Tidak ada transaksi ${selectedMonthLabel} yang sesuai dengan filter yang dipilih.`
                 : 'Mulai catat transaksi pemasukan atau pengeluaran pertamamu.'}
@@ -173,7 +173,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   playHapticSound('click');
                   onResetFilters();
                 }}
-                className="mt-4 px-5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+                className="mt-4 px-5 rounded-xl bg-white dark:bg-slate-800 border border-edge text-strong text-xs font-bold transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
               >
                 Reset Filter
               </button>
@@ -226,7 +226,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               return (
                 <li
                   key={tx.id}
-                  className="bg-white dark:bg-slate-800/80 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800 shadow-xs flex items-center gap-3 hover:shadow-md transition-shadow group"
+                  className="bg-card rounded-2xl p-3.5 border border-line shadow-xs flex items-center gap-3 hover:shadow-md transition-shadow group"
                 >
                   {/* Squircle Icon */}
                   <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold ${toneClass}`}>
@@ -236,7 +236,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   <div className="flex-1 min-w-0">
                     {/* Baris 1: judul memakai lebar penuh, nominal di kanan */}
                     <div className="flex items-baseline justify-between gap-2">
-                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate min-w-0">
+                      <div className="text-sm font-bold text-strong truncate min-w-0">
                         {title}
                       </div>
                       <span
@@ -244,7 +244,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                           isIncome
                             ? 'text-emerald-700 dark:text-emerald-400'
                             : isExpense
-                            ? 'text-slate-900 dark:text-slate-100'
+                            ? 'text-strong'
                             : 'text-cyan-700 dark:text-cyan-400'
                         }`}
                       >
@@ -254,7 +254,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
                     {/* Baris 2: keterangan dan tombol aksi */}
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 min-w-0 truncate">
+                      <div className="text-[11px] text-subtle min-w-0 truncate">
                         <span>{subtitle}</span>
                         {tx.createdBy?.name && (
                           <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
