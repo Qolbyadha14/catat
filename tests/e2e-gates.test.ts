@@ -21,10 +21,17 @@ import { parseReceipt } from '../src/lib/receiptParser';
 import { parseOcrReceipt } from '../src/lib/ocr/schema';
 import { calculateDimensions } from '../src/lib/ocr/imageProcessor';
 import { canScan, recordScan, getScanCount, acceptDisclosure, hasAcceptedDisclosure, resetScanCounterForTest } from '../src/lib/ocr/rateLimiter';
+import { parseBackup } from '../src/features/backup/backupFormat';
 import * as fs from 'fs';
 import * as path from 'path';
 
 let testUid: string;
+
+function parseBackupFor(backup: unknown) {
+  const parsed = parseBackup(JSON.stringify(backup));
+  if (!parsed.ok) throw new Error(parsed.error);
+  return parsed.backup;
+}
 
 describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
   beforeAll(async () => {
@@ -1159,6 +1166,71 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(all.transactions.filter((t) => t.note.startsWith('riwayat-')).length).toBe(6);
   });
 
+  it('Gate 20: Backup export and restore into a family ledger is complete, balance-correct and idempotent', async () => {
+    const { createAccount } = await import('../src/features/accounts/accountService');
+    const { createAndSaveLedger } = await import('../src/lib/ledgerService');
+    const { exportBackup, loadExistingIds, applyRestorePlan } = await import('../src/features/backup/backupService');
+    const { planRestore, isPlanEmpty, transactionBalanceEffects } = await import('../src/features/backup/restorePlan');
+
+    // Data pribadi: akun baru dengan saldo awal 7000 lalu dua transaksi, plus transaksi di akun bawaan
+    const fresh = await createAccount(testUid, { name: 'Akun Gate 20', kind: 'asset', balance: 7000 });
+    await createTransaction(testUid, { type: 'expense', amount: 1500, accountId: fresh.id, categoryId: 'cat_food', date: Date.now(), note: 'g20 a' });
+    await createTransaction(testUid, { type: 'income', amount: 400, accountId: fresh.id, categoryId: 'cat_salary', date: Date.now(), note: 'g20 b' });
+    await createTransaction(testUid, { type: 'expense', amount: 900, accountId: 'acc_cash', categoryId: 'cat_food', date: Date.now(), note: 'g20 c' });
+
+    const { backup, skippedInvalid } = await exportBackup(testUid, { name: 'Pribadi' });
+    expect(skippedInvalid).toBe(0);
+    expect(backup.transactions.length).toBeGreaterThanOrEqual(3);
+    const freshInBackup = backup.accounts.find((a) => a.id === fresh.id);
+    expect(freshInBackup?.balance).toBe(7000 - 1500 + 400);
+
+    // File harus bisa dibaca kembali apa adanya
+    const parsed = parseBackup(JSON.stringify(backup));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    // Tujuan: buku kas keluarga milik testUid yang masih kosong transaksi
+    await createAndSaveLedger({ uid: testUid, displayName: 'Owner Gate 20' });
+    const cashBefore = (await getDoc(doc(db, 'ledgers', testUid, 'accounts', 'acc_cash'))).data()?.balance as number;
+    const me = { uid: testUid, name: 'Tester' };
+
+    const existing = await loadExistingIds(testUid, testUid);
+    const plan = planRestore(parsed.backup, existing, me);
+    expect(plan.accountsToCreate.map((a) => a.id)).toContain(fresh.id);
+    // Gate 19 menulis transaksi ke akun yang tidak punya dokumen akun, jadi harus dilewati
+    expect(plan.skipped.missingRefs).toBeGreaterThanOrEqual(6);
+
+    // chunkSize kecil memaksa banyak batch
+    const progress: number[] = [];
+    await applyRestorePlan(testUid, testUid, plan, { chunkSize: 6, onProgress: (p) => progress.push(p.written) });
+    expect(progress.length).toBeGreaterThan(2);
+
+    const ledgerTxs = (await getDocs(collection(db, 'ledgers', testUid, 'transactions'))).docs.map((d) =>
+      transactionSchema.parse(d.data())
+    );
+    // Buku kas boleh sudah berisi transaksi dari gate lain; semua yang direncanakan harus masuk
+    const restoredIds = new Set(plan.transactionsToCreate.map((t) => t.id));
+    const restoredTxs = ledgerTxs.filter((t) => restoredIds.has(t.id));
+    expect(restoredTxs).toHaveLength(plan.transactionsToCreate.length);
+    expect(ledgerTxs.length).toBe(existing.transactionIds.size + restoredTxs.length);
+
+    // Akun baru berakhir tepat di saldo backup; akun yang sudah ada hanya bergeser sebesar transaksi baru
+    const balanceOf = async (id: string) =>
+      (await getDoc(doc(db, 'ledgers', testUid, 'accounts', id))).data()?.balance as number;
+    expect(await balanceOf(fresh.id)).toBe(7000 - 1500 + 400);
+    const cashShift = restoredTxs
+      .flatMap((t) => transactionBalanceEffects(t))
+      .filter(([id]) => id === 'acc_cash')
+      .reduce((sum, [, d]) => sum + d, 0);
+    expect(await balanceOf('acc_cash')).toBe(cashBefore + cashShift);
+
+    // Menjalankan lagi tidak mengubah apa pun
+    const again = planRestore(parsed.backup, await loadExistingIds(testUid, testUid), me);
+    expect(isPlanEmpty(again)).toBe(true);
+    expect(again.transactionsToCreate).toHaveLength(0);
+    expect(await balanceOf('acc_cash')).toBe(cashBefore + cashShift);
+  });
+
   // Harus tetap menjadi test terakhir: gate ini mengganti user yang login.
   it('Gate 16: Invite join & rotation through invites/{code} with a second user', async () => {
     const { createAndSaveLedger, rotateInviteCode, joinLedgerByCode, getLedgerById } = await import(
@@ -1202,6 +1274,43 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(fresh.id).toBe(joiner.uid);
     expect(fresh.members[joiner.uid]?.role).toBe('owner');
     expect((await getDoc(doc(db, 'invites', fresh.inviteCode))).data()?.ledgerId).toBe(joiner.uid);
+
+    // Anggota (bukan pemilik) memulihkan banyak transaksi dalam satu batch: setiap operasi
+    // memeriksa keanggotaan lewat get(), jadi ini menguji batas akses dokumen di rules.
+    const { applyRestorePlan, loadExistingIds } = await import('../src/features/backup/backupService');
+    const { buildBackup } = await import('../src/features/backup/backupFormat');
+    const { planRestore } = await import('../src/features/backup/restorePlan');
+    const base = Date.now();
+    const memberBackup = buildBackup({
+      scope: 'personal',
+      scopeName: 'Joiner',
+      accounts: [{ id: 'acc_g20_join', name: 'Akun Joiner', kind: 'asset', balance: 50_000, isArchived: false, createdAt: base }],
+      categories: [{ id: 'cat_g20_join', name: 'Kategori Joiner', type: 'expense', isArchived: false, createdAt: base }],
+      transactions: Array.from({ length: 45 }, (_, i) => ({
+        id: `tx_g20_join_${i}`,
+        type: 'expense' as const,
+        amount: 100 + i,
+        accountId: 'acc_g20_join',
+        categoryId: 'cat_g20_join',
+        date: base + i,
+        note: '',
+        createdAt: base,
+        updatedAt: base,
+        createdBy: { uid: 'orang-lain', name: 'Orang Lain' },
+      })),
+    });
+    const memberParsed = parseBackupFor(memberBackup);
+    const memberPlan = planRestore(
+      memberParsed,
+      await loadExistingIds(joiner.uid, testUid),
+      { uid: joiner.uid, name: 'Joiner' }
+    );
+    expect(memberPlan.transactionsToCreate).toHaveLength(45);
+    expect(memberPlan.reattributed).toBe(45);
+    await applyRestorePlan(joiner.uid, testUid, memberPlan);
+    const joinedAccount = await getDoc(doc(db, 'ledgers', testUid, 'accounts', 'acc_g20_join'));
+    expect(joinedAccount.data()?.balance).toBe(50_000);
+    expect((await getDocs(collection(db, 'ledgers', testUid, 'transactions'))).docs.filter((d) => d.id.startsWith('tx_g20_join_'))).toHaveLength(45);
   });
 });
 

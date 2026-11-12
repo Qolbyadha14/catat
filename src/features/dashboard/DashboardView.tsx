@@ -11,6 +11,7 @@ import { TransactionFormSheet, type InitialTransferData } from '../transactions/
 import { TransactionFilterSheet } from '../transactions/TransactionFilterSheet';
 import { DeleteTransactionDialog } from '../transactions/DeleteTransactionDialog';
 import { ManageSheet } from '../manage/ManageSheet';
+import { BackupSheet } from '../backup/BackupSheet';
 import { ensureUserDefaults } from '../auth/seedDefaults';
 import type { UpcomingBill } from '../../lib/bills';
 import { shiftMonth, getMonthRange, formatMonthYear } from '../../lib/monthNavigator';
@@ -127,6 +128,7 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
   // Sheets & Dialogs State
   const [transactionSheet, setTransactionSheet] = useState<TransactionSheetState | null>(null);
   const [isManageOpen, setIsManageOpen] = useState(false);
+  const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -441,6 +443,16 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         categories={categories}
       />
 
+      {isBackupOpen && (
+        <BackupSheet
+          uid={user.uid}
+          ledgerId={ledgerId}
+          scopeName={activeLedger ? activeLedger.name : 'Buku kas pribadi'}
+          me={userProfileCreator}
+          onClose={() => setIsBackupOpen(false)}
+        />
+      )}
+
       {/* Profile & Settings Popover Menu */}
       <ProfileMenuPopover
         user={user}
@@ -449,6 +461,10 @@ export function DashboardView({ user, onSignOut, onOpenAdmin }: DashboardViewPro
         onOpenManage={() => {
           setIsProfileMenuOpen(false);
           setIsManageOpen(true);
+        }}
+        onOpenBackup={() => {
+          setIsProfileMenuOpen(false);
+          setIsBackupOpen(true);
         }}
         onOpenAdmin={onOpenAdmin}
         onSignOut={onSignOut}

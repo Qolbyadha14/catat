@@ -10,6 +10,7 @@ interface ProfileMenuPopoverProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenManage: () => void;
+  onOpenBackup: () => void;
   onOpenAdmin?: () => void;
   onSignOut: () => Promise<void>;
   theme: ThemeMode;
@@ -21,6 +22,7 @@ export function ProfileMenuPopover({
   isOpen,
   onClose,
   onOpenManage,
+  onOpenBackup,
   onOpenAdmin,
   onSignOut,
   theme,
@@ -78,6 +80,24 @@ export function ProfileMenuPopover({
           <div className="profile-menu-text">
             <span className="profile-menu-title">Kelola Akun & Kategori</span>
             <span className="profile-menu-desc">Tambah bank, e-wallet, paylater, atau kategori</span>
+          </div>
+          <span className="profile-menu-chevron" aria-hidden="true">›</span>
+        </button>
+
+        <div className="profile-popover-divider" />
+
+        <button
+          type="button"
+          className="profile-menu-row-btn"
+          onClick={() => {
+            onClose();
+            onOpenBackup();
+          }}
+        >
+          <span className="profile-menu-icon" aria-hidden="true">💾</span>
+          <div className="profile-menu-text">
+            <span className="profile-menu-title">Backup & Pulihkan</span>
+            <span className="profile-menu-desc">Unduh cadangan data atau pulihkan dari file</span>
           </div>
           <span className="profile-menu-chevron" aria-hidden="true">›</span>
         </button>
