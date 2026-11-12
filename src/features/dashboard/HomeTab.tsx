@@ -1,20 +1,14 @@
-import React from 'react';
-import {
-  Wallet,
-  ArrowRightLeft,
-  Copy,
-  Pencil,
-  Trash2,
-  Plus,
-  SlidersHorizontal,
-} from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Plus, SlidersHorizontal } from 'lucide-react';
 import { BalanceHeroCard } from './BalanceHeroCard';
 import { UpcomingBillsCard } from './UpcomingBillsCard';
 import type { Account, Transaction } from '../../lib/schemas';
 import type { UpcomingBill } from '../../lib/bills';
-import { formatIdr, formatDate } from '../../lib/formatters';
+import { formatIdr } from '../../lib/formatters';
 import { playHapticSound } from '../../lib/haptic';
-import { getCategoryTone, TRANSFER_TONE } from '../../lib/categoryTone';
+import { groupTransactionsByDay } from '../../lib/transactionGroups';
+import { useCurrentDay } from '../../lib/useCurrentDay';
+import { TransactionRow } from './TransactionRow';
 
 export interface HomeTabProps {
   netBalance: number;
@@ -43,9 +37,6 @@ export interface HomeTabProps {
   onPayUpcomingBill: (bill: UpcomingBill) => void;
 }
 
-const ACTION_BUTTON_CLASS =
-  'p-2 rounded-lg text-subtle transition-colors cursor-pointer';
-
 export const HomeTab: React.FC<HomeTabProps> = ({
   netBalance,
   totalAssets,
@@ -72,6 +63,12 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   onDeleteTransaction,
   onPayUpcomingBill,
 }) => {
+  const todayStart = useCurrentDay();
+  const dayGroups = useMemo(
+    () => groupTransactionsByDay(filteredTransactions, todayStart),
+    [filteredTransactions, todayStart]
+  );
+
   return (
     <div className="space-y-4 flex-1 flex flex-col">
       {/* 1. Hero Balance Card */}
@@ -101,7 +98,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
               id="home-history-title"
               className="text-base font-bold text-strong tracking-tight"
             >
-              Pelacakan Transaksi Harian
+              Riwayat Transaksi
             </h2>
             <div className="text-xs font-medium text-subtle">
               {filteredTransactions.length} Transaksi Tercatat
@@ -150,8 +147,21 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
         {/* Transactions List */}
         {isLoading ? (
-          <div className="text-center py-12 text-subtle text-xs flex-1 flex items-center justify-center">
-            Memuat data transaksi...
+          <div className="space-y-2.5" role="status" aria-busy="true">
+            <span className="sr-only">Memuat data transaksi...</span>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                aria-hidden="true"
+                className="bg-card rounded-2xl p-3.5 border border-line flex items-center gap-3 animate-pulse"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-edge shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-2/5 rounded bg-edge" />
+                  <div className="h-2.5 w-3/5 rounded bg-edge" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredTransactions.length === 0 ? (
           <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-3xl py-12 px-6 flex-1 min-h-[220px] flex flex-col items-center justify-center text-center border border-dashed border-slate-200/90 dark:border-slate-700 shadow-2xs my-2">
@@ -192,127 +202,35 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             )}
           </div>
         ) : (
-          <ul className="space-y-2.5">
-            {filteredTransactions.map((tx) => {
-              const isIncome = tx.type === 'income';
-              const isExpense = tx.type === 'expense';
-
-              let title: string;
-              let subtitle: string;
-              let iconContent: React.ReactNode;
-              let toneClass: string;
-
-              if (tx.type === 'transfer') {
-                const fromAcc = accountMap.get(tx.fromAccountId)?.name || 'Akun';
-                const toAcc = accountMap.get(tx.toAccountId)?.name || 'Akun';
-                title = `${fromAcc} ➔ ${toAcc}`;
-                subtitle = `${formatDate(tx.date)}${tx.note ? ` • ${tx.note}` : ''}`;
-                toneClass = TRANSFER_TONE;
-                iconContent = <ArrowRightLeft size={18} aria-hidden="true" />;
-              } else {
-                const cat = categoryMap.get(tx.categoryId);
-                const catName = cat?.name || 'Lainnya';
-                const accName = accountMap.get(tx.accountId)?.name || 'Akun';
-                title = catName;
-                subtitle = `${formatDate(tx.date)} • ${accName}${tx.note ? ` • ${tx.note}` : ''}`;
-                toneClass = getCategoryTone(tx.categoryId, catName);
-                iconContent = cat?.icon ? (
-                  <span className="text-lg leading-none" aria-hidden="true">{cat.icon}</span>
-                ) : (
-                  <Wallet size={18} aria-hidden="true" />
-                );
-              }
-
-              return (
-                <li
-                  key={tx.id}
-                  className="bg-card rounded-2xl p-3.5 border border-line shadow-xs flex items-center gap-3 hover:shadow-md transition-shadow group"
-                >
-                  {/* Squircle Icon */}
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold ${toneClass}`}>
-                    {iconContent}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    {/* Baris 1: judul memakai lebar penuh, nominal di kanan */}
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div className="text-sm font-bold text-strong truncate min-w-0">
-                        {title}
-                      </div>
-                      <span
-                        className={`text-sm font-extrabold tracking-tight whitespace-nowrap tabular-nums shrink-0 ${
-                          isIncome
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : isExpense
-                            ? 'text-strong'
-                            : 'text-cyan-700 dark:text-cyan-400'
-                        }`}
-                      >
-                        {`${isIncome ? '+' : isExpense ? '-' : ''}${formatIdr(tx.amount)}`}
-                      </span>
-                    </div>
-
-                    {/* Baris 2: keterangan dan tombol aksi */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-[11px] text-subtle min-w-0 truncate">
-                        <span>{subtitle}</span>
-                        {tx.createdBy?.name && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-[10px]">
-                            👤 {tx.createdBy.name}
-                          </span>
-                        )}
-                        {tx.items && tx.items.length > 0 && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 font-bold text-[10px]">
-                            🛒 {tx.items.length} item
-                          </span>
-                        )}
-                      </div>
-
-                    {/* Quick actions row */}
-                    <div className="flex items-center gap-0.5 shrink-0 -mr-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playHapticSound('tap');
-                          onDuplicateTransaction(tx);
-                        }}
-                        className={`${ACTION_BUTTON_CLASS} hover:text-blue-700 hover:bg-blue-50 dark:hover:text-blue-300 dark:hover:bg-blue-950/40`}
-                        title="Duplikat Transaksi"
-                        aria-label={`Duplikat transaksi ${title}`}
-                      >
-                        <Copy size={14} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playHapticSound('tap');
-                          onEditTransaction(tx);
-                        }}
-                        className={`${ACTION_BUTTON_CLASS} hover:text-blue-700 hover:bg-blue-50 dark:hover:text-blue-300 dark:hover:bg-blue-950/40`}
-                        title="Ubah Transaksi"
-                        aria-label={`Ubah transaksi ${title}`}
-                      >
-                        <Pencil size={14} aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          playHapticSound('delete');
-                          onDeleteTransaction(tx);
-                        }}
-                        className={`${ACTION_BUTTON_CLASS} ml-1.5 hover:text-rose-700 hover:bg-rose-50 dark:hover:text-rose-300 dark:hover:bg-rose-950/40`}
-                        title="Hapus Transaksi"
-                        aria-label={`Hapus transaksi ${title}`}
-                      >
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    </div>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="space-y-5">
+            {dayGroups.map((group) => (
+              <div key={group.key} role="group" aria-labelledby={`day-${group.key}`}>
+                <div className="flex items-baseline justify-between gap-2 mb-2 px-1">
+                  <h3 id={`day-${group.key}`} className="text-xs font-bold text-strong">
+                    {group.label}
+                  </h3>
+                  <span className="text-[11px] font-semibold text-subtle tabular-nums whitespace-nowrap">
+                    {group.expense > 0 && `-${formatIdr(group.expense)}`}
+                    {group.expense > 0 && group.income > 0 && ' · '}
+                    {group.income > 0 && `+${formatIdr(group.income)}`}
+                  </span>
+                </div>
+                <ul className="space-y-2.5">
+                  {group.transactions.map((tx) => (
+                    <TransactionRow
+                      key={tx.id}
+                      tx={tx}
+                      accountMap={accountMap}
+                      categoryMap={categoryMap}
+                      onEdit={onEditTransaction}
+                      onDuplicate={onDuplicateTransaction}
+                      onDelete={onDeleteTransaction}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         )}
       </section>
     </div>
