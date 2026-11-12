@@ -1,5 +1,7 @@
 import { shiftMonth, getMonthRange, formatMonthYear } from './monthNavigator';
+import { test } from 'bun:test';
 
+test('lib/monthNavigator.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -62,3 +64,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('Month navigator asserts pass');
+});

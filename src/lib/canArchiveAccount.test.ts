@@ -1,5 +1,7 @@
 import { canArchiveAccount } from './canArchiveAccount';
+import { test } from 'bun:test';
 
+test('lib/canArchiveAccount.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -38,3 +40,4 @@ const accBank = { id: 'acc_bank', balance: 0 };
 }
 
 console.log('canArchiveAccount asserts pass');
+});

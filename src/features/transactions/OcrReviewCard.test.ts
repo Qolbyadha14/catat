@@ -1,5 +1,7 @@
 import { formatPlatformBadge, formatReviewNote } from './ocrReview';
+import { test } from 'bun:test';
 
+test('features/transactions/OcrReviewCard.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -23,9 +25,10 @@ const note2 = formatReviewNote(null, null, 'bank_jago');
 assert(note2.includes('Bank Jago'), 'handles empty merchant gracefully');
 
 // Test 3: Items label
-export function formatItemsSummary(itemsCount: number): string {
+function formatItemsSummary(itemsCount: number): string {
   return `${itemsCount} barang`;
 }
 assert(formatItemsSummary(3) === '3 barang', 'formats items count');
 
 console.log('OcrReviewCard logic tests pass');
+});

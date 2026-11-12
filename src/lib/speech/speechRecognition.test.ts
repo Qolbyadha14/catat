@@ -2,7 +2,9 @@ import {
   isSpeechRecognitionSupported,
   createSpeechRecognizer,
 } from './speechRecognition';
+import { test } from 'bun:test';
 
+test('lib/speech/speechRecognition.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -82,3 +84,4 @@ assert(recognizer?.isListening() === false, 'Recognizer should not be listening 
 assert(Boolean(ended), 'onEnd should have been called');
 
 console.log('speechRecognition unit tests passed');
+});

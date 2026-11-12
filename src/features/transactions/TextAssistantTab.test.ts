@@ -54,7 +54,9 @@ const accounts = [
 
 // Test voice input integration capability
 import { isSpeechRecognitionSupported, createSpeechRecognizer } from '../../lib/speech/speechRecognition';
+import { test } from 'bun:test';
 
+test('features/transactions/TextAssistantTab.test.ts', async () => {
 {
   assert(typeof isSpeechRecognitionSupported === 'function', 'isSpeechRecognitionSupported is a function');
   assert(typeof createSpeechRecognizer === 'function', 'createSpeechRecognizer is a function');
@@ -62,3 +64,4 @@ import { isSpeechRecognitionSupported, createSpeechRecognizer } from '../../lib/
 }
 
 console.log('TextAssistantTab tests passed');
+});

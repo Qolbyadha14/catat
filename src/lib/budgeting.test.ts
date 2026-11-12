@@ -3,7 +3,9 @@ import {
   getDaysRemainingInMonth,
   evaluateTransactionBudgetImpact,
 } from './budgeting';
+import { test } from 'bun:test';
 
+test('lib/budgeting.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -66,3 +68,4 @@ const impactNoBudget = evaluateTransactionBudgetImpact(undefined, 500000, 100000
 assert(impactNoBudget.willExceed === false, 'undefined budget will not exceed');
 
 console.log('budgeting domain logic tests passed');
+});

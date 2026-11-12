@@ -84,7 +84,7 @@ describe('Live OCR Test Suite (App Check Debug Token & Gate Verification)', () =
 
         if (parsed.amount && parsed.amount > 0) {
           const sanitized = parseOcrReceipt(schemaInput, testDate);
-          expect(sanitized.amount).toBe(fix.expected.amount);
+          expect(sanitized.amount).toBe(fix.expected.amount as number);
 
           if (fix.id === 'fix-10-future-date') {
             expect(sanitized.date).toBe('2026-10-17');

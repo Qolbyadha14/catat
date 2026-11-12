@@ -1,6 +1,8 @@
 import type { Transaction } from '../../lib/schemas';
 import type { CreateTransactionInput } from './transactionService';
+import { test } from 'bun:test';
 
+test('features/transactions/transactionMath.test.ts', async () => {
 function assertStrictEqual(actual: unknown, expected: unknown) {
   if (actual !== expected) {
     throw new Error(`Expected ${String(expected)}, but got ${String(actual)}`);
@@ -108,3 +110,4 @@ function calculateDeltas(oldTx: Transaction, input: CreateTransactionInput): Map
 }
 
 console.log('Transaction delta math asserts pass');
+});

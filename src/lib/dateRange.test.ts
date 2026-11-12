@@ -1,5 +1,7 @@
 import { isInRange, getPresetRange } from './dateRange';
+import { test } from 'bun:test';
 
+test('lib/dateRange.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -53,3 +55,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('Date range boundary asserts pass');
+});

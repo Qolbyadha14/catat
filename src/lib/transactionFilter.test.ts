@@ -5,7 +5,9 @@ import {
   type FilterCriteria,
 } from './transactionFilter';
 import type { Transaction } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/transactionFilter.test.ts', async () => {
 function assert(condition: unknown, msg: string): asserts condition {
   if (!condition) throw new Error(msg);
 }
@@ -270,3 +272,4 @@ const sampleTransactions: Transaction[] = [
 }
 
 console.log('Transaction filter tests pass');
+});

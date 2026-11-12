@@ -1,5 +1,7 @@
 import { formatLiveAmount, calculateNewCursorPosition } from './currencyInputFormatter';
+import { test } from 'bun:test';
 
+test('lib/currencyInputFormatter.test.ts', async () => {
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
 }
@@ -78,3 +80,4 @@ function assert(cond: boolean, msg: string) {
 }
 
 console.log('currencyInputFormatter tests pass');
+});

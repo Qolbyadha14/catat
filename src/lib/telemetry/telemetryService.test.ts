@@ -3,7 +3,9 @@ import {
   formatTelemetryDateKey,
   type AiLogEntry,
 } from './telemetryService';
+import { test } from 'bun:test';
 
+test('lib/telemetry/telemetryService.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -78,3 +80,4 @@ assert(emptySummary.avgDurationMs === 0, 'empty logs avgDurationMs is 0');
 assert(emptySummary.totalTokens === 0, 'empty logs totalTokens is 0');
 
 console.log('telemetryService asserts pass');
+});

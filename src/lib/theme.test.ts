@@ -1,5 +1,7 @@
 import { resolveTheme } from './theme';
+import { test } from 'bun:test';
 
+test('lib/theme.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -21,3 +23,4 @@ assert(resolveTheme(undefined, false) === 'light', 'undefined + false -> light')
 assert(resolveTheme(undefined, true) === 'dark', 'undefined + true -> dark');
 
 console.log('resolveTheme asserts pass');
+});

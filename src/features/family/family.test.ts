@@ -1,5 +1,7 @@
 import { formatWhatsAppInviteText, generateInviteCode, createInitialLedger } from '../../lib/ledgerService';
+import { test } from 'bun:test';
 
+test('features/family/family.test.ts', async () => {
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -27,3 +29,4 @@ assert(initial.inviteCode !== initialAgain.inviteCode, 'invite code is not deriv
 assert(/^[2-9A-HJ-NP-Z]{6}$/.test(initialAgain.inviteCode), 'random invite code uses the safe charset');
 
 console.log('Family feature unit tests pass');
+});

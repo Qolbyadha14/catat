@@ -1,5 +1,7 @@
 import { calculateBatchBalanceDeltas } from './transactionService';
+import { test } from 'bun:test';
 
+test('features/transactions/transactionService.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -26,3 +28,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('transactionService batch delta tests pass');
+});

@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'bun:test';
 import {
   initializeTestEnvironment,
-  RulesTestEnvironment,
+  type RulesTestEnvironment,
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing';

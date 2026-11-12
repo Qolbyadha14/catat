@@ -84,7 +84,9 @@ assert(prompt.includes('Bank Jago'), 'prompt contains account name');
 // 8. Dynamic config limit and killswitch tests
 import { scanReceiptWithGemini } from './geminiService';
 import { setCachedSystemConfigForTest } from '../config/systemConfigService';
+import { test } from 'bun:test';
 
+test('lib/ocr/geminiService.test.ts', async () => {
 {
   setCachedSystemConfigForTest({ aiKillSwitch: true });
   let killed = false;
@@ -103,7 +105,4 @@ import { setCachedSystemConfigForTest } from '../config/systemConfigService';
 }
 
 console.log('geminiService unit tests pass');
-
-
-
-
+});

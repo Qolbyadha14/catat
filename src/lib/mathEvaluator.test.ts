@@ -1,5 +1,7 @@
 import { evaluateMathExpression } from './mathEvaluator';
+import { test } from 'bun:test';
 
+test('lib/mathEvaluator.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -129,4 +131,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('Math evaluator asserts pass');
-
+});

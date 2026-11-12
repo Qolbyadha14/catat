@@ -4,7 +4,9 @@ import {
   calculateDebtPlan,
 } from './debtPlanner';
 import type { Account } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/debtPlanner.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -58,3 +60,4 @@ assert(zeroPlan.totalMonths === 0, 'Zero accounts should have totalMonths = 0');
 assert(zeroPlan.debtFreeDate === null, 'Zero accounts should have null debtFreeDate');
 
 console.log('debtPlanner unit tests passed');
+});

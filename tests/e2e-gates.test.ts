@@ -789,7 +789,7 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
 
         if (parsed.amount && parsed.amount > 0) {
           const sanitized = parseOcrReceipt(schemaInput, refDate);
-          expect(sanitized.amount).toBe(fix.expected.amount);
+          expect(sanitized.amount).toBe(fix.expected.amount as number);
 
           if (fix.id === 'fix-10-future-date') {
             expect(sanitized.date).toBe('2026-10-17');

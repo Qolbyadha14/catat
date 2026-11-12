@@ -1,5 +1,7 @@
 import { calculateNetCashflow } from './cashflow';
+import { test } from 'bun:test';
 
+test('lib/cashflow.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -35,3 +37,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('Net cashflow tests pass');
+});

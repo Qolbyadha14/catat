@@ -1,9 +1,9 @@
-const CACHE_NAME = 'catat-pwa-v2';
+// Naikkan versi bila daftar precache berubah agar cache lama dihapus saat activate
+const CACHE_NAME = 'catat-pwa-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/site.webmanifest',
-  '/manifest.json',
   '/favicon.ico',
   '/favicon.svg',
   '/icon-192.png',

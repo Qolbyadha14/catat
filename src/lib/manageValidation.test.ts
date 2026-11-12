@@ -1,5 +1,7 @@
 import { isNameUnique } from './manageValidation';
+import { test } from 'bun:test';
 
+test('lib/manageValidation.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -29,3 +31,4 @@ assert(!isNameUnique('', items), 'Empty string must fail');
 assert(!isNameUnique('   ', items), 'Whitespace-only must fail');
 
 console.log('manageValidation asserts pass');
+});

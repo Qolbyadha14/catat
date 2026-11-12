@@ -1,6 +1,8 @@
 import { computeWeeklyCashflow } from './weeklyCashflow';
 import type { Transaction } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/weeklyCashflow.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -91,3 +93,4 @@ if (w1 && w2 && w3) {
 assert(result.peakExpenseWeekNumber === 4, 'Week 4 had highest expense (450.000)');
 
 console.log('weeklyCashflow unit tests passed');
+});

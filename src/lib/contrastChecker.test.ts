@@ -5,7 +5,9 @@ import {
   passesWcagAA,
   auditColorPairs,
 } from './contrastChecker';
+import { test } from 'bun:test';
 
+test('lib/contrastChecker.test.ts', async () => {
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
 }
@@ -42,3 +44,4 @@ const audit = auditColorPairs([
 assert(audit.passed === true, 'Audit pairs pass');
 
 console.log('contrastChecker tests pass');
+});

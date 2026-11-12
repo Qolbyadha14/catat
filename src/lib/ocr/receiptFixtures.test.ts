@@ -1,7 +1,9 @@
 import { RECEIPT_FIXTURES } from './fixtures';
 import { parseReceipt } from '../receiptParser';
 import { parseOcrReceipt } from './schema';
+import { test } from 'bun:test';
 
+test('lib/ocr/receiptFixtures.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -104,3 +106,4 @@ assert(exactAmountMatches + fallbackOrRejectHandled >= 9, 'Overall accuracy & sa
 }
 
 console.log('receiptFixtures 10-fixture suite & zero auto-save assertions pass');
+});

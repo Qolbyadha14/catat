@@ -5,7 +5,9 @@ import {
   type TextCategoryContext,
   type TextAccountContext,
 } from './textAssistantService';
+import { test } from 'bun:test';
 
+test('lib/nlp/textAssistantService.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -95,3 +97,4 @@ assert(resLiability.type === 'expense', 'type expense');
 assert(resLiability.accountId === 'acc-spaylater', 'accountId spaylater');
 
 console.log('textAssistantService Unit Tests passed');
+});

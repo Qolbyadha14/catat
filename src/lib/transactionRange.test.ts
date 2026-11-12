@@ -1,5 +1,7 @@
 import { filterTransactionsInRange } from './transactionRange';
+import { test } from 'bun:test';
 
+test('lib/transactionRange.test.ts', async () => {
 function assert(condition: boolean, msg: string): asserts condition {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -27,3 +29,4 @@ const dates = (items: { date: number }[]) => items.map((t) => t.date).join(',');
 }
 
 console.log('transactionRange tests pass');
+});

@@ -1,5 +1,7 @@
 import { normalizeCurrency, extractDate, parseReceipt } from './receiptParser';
+import { test } from 'bun:test';
 
+test('lib/receiptParser.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -158,3 +160,4 @@ JASA SERVIS
 }
 
 console.log('receiptParser tests pass (5 QA fixtures 100% nominal match)');
+});

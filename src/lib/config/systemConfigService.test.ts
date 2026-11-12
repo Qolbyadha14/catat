@@ -2,7 +2,9 @@ import {
   DEFAULT_SYSTEM_CONFIG,
   resolveMergedConfig,
 } from './systemConfigService';
+import { test } from 'bun:test';
 
+test('lib/config/systemConfigService.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -34,3 +36,4 @@ assert(sanitized.dailyOcrLimit === 20, 'sanitizes negative daily limit to 20');
 assert(sanitized.defaultOcrModel === 'gemini-3.5-flash-lite', 'sanitizes empty model to default');
 
 console.log('systemConfigService asserts pass');
+});

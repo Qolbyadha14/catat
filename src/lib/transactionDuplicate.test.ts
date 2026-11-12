@@ -1,6 +1,8 @@
 import { prepareTransactionDuplicate } from './transactionDuplicate';
 import type { Account, Category, Transaction } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/transactionDuplicate.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -193,3 +195,4 @@ const mockCategories: Category[] = [
 }
 
 console.log('TransactionDuplicate asserts pass');
+});

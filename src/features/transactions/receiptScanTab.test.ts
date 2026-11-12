@@ -143,7 +143,9 @@ import { extractImageFileFromClipboard } from './receiptFiles';
 
 // 5. Multi-File Batch Validation & Quota Checks Gate
 import { validateBatchFiles, checkBatchQuota } from './receiptFiles';
+import { test } from 'bun:test';
 
+test('features/transactions/receiptScanTab.test.ts', async () => {
 {
   // Test empty file list
   const emptyRes = validateBatchFiles([]);
@@ -191,4 +193,4 @@ import { validateBatchFiles, checkBatchQuota } from './receiptFiles';
 }
 
 console.log('ReceiptScanTab unit & validation gate tests pass');
-
+});

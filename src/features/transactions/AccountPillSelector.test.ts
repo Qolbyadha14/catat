@@ -1,6 +1,8 @@
 import { filterSelectableAccounts, getAccountKindBadge } from './accountPills';
 import type { Account } from '../../lib/schemas';
+import { test } from 'bun:test';
 
+test('features/transactions/AccountPillSelector.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -29,3 +31,4 @@ assert(liabilityBadge.label === 'PayLater', 'liability badge is PayLater');
 assert(liabilityBadge.className.includes('liability'), 'liability badge className is liability');
 
 console.log('AccountPillSelector logic tests pass');
+});

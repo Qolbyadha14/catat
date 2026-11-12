@@ -74,7 +74,9 @@ import {
   ledgerMemberSchema,
   ledgerSchema,
 } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/schemas.test.ts', async () => {
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -119,3 +121,4 @@ assert(parsedTx.items?.length === 1, 'parses items');
 assert(parsedTx.createdBy?.name === 'Sarah', 'parses createdBy');
 
 console.log('Schemas assert checks pass');
+});

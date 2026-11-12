@@ -1,5 +1,7 @@
 import { validateReceiptFile, MAX_FILE_SIZE_BYTES } from './ocrService';
+import { test } from 'bun:test';
 
+test('lib/ocrService.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -45,3 +47,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('ocrService validation tests pass');
+});

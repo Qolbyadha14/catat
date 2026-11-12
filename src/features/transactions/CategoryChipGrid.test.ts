@@ -1,6 +1,8 @@
 import { filterCategoriesByType, getRecommendedCategory } from './categoryChips';
 import type { Category } from '../../lib/schemas';
+import { test } from 'bun:test';
 
+test('features/transactions/CategoryChipGrid.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -27,3 +29,4 @@ const noRec = getRecommendedCategory(expenseCats, 'unknown_id');
 assert(noRec === null, 'returns null for unmatched recommendation');
 
 console.log('CategoryChipGrid logic tests pass');
+});

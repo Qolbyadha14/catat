@@ -1,6 +1,8 @@
 import { calculateDueDays, getUpcomingBills } from './bills';
 import type { Account } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/bills.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -70,3 +72,4 @@ if (firstBill) {
 }
 
 console.log('bills domain logic unit tests passed');
+});

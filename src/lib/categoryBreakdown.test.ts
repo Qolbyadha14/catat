@@ -1,6 +1,8 @@
 import { computeCategoryBreakdown } from './categoryBreakdown';
 import type { Transaction } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/categoryBreakdown.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -201,4 +203,4 @@ const nextMonth = new Date(2026, 10, 1).getTime(); // Nov 1, 2026
 }
 
 console.log('Category breakdown tests pass');
-
+});

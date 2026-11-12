@@ -1,11 +1,13 @@
 import { adjustAccountBalance } from './accountService';
+import { test } from 'bun:test';
 
+test('features/accounts/accountInitialBalance.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
 
 // 1. Helper logic for computing initial balance based on kind
-export function computeInitialBalance(kind: 'asset' | 'liability', inputAmount: number): number {
+function computeInitialBalance(kind: 'asset' | 'liability', inputAmount: number): number {
   if (kind === 'liability') {
     return -Math.abs(inputAmount);
   }
@@ -21,3 +23,4 @@ assert(computeInitialBalance('asset', 0) === 0, 'Zero asset balance must be 0');
 assert(typeof adjustAccountBalance === 'function', 'adjustAccountBalance must be a function');
 
 console.log('accountInitialBalance tests passed');
+});

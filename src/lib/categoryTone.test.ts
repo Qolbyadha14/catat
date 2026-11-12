@@ -1,5 +1,7 @@
 import { getCategoryTone, getCategoryToneName } from './categoryTone';
+import { test } from 'bun:test';
 
+test('lib/categoryTone.test.ts', async () => {
 function assert(condition: boolean, msg: string): asserts condition {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -23,3 +25,4 @@ for (const id of custom) {
 }
 
 console.log('categoryTone tests pass');
+});

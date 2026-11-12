@@ -9,7 +9,9 @@ import {
   acceptDisclosure,
   resetScanCounterForTest,
 } from './rateLimiter';
+import { test } from 'bun:test';
 
+test('lib/ocr/ocr.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) {
     throw new Error(`Assertion failed: ${msg}`);
@@ -149,3 +151,4 @@ function throws(fn: () => void) {
 }
 
 console.log('OCR schema, imageProcessor dimensions, and rateLimiter tests pass');
+});

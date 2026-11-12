@@ -1,6 +1,8 @@
 import { sanitizeAccountUpdate } from './accountService';
 import { sanitizeCategoryUpdate } from '../categories/categoryService';
+import { test } from 'bun:test';
 
+test('features/accounts/accountService.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(msg);
 }
@@ -74,4 +76,4 @@ const sanitizedInvalidDue = sanitizeAccountUpdate(accountWithInvalidDueDay);
 assert(!('dueDay' in sanitizedInvalidDue), 'dueDay > 31 must be stripped');
 
 console.log('Account and Category whitelist sanitizer asserts pass');
-
+});

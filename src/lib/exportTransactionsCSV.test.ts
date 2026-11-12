@@ -3,7 +3,9 @@ import {
   escapeCsvField,
 } from './exportTransactionsCSV';
 import type { Transaction } from './schemas';
+import { test } from 'bun:test';
 
+test('lib/exportTransactionsCSV.test.ts', async () => {
 function assert(condition: unknown, msg: string): asserts condition {
   if (!condition) throw new Error(msg);
 }
@@ -142,3 +144,4 @@ assert(
 );
 
 console.log('exportTransactionsCSV asserts pass');
+});

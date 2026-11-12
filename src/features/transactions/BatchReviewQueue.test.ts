@@ -1,5 +1,7 @@
 import { calculateBatchTotal, type BatchReviewItem } from './batchReview';
+import { test } from 'bun:test';
 
+test('features/transactions/BatchReviewQueue.test.ts', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -26,3 +28,4 @@ function assert(condition: boolean, msg: string) {
 }
 
 console.log('BatchReviewQueue logic tests pass');
+});

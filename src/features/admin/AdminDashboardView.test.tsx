@@ -1,6 +1,8 @@
 import type { AiLogEntry } from '../../lib/telemetry/telemetryService';
 import { calculateTelemetrySummary } from '../../lib/telemetry/telemetryService';
+import { test } from 'bun:test';
 
+test('features/admin/AdminDashboardView.test.tsx', async () => {
 function assert(condition: boolean, msg: string) {
   if (!condition) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -65,3 +67,4 @@ assert(summary.ocrCalls === 2, 'summary ocrCalls is 2');
 assert(summary.nlpCalls === 1, 'summary nlpCalls is 1');
 
 console.log('AdminDashboardView asserts pass');
+});
