@@ -10,6 +10,12 @@ import { CategoryChipGrid } from './CategoryChipGrid';
 import { AccountPillSelector } from './AccountPillSelector';
 import { OcrReviewCard } from './OcrReviewCard';
 import { formatReviewNote } from './ocrReview';
+import {
+  buildBatchPayloads,
+  buildQuickSavePayload,
+  buildSubmitPayload,
+  resolveCategoryAndAccount,
+} from './transactionFormLogic';
 import type { OcrReceiptResult } from '../../lib/ocr/schema';
 import type { DuplicateFormValues } from '../../lib/transactionDuplicate';
 import { evaluateMathExpression } from '../../lib/mathEvaluator';
@@ -304,58 +310,10 @@ export function TransactionFormSheet({
     if (mathError) setMathError(null);
   };
 
-  const resolveCategoryAndAccount = (res: OcrReceiptResult) => {
-    // 1. Resolve category
-    let matchedCatId = res.categoryId;
-    if (matchedCatId && !categories.some((c) => c.id === matchedCatId)) {
-      matchedCatId = null;
-    }
-    if (!matchedCatId) {
-      if (res.platform === 'shopeefood' || res.platform === 'gofood') {
-        const foodCat = categories.find(
-          (c) => !c.isArchived && c.type === 'expense' && /makan|minum|food|kuliner/i.test(c.name)
-        );
-        if (foodCat) matchedCatId = foodCat.id;
-      }
-    }
-    if (!matchedCatId) {
-      const defaultCat = categories.find((c) => !c.isArchived && c.type === 'expense');
-      matchedCatId = defaultCat?.id ?? '';
-    }
-
-    // 2. Resolve account
-    let matchedAccId = res.accountId;
-    if (matchedAccId && !accounts.some((a) => a.id === matchedAccId)) {
-      matchedAccId = null;
-    }
-    if (!matchedAccId) {
-      if (res.platform === 'spaylater') {
-        const spayAcc = accounts.find((a) => !a.isArchived && /spay|shopee.*paylater|paylater/i.test(a.name));
-        if (spayAcc) matchedAccId = spayAcc.id;
-      } else if (res.platform === 'bank_jago') {
-        const jagoAcc = accounts.find((a) => !a.isArchived && /jago/i.test(a.name));
-        if (jagoAcc) matchedAccId = jagoAcc.id;
-      }
-    }
-    if (!matchedAccId && res.paymentMethod) {
-      const pm = res.paymentMethod.toLowerCase();
-      const found = accounts.find(
-        (a) =>
-          !a.isArchived &&
-          (a.name.toLowerCase().includes(pm) || pm.includes(a.name.toLowerCase()))
-      );
-      if (found) matchedAccId = found.id;
-    }
-    if (!matchedAccId) {
-      const defaultAcc = accounts.find((a) => !a.isArchived);
-      matchedAccId = defaultAcc?.id ?? accounts[0]?.id ?? '';
-    }
-
-    return { matchedCatId, matchedAccId };
-  };
+  const resolveOcrSelection = (res: OcrReceiptResult) => resolveCategoryAndAccount(res, categories, accounts);
 
   const handleOcrSuccess = (res: OcrReceiptResult, previewUrl: string | null) => {
-    const { matchedCatId, matchedAccId } = resolveCategoryAndAccount(res);
+    const { matchedCatId, matchedAccId } = resolveOcrSelection(res);
 
     // 3. Format note with platform and paymentMethod
     const formattedNote = formatReviewNote(res.merchant, res.paymentMethod, res.platform);
@@ -434,7 +392,7 @@ export function TransactionFormSheet({
 
   const handleBatchComplete = (results: Array<{ result: OcrReceiptResult; previewUrl: string }>) => {
     const queueItems: BatchReviewItem[] = results.map((item, index) => {
-      const { matchedCatId, matchedAccId } = resolveCategoryAndAccount(item.result);
+      const { matchedCatId, matchedAccId } = resolveOcrSelection(item.result);
       const rounded = Math.round(item.result.amount || 0);
       return {
         id: `batch_${Date.now()}_${index}`,
@@ -465,8 +423,8 @@ export function TransactionFormSheet({
 
   const handleSaveBatch = async () => {
     if (!batchQueue || batchQueue.length === 0) return;
-    const active = batchQueue.filter((it) => !it.isExcluded && it.nominal > 0);
-    if (active.length === 0) {
+    const payloads = buildBatchPayloads(batchQueue, createdBy);
+    if (payloads.length === 0) {
       setError('Tidak ada transaksi valid yang dipilih untuk disimpan.');
       return;
     }
@@ -474,22 +432,6 @@ export function TransactionFormSheet({
     setSaving(true);
     setError(null);
     try {
-      const payloads = active.map((item) => {
-        const epoch = new Date(item.date).getTime() || Date.now();
-        const noteText = item.merchant.trim() || 'Struk Belanja';
-        return {
-          type: 'expense' as const,
-          amount: item.nominal,
-          accountId: item.accountId,
-          categoryId: item.categoryId,
-          date: epoch,
-          note: noteText,
-          referenceKey: item.result.referenceKey,
-          items: item.result.items,
-          createdBy,
-        };
-      });
-
       await createBatchTransactions(uid, payloads, ledgerId);
       setBatchQueue(null);
       onSuccess?.();
@@ -505,56 +447,28 @@ export function TransactionFormSheet({
   const handleQuickSave = async () => {
     if (!ocrReview) return;
     setError(null);
-    const finalAmount = parseInt(rawAmount, 10);
-    if (!finalAmount || finalAmount <= 0) {
-      setError('Masukkan nominal yang valid');
-      return;
-    }
-    if (!currentAccountId) {
-      setError('Pilih akun transaksi');
-      return;
-    }
-    if (type !== 'transfer' && !currentCategoryId) {
-      setError('Pilih kategori transaksi');
+
+    const built = buildQuickSavePayload({
+      type,
+      amount: parseInt(rawAmount, 10),
+      accountId: currentAccountId,
+      toAccountId: currentToAccountId,
+      categoryId: currentCategoryId,
+      date: new Date(dateStr).getTime() || Date.now(),
+      note,
+      ocr: ocrReview.result,
+      items,
+      referenceKey,
+      createdBy,
+    });
+    if (!built.ok) {
+      setError(built.error);
       return;
     }
 
-    const epochDate = new Date(dateStr).getTime() || Date.now();
     try {
       setSaving(true);
-      if (type === 'transfer') {
-        await createTransaction(
-          uid,
-          {
-            type: 'transfer',
-            amount: finalAmount,
-            fromAccountId: currentAccountId,
-            toAccountId: currentToAccountId,
-            date: epochDate,
-            note,
-            referenceKey: ocrReview.result.referenceKey || referenceKey,
-            items: ocrReview.result.items || items,
-            createdBy,
-          },
-          ledgerId
-        );
-      } else {
-        await createTransaction(
-          uid,
-          {
-            type,
-            amount: finalAmount,
-            accountId: currentAccountId,
-            categoryId: currentCategoryId,
-            date: epochDate,
-            note,
-            referenceKey: ocrReview.result.referenceKey || referenceKey,
-            items: ocrReview.result.items || items,
-            createdBy,
-          },
-          ledgerId
-        );
-      }
+      await createTransaction(uid, built.payload, ledgerId);
       setOcrReview(null);
       onSuccess?.();
       onClose();
@@ -584,62 +498,30 @@ export function TransactionFormSheet({
       }
     }
 
-    if (!finalAmount || finalAmount <= 0) {
-      setError('Masukkan nominal yang valid');
+    const built = buildSubmitPayload({
+      type,
+      amount: finalAmount,
+      accountId: currentAccountId,
+      toAccountId: currentToAccountId,
+      categoryId: currentCategoryId,
+      date: new Date(dateStr).getTime() || Date.now(),
+      note,
+      items,
+      referenceKey,
+      createdBy,
+      initialTx,
+    });
+    if (!built.ok) {
+      setError(built.error);
       return;
     }
-
-    if (!currentAccountId) {
-      setError('Pilih akun transaksi');
-      return;
-    }
-
-    const epochDate = new Date(dateStr).getTime() || Date.now();
 
     try {
       setSaving(true);
-      if (type === 'transfer') {
-        if (!currentToAccountId || currentToAccountId === currentAccountId) {
-          setError('Pilih akun tujuan transfer yang berbeda');
-          return;
-        }
-        const payload = {
-          type: 'transfer' as const,
-          amount: finalAmount,
-          fromAccountId: currentAccountId,
-          toAccountId: currentToAccountId,
-          date: epochDate,
-          note: note.trim(),
-          referenceKey: referenceKey || initialTx?.referenceKey,
-          items: items.length > 0 ? items : initialTx?.items,
-          createdBy: initialTx?.createdBy || createdBy,
-        };
-        if (initialTx) {
-          await updateTransaction(uid, initialTx.id, payload, ledgerId);
-        } else {
-          await createTransaction(uid, payload, ledgerId);
-        }
+      if (initialTx) {
+        await updateTransaction(uid, initialTx.id, built.payload, ledgerId);
       } else {
-        if (!currentCategoryId) {
-          setError('Pilih kategori transaksi');
-          return;
-        }
-        const payload = {
-          type,
-          amount: finalAmount,
-          accountId: currentAccountId,
-          categoryId: currentCategoryId,
-          date: epochDate,
-          note: note.trim(),
-          referenceKey: referenceKey || initialTx?.referenceKey,
-          items: items.length > 0 ? items : initialTx?.items,
-          createdBy: initialTx?.createdBy || createdBy,
-        };
-        if (initialTx) {
-          await updateTransaction(uid, initialTx.id, payload, ledgerId);
-        } else {
-          await createTransaction(uid, payload, ledgerId);
-        }
+        await createTransaction(uid, built.payload, ledgerId);
       }
 
       // Reset

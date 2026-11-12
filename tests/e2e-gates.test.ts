@@ -1075,6 +1075,52 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
     expect(parseCategoryDoc({ ...catSnap.data(), monthlyBudget: null }).success).toBe(true);
   });
 
+  it('Gate 18: Saving with empty optional fields (as the form sends them) never trips Firestore undefined check', async () => {
+    const { createBatchTransactions } = await import('../src/features/transactions/transactionService');
+
+    // Bentuk persis payload form untuk catatan manual: referensi, item, dan foto pembuat kosong
+    const manual = {
+      type: 'expense' as const,
+      amount: 5000,
+      accountId: 'acc_cash',
+      categoryId: 'cat_food',
+      date: Date.now(),
+      note: 'Gate 18 manual',
+      referenceKey: undefined,
+      items: undefined,
+      createdBy: { uid: testUid, name: 'Tanpa Foto', photoURL: undefined },
+    };
+
+    const created = await createTransaction(testUid, manual);
+    const stored = (await getDoc(doc(db, 'users', testUid, 'transactions', created.id))).data();
+    expect(stored?.amount).toBe(5000);
+    expect(stored?.createdBy).toEqual({ uid: testUid, name: 'Tanpa Foto' });
+    expect('referenceKey' in (stored ?? {})).toBe(false);
+
+    const updated = await updateTransaction(testUid, created.id, { ...manual, amount: 7500 });
+    expect(updated.amount).toBe(7500);
+
+    const batch = await createBatchTransactions(testUid, [manual, { ...manual, amount: 1000, note: 'Gate 18 batch' }]);
+    expect(batch).toHaveLength(2);
+    for (const tx of batch) {
+      expect((await getDoc(doc(db, 'users', testUid, 'transactions', tx.id))).exists()).toBe(true);
+    }
+
+    // Transfer dengan metadata kosong yang sama
+    const transfer = await createTransaction(testUid, {
+      type: 'transfer',
+      amount: 2000,
+      fromAccountId: 'acc_cash',
+      toAccountId: 'acc_bank',
+      date: Date.now(),
+      note: '',
+      referenceKey: undefined,
+      items: undefined,
+      createdBy: undefined,
+    });
+    expect(transfer.type).toBe('transfer');
+  });
+
   // Harus tetap menjadi test terakhir: gate ini mengganti user yang login.
   it('Gate 16: Invite join & rotation through invites/{code} with a second user', async () => {
     const { createAndSaveLedger, rotateInviteCode, joinLedgerByCode, getLedgerById } = await import(
@@ -1112,6 +1158,12 @@ describe('E2E P0 Gates (Auth, Firestore, Balance Atomicity)', () => {
 
     // Anggota tidak boleh mengganti kode
     await expect(rotateInviteCode(joined)).rejects.toThrow();
+
+    // Pengguna tanpa foto profil (photoURL undefined) tetap bisa membuat buku kas baru
+    const fresh = await createAndSaveLedger({ uid: joiner.uid, displayName: 'Tanpa Foto', photoURL: undefined });
+    expect(fresh.id).toBe(joiner.uid);
+    expect(fresh.members[joiner.uid]?.role).toBe('owner');
+    expect((await getDoc(doc(db, 'invites', fresh.inviteCode))).data()?.ledgerId).toBe(joiner.uid);
   });
 });
 

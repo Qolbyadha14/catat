@@ -10,6 +10,7 @@ import {
   type TransactionCreator,
   type TransactionItem,
 } from '../../lib/schemas';
+import { omitUndefinedDeep } from '../../lib/omitUndefined';
 
 export type CreateTransactionInput =
   | {
@@ -95,12 +96,14 @@ export async function createTransaction(
     const txRef = doc(txCol);
     const now = Date.now();
 
-    const validated = transactionSchema.parse({
-      ...input,
-      id: txRef.id,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const validated = omitUndefinedDeep(
+      transactionSchema.parse({
+        ...input,
+        id: txRef.id,
+        createdAt: now,
+        updatedAt: now,
+      })
+    );
 
     txn.set(txRef, validated);
     return validated;
@@ -213,12 +216,14 @@ export async function updateTransaction(
     });
 
     const now = Date.now();
-    const validated = transactionSchema.parse({
-      ...input,
-      id: txId,
-      createdAt: oldTx.createdAt,
-      updatedAt: now,
-    });
+    const validated = omitUndefinedDeep(
+      transactionSchema.parse({
+        ...input,
+        id: txId,
+        createdAt: oldTx.createdAt,
+        updatedAt: now,
+      })
+    );
 
     txn.set(txRef, validated);
     return validated;
@@ -289,12 +294,14 @@ export async function createBatchTransactions(
 
     for (const item of items) {
       const txRef = doc(collection(db, txPath[0]!, txPath[1]!, txPath[2]!));
-      const validated = transactionSchema.parse({
-        ...item,
-        id: txRef.id,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const validated = omitUndefinedDeep(
+        transactionSchema.parse({
+          ...item,
+          id: txRef.id,
+          createdAt: now,
+          updatedAt: now,
+        })
+      );
       txn.set(txRef, validated);
       created.push(validated);
     }

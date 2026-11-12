@@ -2,6 +2,7 @@ import { doc, getDoc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase
 import { db } from './firebase';
 import type { Ledger, LedgerMember } from './schemas';
 import { ensureLedgerDefaults } from '../features/auth/seedDefaults';
+import { omitUndefinedDeep } from './omitUndefined';
 
 // Character set avoiding ambiguous characters (0, O, 1, I)
 const INVITE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -256,13 +257,13 @@ export async function createAndSaveLedger(
   let targetLedger: Ledger;
   if (snap.exists()) {
     targetLedger = reconcileOrPreserveLedger(snap.data() as Ledger, owner, name);
-    await setDoc(ledgerRef, targetLedger, { merge: true });
+    await setDoc(ledgerRef, omitUndefinedDeep(targetLedger), { merge: true });
     await ensureInviteIndex(targetLedger.id, targetLedger.inviteCode);
   } else {
     const inviteCode = await generateUnusedInviteCode();
     targetLedger = createInitialLedger(owner, name, inviteCode);
     const batch = writeBatch(db);
-    batch.set(ledgerRef, targetLedger);
+    batch.set(ledgerRef, omitUndefinedDeep(targetLedger));
     batch.set(doc(db, 'invites', inviteCode), { ledgerId: targetLedger.id, createdAt: Date.now() });
     await batch.commit();
   }
